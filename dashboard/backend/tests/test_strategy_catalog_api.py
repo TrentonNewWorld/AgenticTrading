@@ -45,7 +45,7 @@ def test_catalog_entries_resolve_and_all_support_live_trading():
 def test_catalog_entries_have_unique_keys():
     keys = [e.key for e in catalog_module.CATALOG_ENTRIES]
     assert len(keys) == len(set(keys))
-    assert len(keys) == 26
+    assert len(keys) == 23
 
 
 def test_metrics_on_empty_curve():

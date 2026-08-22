@@ -15,7 +15,7 @@
       "id": "spy_index",
       "name": "Agentic Trading Lab",
       "label": "Market Index",
-      "model": "SPY",
+      "model": "S&P 500 Buy & Hold",
       "strategy": "market_index",
       "symbols": [
         "^GSPC"
@@ -25,25 +25,17 @@
       "id": "djia_index",
       "name": "Agentic Trading Lab",
       "label": "Market Index",
-      "model": "DJIA",
+      "model": "Dow 30 Buy & Hold",
       "strategy": "market_index",
       "symbols": [
         "^DJI"
       ]
     },
     {
-      "id": "buy_hold_djia",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Buy & Hold",
-      "strategy": "equal_weight_buyhold",
-      "symbols": []
-    },
-    {
       "id": "mean_variance_djia",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Mean-Variance",
+      "model": "Markowitz Optimizer",
       "strategy": "mean_variance",
       "symbols": []
     },
@@ -51,7 +43,7 @@
       "id": "equal_weight_djia",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Equal-Weight",
+      "model": "Daily Equal-Weight",
       "strategy": "equal_weight_index",
       "symbols": []
     },
@@ -59,7 +51,7 @@
       "id": "tradingagents_composite",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "TradingAgents (technical composite)",
+      "model": "Technical Composite Score",
       "strategy": "tradingagents_composite",
       "symbols": []
     },
@@ -67,7 +59,7 @@
       "id": "capm_alpha_ranking",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "CAPM Alpha Ranking",
+      "model": "CAPM Alpha Leaders",
       "strategy": "capm_alpha_ranking",
       "symbols": []
     },
@@ -75,7 +67,7 @@
       "id": "momentum_effect",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Momentum Effect",
+      "model": "12-Month Momentum",
       "strategy": "momentum_effect",
       "symbols": []
     },
@@ -83,7 +75,7 @@
       "id": "volatility_effect",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Volatility Effect",
+      "model": "Low-Volatility Anomaly",
       "strategy": "volatility_effect",
       "symbols": []
     },
@@ -91,31 +83,15 @@
       "id": "short_term_reversal",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Short-Term Reversal",
+      "model": "Short-Term Mean Reversion",
       "strategy": "short_term_reversal",
       "symbols": []
-    },
-    {
-      "id": "overnight_anomaly",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Overnight Anomaly (SPY)",
-      "strategy": "overnight_anomaly",
-      "symbols": ["SPY"]
-    },
-    {
-      "id": "turn_of_month",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Turn of the Month (SPY)",
-      "strategy": "turn_of_month",
-      "symbols": ["SPY"]
     },
     {
       "id": "bandtastic",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Bandtastic",
+      "model": "Bollinger Band Reversal",
       "strategy": "bandtastic",
       "symbols": []
     },
@@ -123,23 +99,15 @@
       "id": "supertrend_triple",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Supertrend x3",
+      "model": "Triple Supertrend",
       "strategy": "supertrend_triple",
-      "symbols": []
-    },
-    {
-      "id": "hlhb",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "hlhb",
-      "strategy": "hlhb",
       "symbols": []
     },
     {
       "id": "trendrider",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "TrendRider (simplified)",
+      "model": "Multi-Signal Trend Rider",
       "strategy": "trendrider",
       "symbols": []
     },
@@ -147,7 +115,7 @@
       "id": "pattern_recognition",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Pattern Recognition",
+      "model": "Candlestick Reversal",
       "strategy": "pattern_recognition",
       "symbols": []
     },
@@ -155,7 +123,7 @@
       "id": "universal_macd",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "UniversalMACD (zero-cross)",
+      "model": "MACD Crossover",
       "strategy": "universal_macd",
       "symbols": []
     },
@@ -163,7 +131,7 @@
       "id": "almgren_chriss_twap",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "AlmgrenChriss / TWAP",
+      "model": "RSI Threshold Trader",
       "strategy": "almgren_chriss_twap",
       "symbols": []
     },
@@ -171,7 +139,7 @@
       "id": "balanced_starter",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Balanced Starter",
+      "model": "Momentum with Dip-Buy",
       "strategy": "balanced_starter",
       "symbols": []
     },
@@ -179,7 +147,7 @@
       "id": "momentum_scout",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Momentum Scout",
+      "model": "Volume-Confirmed Momentum",
       "strategy": "momentum_scout",
       "symbols": []
     },
@@ -187,7 +155,7 @@
       "id": "three_step_analyst",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Three-Step Analyst",
+      "model": "Trend-Filtered Momentum",
       "strategy": "three_step_analyst",
       "symbols": []
     },
@@ -195,7 +163,7 @@
       "id": "ai_hedge_fund",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "AI Hedge Fund",
+      "model": "Momentum-Quality Composite",
       "strategy": "ai_hedge_fund",
       "symbols": []
     },
@@ -203,7 +171,7 @@
       "id": "blue_chip_steady",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Blue-Chip Steady",
+      "model": "Buy & Hold with Stop-Loss",
       "strategy": "blue_chip_steady",
       "symbols": []
     },
@@ -211,7 +179,7 @@
       "id": "even_split_dow",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Even-Split Dow",
+      "model": "Monthly Equal-Weight",
       "strategy": "even_split_dow",
       "symbols": []
     },
@@ -219,23 +187,15 @@
       "id": "contrarian_dip_buyer",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Contrarian Dip Buyer",
+      "model": "Tranche Dip Buyer",
       "strategy": "contrarian_dip_buyer",
-      "symbols": []
-    },
-    {
-      "id": "sector_rotator",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Sector Rotator",
-      "strategy": "sector_rotator",
       "symbols": []
     },
     {
       "id": "volatility_guard",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
-      "model": "Volatility Guard",
+      "model": "Volatility-Scaled Momentum",
       "strategy": "volatility_guard",
       "symbols": []
     },

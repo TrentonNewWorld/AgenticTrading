@@ -4,7 +4,7 @@ live/paper trading, presented as one card each (name, description, own
 equity-curve chart, metrics) and made selectable through the existing
 ``alpaca_paper_service``/``alpaca_live_service`` run-by-strategy-key paths.
 
-Computing all 26 strategies' full-year equity curves against real Alpaca
+Computing all 23 strategies' full-year equity curves against real Alpaca
 data on every page load would be slow and would burn API quota on every
 visitor, so results are cached to a small JSON file
 (``dashboard/storage/data/strategy_catalog_cache.json``) and only
@@ -39,68 +39,63 @@ class CatalogEntry:
     description: str
 
 
-#: 26 strategies that cleared 3%+ in the full-year "Strategy Lab" retest
-#: (2025-08-21 -> 2026-08-21) AND support live/paper trading. Excluded from
-#: the 28 that cleared 3%+: MultiMa and Pairs Trading (the only two that lost
-#: money), plus Overnight Anomaly and Turn of the Month -- both are
-#: single-instrument (SPY) intraday round-trip strategies (buy at one
-#: session boundary, sell at another) that don't reduce to a single "target
-#: weight for today" call, so neither defines a decide() and this catalog,
-#: whose whole point is a strategy you can actually select and run, has no
-#: use for them. Every entry here has a `decide()` method.
+#: 23 strategies that returned 10%+ (finishing above $1,100 on the catalog's
+#: $1,000 starting wallet) in the full-year "Strategy Lab" retest
+#: (2025-08-21 -> 2026-08-21) AND support live/paper trading. Excluded:
+#: MultiMa and Pairs Trading (the only two of the original 30 that lost
+#: money); Overnight Anomaly and Turn of the Month (single-instrument SPY
+#: intraday round-trip strategies with no decide() -- see the removal commit
+#: for why they don't belong in a catalog whose point is strategies you can
+#: actually run); and Equal-Weight Buy & Hold, hlhb, Sector Rotator, which
+#: cleared the original 3% bar but not this catalog's stricter 10% one.
+#: Every entry here has a `decide()` method.
 CATALOG_ENTRIES: List[CatalogEntry] = [
-    CatalogEntry("momentum_effect", "Momentum Effect", "QuantConnect",
+    CatalogEntry("momentum_effect", "12-Month Momentum", "QuantConnect",
         "Ranks all 30 Dow stocks by trailing 12-month total return and holds the top 10 equally weighted, rebalanced monthly."),
-    CatalogEntry("capm_alpha_ranking", "CAPM Alpha Ranking", "QuantConnect",
+    CatalogEntry("capm_alpha_ranking", "CAPM Alpha Leaders", "QuantConnect",
         "Runs a rolling 60-day CAPM regression of each stock's returns against the equal-weight Dow-30 market return, ranks by alpha, and holds the top 2 alpha generators equally weighted, rebalanced monthly."),
-    CatalogEntry("contrarian_dip_buyer", "Contrarian Dip Buyer", "Marketplace",
+    CatalogEntry("contrarian_dip_buyer", "Tranche Dip Buyer", "Marketplace",
         "Buys a stock in increasing tranches (up to 3) the further it falls below its 20-day high (10%/15%/20% thresholds), weighted by how deep the dip is; exits once the stock recovers to within 2% of that high."),
-    CatalogEntry("tradingagents_composite", "TradingAgents (technical composite)", "TradingAgents",
+    CatalogEntry("tradingagents_composite", "Technical Composite Score", "TradingAgents",
         "Composites RSI, MACD histogram, 50/200-day SMA position, and Bollinger %B into one score; holds the top 8 Dow names by that score, rebalanced every 5 days. A proxy for TradingAgents' technical analyst -- the framework's own bull/bear/risk debate stages are LLM judgment calls with no numeric formula."),
-    CatalogEntry("ai_hedge_fund", "AI Hedge Fund", "Marketplace",
+    CatalogEntry("ai_hedge_fund", "Momentum-Quality Composite", "Marketplace",
         "Composite score of 12-month momentum (skipping the most recent month), low realized volatility, and 5-day return; holds the top 8 scorers, rebalanced monthly. Approximates virattt's ai-hedge-fund analyst panel with no fundamentals/news feed."),
-    CatalogEntry("almgren_chriss_twap", "AlmgrenChriss / TWAP", "freqtrade",
+    CatalogEntry("almgren_chriss_twap", "RSI Threshold Trader", "freqtrade",
         "Buys any stock whose RSI drops below 45 and exits once RSI recovers above 50. Both freqtrade source strategies use this identical signal on daily bars."),
-    CatalogEntry("universal_macd", "UniversalMACD (zero-cross)", "freqtrade",
+    CatalogEntry("universal_macd", "MACD Crossover", "freqtrade",
         "Buys when a normalized MACD ratio (12-day EMA / 26-day EMA, minus 1) crosses from negative to positive, sells on the reverse cross."),
-    CatalogEntry("volatility_guard", "Volatility Guard", "Marketplace",
+    CatalogEntry("volatility_guard", "Volatility-Scaled Momentum", "Marketplace",
         "Holds the top 8 momentum stocks at full weight while 10-day price volatility stays under 1.2x its 60-day average; cuts to the top 4 above that, and the top 2 above 1.6x."),
-    CatalogEntry("supertrend_triple", "Supertrend x3", "freqtrade",
+    CatalogEntry("supertrend_triple", "Triple Supertrend", "freqtrade",
         "Combines three ATR-based Supertrend indicators at different sensitivities (7/3, 10/3, 14/4 period/multiplier); only buys when all three agree the trend is up, exits when all three flip down."),
-    CatalogEntry("short_term_reversal", "Short-Term Reversal", "QuantConnect",
+    CatalogEntry("short_term_reversal", "Short-Term Mean Reversion", "QuantConnect",
         "Ranks stocks by their prior month's return and holds the 10 worst performers equally weighted, rebalanced monthly, betting on short-term mean reversion. The original's short leg (best performers) is dropped since this engine is long-only."),
-    CatalogEntry("mean_variance", "Mean-Variance", "Leaderboard baseline",
+    CatalogEntry("mean_variance", "Markowitz Optimizer", "Leaderboard baseline",
         "Estimates the long-only, maximum-Sharpe-ratio portfolio each month from the prior 21 trading days of returns (Markowitz optimization via matrix pseudo-inverse), holds those weights for the following month."),
-    CatalogEntry("pattern_recognition", "Pattern Recognition", "freqtrade",
+    CatalogEntry("pattern_recognition", "Candlestick Reversal", "freqtrade",
         "Buys when a stock forms a 'high wave' candle (small body, long shadows both directions, signaling indecision) at a fresh 10-day low; holds for a fixed 10 trading days."),
-    CatalogEntry("balanced_starter", "Balanced Starter", "Marketplace",
+    CatalogEntry("balanced_starter", "Momentum with Dip-Buy", "Marketplace",
         "Equal-weights the top 8 stocks by 20-day momentum; overweights a name trading 3%+ below its 20-day average, trims a name up 15%+ in a month, capped at 20% per position."),
-    CatalogEntry("market_index_spy", "Market Index: S&P 500 (SPY)", "Leaderboard baseline",
+    CatalogEntry("market_index_spy", "S&P 500 Buy & Hold", "Leaderboard baseline",
         "Simply holds the SPY ETF, tracking the S&P 500 -- a passive market comparison."),
-    CatalogEntry("equal_weight_index", "Equal-Weight Index", "Leaderboard baseline",
+    CatalogEntry("equal_weight_index", "Daily Equal-Weight", "Leaderboard baseline",
         "Rebalances back to equal weight across all 30 Dow stocks every single trading day."),
-    CatalogEntry("market_index_djia", "Market Index: DJIA (DIA)", "Leaderboard baseline",
+    CatalogEntry("market_index_djia", "Dow 30 Buy & Hold", "Leaderboard baseline",
         "Simply holds the DIA ETF, tracking the Dow Jones Industrial Average -- the passive benchmark every Dow-30 strategy here is implicitly trying to beat."),
-    CatalogEntry("even_split_dow", "Even-Split Dow", "Marketplace",
+    CatalogEntry("even_split_dow", "Monthly Equal-Weight", "Marketplace",
         "Equal-weights all 30 Dow stocks, rebalanced monthly back to even shares."),
-    CatalogEntry("equal_weight_buyhold", "Equal-Weight Buy & Hold", "Leaderboard baseline",
-        "Buys equal dollar amounts of all 30 Dow stocks on day one and holds without rebalancing, letting weights drift with each stock's own price movement."),
-    CatalogEntry("momentum_scout", "Momentum Scout", "Marketplace",
+    CatalogEntry("momentum_scout", "Volume-Confirmed Momentum", "Marketplace",
         "Ranks by 10-day price momentum confirmed by above-average volume; holds the top 6 names with positive momentum, overweights a name pulling back 1-6% from its recent high within an intact uptrend."),
-    CatalogEntry("three_step_analyst", "Three-Step Analyst", "Marketplace",
+    CatalogEntry("three_step_analyst", "Trend-Filtered Momentum", "Marketplace",
         "Only holds stocks where the 20-day average price is above the 50-day average (an uptrend filter), sized by 20-day momentum, across up to 10 names."),
-    CatalogEntry("blue_chip_steady", "Blue-Chip Steady", "Marketplace",
+    CatalogEntry("blue_chip_steady", "Buy & Hold with Stop-Loss", "Marketplace",
         "Picks the 8 Dow stocks with the best trailing ~1-year return once, holds them equally weighted, and sells a name entirely if it falls 25% from its entry price."),
-    CatalogEntry("volatility_effect", "Volatility Effect", "QuantConnect",
+    CatalogEntry("volatility_effect", "Low-Volatility Anomaly", "QuantConnect",
         "Computes each stock's trailing 252-day return volatility and holds the 5 lowest-volatility names equally weighted, rebalanced monthly -- a defensive, low-volatility-anomaly strategy."),
-    CatalogEntry("hlhb", "hlhb", "freqtrade",
-        "Buys when RSI crosses above 50, the 5-day EMA rises above the 10-day EMA, and ADX confirms a real trend (>25); sells on the mirrored bearish combination."),
-    CatalogEntry("bandtastic", "Bandtastic", "freqtrade",
+    CatalogEntry("bandtastic", "Bollinger Band Reversal", "freqtrade",
         "Buys a stock when its price falls below its 20-day Bollinger lower band while RSI stays under 52 and its 10-day EMA is above its 50-day EMA; sells on the mirror-image condition at the upper band."),
-    CatalogEntry("trendrider", "TrendRider (simplified)", "freqtrade",
+    CatalogEntry("trendrider", "Multi-Signal Trend Rider", "freqtrade",
         "Enters on a golden cross, an RSI bounce off oversold above the 200-day average, or a MACD histogram turning positive; exits on RSI overheating, a bearish EMA cross, or price falling below the 200-day average."),
-    CatalogEntry("sector_rotator", "Sector Rotator", "Marketplace",
-        "Groups the Dow 30 into 8 rough sectors, holds the top 3 names from whichever sector had the best trailing-month average return, checked monthly."),
 ]
 
 #: Registry keys actually used by `.run()` (market_index needs a `symbols`
