@@ -26,29 +26,26 @@ def _isolated_cache(tmp_path, monkeypatch):
     monkeypatch.setattr(catalog_module, "CACHE_PATH", tmp_path / "strategy_catalog_cache.json")
 
 
-def test_catalog_entries_resolve_and_report_selectability_correctly():
-    """Every catalog entry's underlying strategy key must resolve. Most also
-    support live/paper trading via decide() -- the two single-instrument
-    intraday round-trip strategies (Overnight Anomaly, Turn of the Month)
-    genuinely don't, and `is_selectable_for_live_trading` must say so rather
-    than let their Run buttons silently fail."""
+def test_catalog_entries_resolve_and_all_support_live_trading():
+    """Every catalog entry's underlying strategy key must resolve AND define
+    decide() -- this catalog's whole point is a strategy you can actually
+    select and run, so an entry with no decide() (e.g. a single-instrument
+    intraday round-trip strategy like Overnight Anomaly/Turn of the Month)
+    does not belong here at all, unlike the leaderboard's own roster which
+    is fine with display-only strategies."""
     from dashboard.backend.domain.leaderboard.strategies import get_strategy
 
     for entry in catalog_module.CATALOG_ENTRIES:
         config = catalog_module._config_for(entry)
         strat = get_strategy(config)
         assert strat.required_symbols()
-        has_decide = hasattr(strat, "decide")
-        assert has_decide == catalog_module.is_selectable_for_live_trading(entry.key), (
-            f"{entry.key}: decide() present={has_decide} but is_selectable_for_live_trading "
-            "disagrees -- update _NOT_SELECTABLE_FOR_LIVE_TRADING"
-        )
+        assert hasattr(strat, "decide"), f"{entry.key} has no decide() -- does not belong in this catalog"
 
 
 def test_catalog_entries_have_unique_keys():
     keys = [e.key for e in catalog_module.CATALOG_ENTRIES]
     assert len(keys) == len(set(keys))
-    assert len(keys) == 28
+    assert len(keys) == 26
 
 
 def test_metrics_on_empty_curve():

@@ -121,19 +121,12 @@ function renderCard(entry, index) {
       <span>Max DD <b>${(entry.metrics.max_drawdown_pct || 0).toFixed(2)}%</b></span>
       <span>Trades <b>${entry.metrics.n_trades ?? '—'}</b></span>
     </div>
-    ${entry.selectable ? `
     <div class="sc-card-actions">
       <button class="sc-btn paper" id="btn-${entry.key}-paper">Run in Paper</button>
       <button class="sc-btn live" id="btn-${entry.key}-live">Run in Live</button>
     </div>
     <div class="sc-result-box" id="result-${entry.key}-paper" style="display:none;"></div>
     <div class="sc-result-box" id="result-${entry.key}-live" style="display:none;"></div>
-    ` : `
-    <p class="sc-card-desc" style="color:var(--text-muted); font-style:italic;">
-      Not selectable for paper/live trading -- this is a single-instrument intraday
-      round-trip strategy that doesn't reduce to one target-weight decision per day.
-    </p>
-    `}
   `;
   return card;
 }
@@ -207,7 +200,6 @@ async function loadCatalog(forceRefresh) {
     entries.forEach((entry, index) => grid.appendChild(renderCard(entry, index)));
     renderCharts(entries);
     entries.forEach((entry) => {
-      if (!entry.selectable) return;
       document.getElementById(`btn-${entry.key}-paper`).addEventListener('click', (e) => runStrategy(entry.key, 'paper', e.target));
       document.getElementById(`btn-${entry.key}-live`).addEventListener('click', (e) => runStrategy(entry.key, 'live', e.target));
     });

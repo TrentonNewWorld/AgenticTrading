@@ -1,10 +1,10 @@
 """Strategy Catalog: every registered baseline strategy that cleared a 3%+
-trailing-year return in the "Strategy Lab" backtest report, presented as one
-card each (name, description, own equity-curve chart, metrics) and made
-selectable for paper and live trading through the existing
+trailing-year return in the "Strategy Lab" backtest report AND supports
+live/paper trading, presented as one card each (name, description, own
+equity-curve chart, metrics) and made selectable through the existing
 ``alpaca_paper_service``/``alpaca_live_service`` run-by-strategy-key paths.
 
-Computing all 28 strategies' full-year equity curves against real Alpaca
+Computing all 26 strategies' full-year equity curves against real Alpaca
 data on every page load would be slow and would burn API quota on every
 visitor, so results are cached to a small JSON file
 (``dashboard/storage/data/strategy_catalog_cache.json``) and only
@@ -39,10 +39,15 @@ class CatalogEntry:
     description: str
 
 
-#: All 28 strategies that cleared 3%+ in the full-year "Strategy Lab" retest
-#: (2025-08-21 -> 2026-08-21; MultiMa and Pairs Trading, the only two that
-#: lost money, are not included). Every one of these has a `decide()` method
-#: and is therefore selectable for paper/live trading, not just display.
+#: 26 strategies that cleared 3%+ in the full-year "Strategy Lab" retest
+#: (2025-08-21 -> 2026-08-21) AND support live/paper trading. Excluded from
+#: the 28 that cleared 3%+: MultiMa and Pairs Trading (the only two that lost
+#: money), plus Overnight Anomaly and Turn of the Month -- both are
+#: single-instrument (SPY) intraday round-trip strategies (buy at one
+#: session boundary, sell at another) that don't reduce to a single "target
+#: weight for today" call, so neither defines a decide() and this catalog,
+#: whose whole point is a strategy you can actually select and run, has no
+#: use for them. Every entry here has a `decide()` method.
 CATALOG_ENTRIES: List[CatalogEntry] = [
     CatalogEntry("momentum_effect", "Momentum Effect", "QuantConnect",
         "Ranks all 30 Dow stocks by trailing 12-month total return and holds the top 10 equally weighted, rebalanced monthly."),
@@ -90,12 +95,8 @@ CATALOG_ENTRIES: List[CatalogEntry] = [
         "Computes each stock's trailing 252-day return volatility and holds the 5 lowest-volatility names equally weighted, rebalanced monthly -- a defensive, low-volatility-anomaly strategy."),
     CatalogEntry("hlhb", "hlhb", "freqtrade",
         "Buys when RSI crosses above 50, the 5-day EMA rises above the 10-day EMA, and ADX confirms a real trend (>25); sells on the mirrored bearish combination."),
-    CatalogEntry("overnight_anomaly", "Overnight Anomaly (SPY)", "QuantConnect",
-        "Buys SPY at every day's close and sells at the next day's open, capturing only the overnight return."),
     CatalogEntry("bandtastic", "Bandtastic", "freqtrade",
         "Buys a stock when its price falls below its 20-day Bollinger lower band while RSI stays under 52 and its 10-day EMA is above its 50-day EMA; sells on the mirror-image condition at the upper band."),
-    CatalogEntry("turn_of_month", "Turn of the Month (SPY)", "QuantConnect",
-        "Buys SPY at the open on the last trading day of each month and holds for 3 trading days before selling."),
     CatalogEntry("trendrider", "TrendRider (simplified)", "freqtrade",
         "Enters on a golden cross, an RSI bounce off oversold above the 200-day average, or a MACD histogram turning positive; exits on RSI overheating, a bearish EMA cross, or price falling below the 200-day average."),
     CatalogEntry("sector_rotator", "Sector Rotator", "Marketplace",
@@ -116,20 +117,6 @@ def _config_for(entry: CatalogEntry) -> Dict[str, Any]:
     if override:
         return {"id": entry.key, "name": entry.name, **override}
     return {"id": entry.key, "name": entry.name, "strategy": entry.key}
-
-
-#: Overnight Anomaly and Turn of the Month are single-instrument (SPY)
-#: intraday round-trip strategies -- buy at one session boundary, sell at
-#: another within the same or next session. That doesn't reduce to a single
-#: "target weight for today" call the way every other strategy's decide()
-#: does, so neither defines one, and both are display-only here (a "Run in
-#: Paper"/"Run in Live" button for them would just raise
-#: `strategy has no live-trading decide() method`).
-_NOT_SELECTABLE_FOR_LIVE_TRADING = {"overnight_anomaly", "turn_of_month"}
-
-
-def is_selectable_for_live_trading(key: str) -> bool:
-    return key not in _NOT_SELECTABLE_FOR_LIVE_TRADING
 
 
 def _fetch_daily_bars(symbols: List[str], end: datetime, lookback_days: int) -> Dict[str, pd.DataFrame]:
@@ -240,7 +227,6 @@ def _compute_all(force_refresh: bool = False) -> Dict[str, Any]:
             "description": entry.description,
             "metrics": metrics,
             "equity_curve": [{"t": row["timestamp"], "equity": row["equity"]} for row in sampled],
-            "selectable": is_selectable_for_live_trading(entry.key),
         })
 
     return {
