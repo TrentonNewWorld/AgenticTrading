@@ -48,51 +48,11 @@
       "symbols": []
     },
     {
-      "id": "tradingagents_composite",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Technical Composite Score",
-      "strategy": "tradingagents_composite",
-      "symbols": []
-    },
-    {
-      "id": "capm_alpha_ranking",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "CAPM Alpha Leaders",
-      "strategy": "capm_alpha_ranking",
-      "symbols": []
-    },
-    {
       "id": "momentum_effect",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
       "model": "12-Month Momentum",
       "strategy": "momentum_effect",
-      "symbols": []
-    },
-    {
-      "id": "volatility_effect",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Low-Volatility Anomaly",
-      "strategy": "volatility_effect",
-      "symbols": []
-    },
-    {
-      "id": "short_term_reversal",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Short-Term Mean Reversion",
-      "strategy": "short_term_reversal",
-      "symbols": []
-    },
-    {
-      "id": "bandtastic",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Bollinger Band Reversal",
-      "strategy": "bandtastic",
       "symbols": []
     },
     {
@@ -104,35 +64,11 @@
       "symbols": []
     },
     {
-      "id": "trendrider",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Multi-Signal Trend Rider",
-      "strategy": "trendrider",
-      "symbols": []
-    },
-    {
       "id": "pattern_recognition",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
       "model": "Candlestick Reversal",
       "strategy": "pattern_recognition",
-      "symbols": []
-    },
-    {
-      "id": "universal_macd",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "MACD Crossover",
-      "strategy": "universal_macd",
-      "symbols": []
-    },
-    {
-      "id": "almgren_chriss_twap",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "RSI Threshold Trader",
-      "strategy": "almgren_chriss_twap",
       "symbols": []
     },
     {
@@ -152,22 +88,6 @@
       "symbols": []
     },
     {
-      "id": "three_step_analyst",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Trend-Filtered Momentum",
-      "strategy": "three_step_analyst",
-      "symbols": []
-    },
-    {
-      "id": "ai_hedge_fund",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Momentum-Quality Composite",
-      "strategy": "ai_hedge_fund",
-      "symbols": []
-    },
-    {
       "id": "blue_chip_steady",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
@@ -181,22 +101,6 @@
       "label": "Baseline Strategy",
       "model": "Monthly Equal-Weight",
       "strategy": "even_split_dow",
-      "symbols": []
-    },
-    {
-      "id": "contrarian_dip_buyer",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Tranche Dip Buyer",
-      "strategy": "contrarian_dip_buyer",
-      "symbols": []
-    },
-    {
-      "id": "volatility_guard",
-      "name": "Agentic Trading Lab",
-      "label": "Baseline Strategy",
-      "model": "Volatility-Scaled Momentum",
-      "strategy": "volatility_guard",
       "symbols": []
     },
     {
