@@ -21,6 +21,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from dashboard.backend.domain.leaderboard.strategies import get_strategy
+from dashboard.backend.execution._alpaca_strategy_shared import (
+    compute_rebalance_orders,
+    fetch_daily_history,
+)
 from dashboard.backend.infrastructure.brokers.alpaca_live import (
     AlpacaLiveCredentialsError,
     AlpacaLiveTradingClient,
@@ -346,6 +351,130 @@ async def _execute_live_run(
         "max_order_usd": cap_usd,
         "account": account,
         "decision": {"actions": actions},
+        "orders_reviewed": orders,
+        "rejected_orders": rejections,
+        "executions": executions,
+    }
+
+
+async def run_live_for_strategy(
+    *,
+    strategy_key: str,
+    symbols: Optional[List[str]] = None,
+    dry_run: bool = True,
+) -> Dict[str, Any]:
+    """Run one live decision cycle for a registered leaderboard strategy
+    (deterministic ``decide()``, never an LLM call) against the real Alpaca
+    account -- the live-money mirror of
+    ``alpaca_paper_service.run_paper_for_strategy``.
+
+    ``dry_run=True`` (the default) always forces a review-only cycle, even if
+    ``ALPACA_LIVE_EXECUTE`` is set. Real orders require **both**
+    ``dry_run=False`` on the call **and** ``ALPACA_LIVE_EXECUTE=true`` in the
+    environment -- same two-gate pattern as ``run_live_for_agent``, and the
+    same process-wide lock (a local, single-account setup has no reason to
+    let an LLM-driven and a deterministic-strategy live run overlap).
+    """
+    if _run_lock.locked():
+        raise ValueError("live_run_in_progress")
+
+    async with _run_lock:
+        return await _execute_live_run_for_strategy(strategy_key=strategy_key, symbols=symbols, dry_run=dry_run)
+
+
+async def _execute_live_run_for_strategy(
+    *, strategy_key: str, symbols: Optional[List[str]], dry_run: bool
+) -> Dict[str, Any]:
+    run_id = f"alpaca_live_{strategy_key}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+
+    strategy = get_strategy({"strategy": strategy_key, "symbols": symbols})
+    if not hasattr(strategy, "decide"):
+        raise ValueError(f"strategy '{strategy_key}' has no live-trading decide() method")
+
+    try:
+        client = AlpacaLiveTradingClient()
+    except AlpacaLiveCredentialsError as exc:
+        await _audit("credentials_missing", {"run_id": run_id, "error": str(exc)})
+        raise
+
+    account = await asyncio.to_thread(client.get_account)
+    if account is None:
+        raise ValueError("alpaca_account_unavailable")
+    holdings = await asyncio.to_thread(client.get_positions)
+
+    # Decision universe is strictly the strategy's OWN symbols -- never the
+    # account's existing holdings, same reasoning as the paper path: this
+    # account can carry unrelated positions from earlier activity, and
+    # letting those leak into e.g. a momentum ranking would silently
+    # substitute "whatever this account happens to already hold" for the
+    # strategy's actual intended universe.
+    strategy_symbols = strategy.required_symbols()
+
+    history = await asyncio.to_thread(fetch_daily_history, client, strategy_symbols)
+    await _audit(
+        "context_snapshot",
+        {"run_id": run_id, "account": account, "holdings": holdings, "strategy_universe": strategy_symbols},
+    )
+
+    try:
+        target_weights = strategy.decide(history)
+    except Exception as exc:
+        await _audit("decision_failed", {"run_id": run_id, "error": str(exc)[:300]})
+        raise
+
+    if target_weights is None:
+        await _audit("no_action", {"run_id": run_id, "reason": "strategy_returned_none"})
+        return {
+            "run_id": run_id, "status": "completed", "action": "none",
+            "reason": "strategy decided to make no trades this cycle",
+            "account": account,
+        }
+
+    await _audit("decision", {"run_id": run_id, "target_weights": target_weights})
+
+    price_symbols = sorted(set(target_weights) | set(holdings))
+    prices = await asyncio.to_thread(client.get_quotes, price_symbols)
+    portfolio_value = float(account["cash"]) + sum(
+        holdings.get(sym, 0) * prices.get(sym, 0) for sym in holdings
+    )
+
+    raw_orders = compute_rebalance_orders(target_weights, portfolio_value, holdings, prices)
+    cap_usd = max_order_usd()
+    orders, rejections = risk_gate_orders(raw_orders, prices, holdings, cap_usd)
+    if rejections:
+        await _audit("orders_rejected", {"run_id": run_id, "max_order_usd": cap_usd, "rejections": rejections})
+
+    executions: List[Dict[str, Any]] = []
+    should_execute = execute_enabled() and not dry_run
+
+    for order in orders:
+        if not should_execute:
+            executions.append({"order": order, "status": "skipped", "reason": "dry_run_or_execute_disabled"})
+            continue
+        try:
+            result = await asyncio.to_thread(
+                client.submit_market_order, order["symbol"], order["quantity"], order["side"]
+            )
+            executions.append({"order": order, "status": result.status or "submitted", "result": result.raw})
+            await _audit(
+                "order_placed",
+                {"run_id": run_id, "order": order, "status": result.status, "result": result.raw},
+            )
+        except Exception as exc:
+            detail = str(exc)[:300]
+            logger.exception("Alpaca live order placement failed for %s", order.get("symbol"))
+            executions.append({"order": order, "status": "failed", "reason": "place_order_failed", "error": detail})
+            await _audit("order_failed", {"run_id": run_id, "order": order, "error": detail})
+
+    return {
+        "run_id": run_id,
+        "status": "completed",
+        "dry_run": dry_run or not execute_enabled(),
+        "execute_enabled": execute_enabled(),
+        "max_order_usd": cap_usd,
+        "account": account,
+        "target_weights": target_weights,
+        "portfolio_value": round(portfolio_value, 2),
         "orders_reviewed": orders,
         "rejected_orders": rejections,
         "executions": executions,

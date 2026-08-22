@@ -48,6 +48,15 @@ _EXPECTED_KEYS = {
     "pattern_recognition",
     "universal_macd",
     "almgren_chriss_twap",
+    "balanced_starter",
+    "momentum_scout",
+    "three_step_analyst",
+    "ai_hedge_fund",
+    "blue_chip_steady",
+    "even_split_dow",
+    "contrarian_dip_buyer",
+    "sector_rotator",
+    "volatility_guard",
 }
 
 

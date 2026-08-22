@@ -333,6 +333,12 @@ async def serve_mission_control():
     """Serve the real-money/paper wallet & holdings dashboard page."""
     return FileResponse(frontend_path / "mission-control.html")
 
+@app.get("/strategy-catalog.html", include_in_schema=False)
+async def serve_strategy_catalog():
+    """Serve the Strategy Catalog page (name/description/chart per 3%+
+    strategy, selectable for paper/live trading)."""
+    return FileResponse(frontend_path / "strategy-catalog.html")
+
 @app.get("/styles.css", include_in_schema=False)
 async def serve_styles():
     """Serve styles.css."""

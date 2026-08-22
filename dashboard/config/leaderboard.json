@@ -22,11 +22,29 @@
       ]
     },
     {
+      "id": "djia_index",
+      "name": "Agentic Trading Lab",
+      "label": "Market Index",
+      "model": "DJIA",
+      "strategy": "market_index",
+      "symbols": [
+        "^DJI"
+      ]
+    },
+    {
       "id": "buy_hold_djia",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
       "model": "Buy & Hold",
       "strategy": "equal_weight_buyhold",
+      "symbols": []
+    },
+    {
+      "id": "mean_variance_djia",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Mean-Variance",
+      "strategy": "mean_variance",
       "symbols": []
     },
     {
@@ -38,11 +56,43 @@
       "symbols": []
     },
     {
+      "id": "tradingagents_composite",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "TradingAgents (technical composite)",
+      "strategy": "tradingagents_composite",
+      "symbols": []
+    },
+    {
+      "id": "capm_alpha_ranking",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "CAPM Alpha Ranking",
+      "strategy": "capm_alpha_ranking",
+      "symbols": []
+    },
+    {
       "id": "momentum_effect",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
       "model": "Momentum Effect",
       "strategy": "momentum_effect",
+      "symbols": []
+    },
+    {
+      "id": "volatility_effect",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Volatility Effect",
+      "strategy": "volatility_effect",
+      "symbols": []
+    },
+    {
+      "id": "short_term_reversal",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Short-Term Reversal",
+      "strategy": "short_term_reversal",
       "symbols": []
     },
     {
@@ -54,11 +104,139 @@
       "symbols": ["SPY"]
     },
     {
+      "id": "turn_of_month",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Turn of the Month (SPY)",
+      "strategy": "turn_of_month",
+      "symbols": ["SPY"]
+    },
+    {
+      "id": "bandtastic",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Bandtastic",
+      "strategy": "bandtastic",
+      "symbols": []
+    },
+    {
       "id": "supertrend_triple",
       "name": "Agentic Trading Lab",
       "label": "Baseline Strategy",
       "model": "Supertrend x3",
       "strategy": "supertrend_triple",
+      "symbols": []
+    },
+    {
+      "id": "hlhb",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "hlhb",
+      "strategy": "hlhb",
+      "symbols": []
+    },
+    {
+      "id": "trendrider",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "TrendRider (simplified)",
+      "strategy": "trendrider",
+      "symbols": []
+    },
+    {
+      "id": "pattern_recognition",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Pattern Recognition",
+      "strategy": "pattern_recognition",
+      "symbols": []
+    },
+    {
+      "id": "universal_macd",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "UniversalMACD (zero-cross)",
+      "strategy": "universal_macd",
+      "symbols": []
+    },
+    {
+      "id": "almgren_chriss_twap",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "AlmgrenChriss / TWAP",
+      "strategy": "almgren_chriss_twap",
+      "symbols": []
+    },
+    {
+      "id": "balanced_starter",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Balanced Starter",
+      "strategy": "balanced_starter",
+      "symbols": []
+    },
+    {
+      "id": "momentum_scout",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Momentum Scout",
+      "strategy": "momentum_scout",
+      "symbols": []
+    },
+    {
+      "id": "three_step_analyst",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Three-Step Analyst",
+      "strategy": "three_step_analyst",
+      "symbols": []
+    },
+    {
+      "id": "ai_hedge_fund",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "AI Hedge Fund",
+      "strategy": "ai_hedge_fund",
+      "symbols": []
+    },
+    {
+      "id": "blue_chip_steady",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Blue-Chip Steady",
+      "strategy": "blue_chip_steady",
+      "symbols": []
+    },
+    {
+      "id": "even_split_dow",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Even-Split Dow",
+      "strategy": "even_split_dow",
+      "symbols": []
+    },
+    {
+      "id": "contrarian_dip_buyer",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Contrarian Dip Buyer",
+      "strategy": "contrarian_dip_buyer",
+      "symbols": []
+    },
+    {
+      "id": "sector_rotator",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Sector Rotator",
+      "strategy": "sector_rotator",
+      "symbols": []
+    },
+    {
+      "id": "volatility_guard",
+      "name": "Agentic Trading Lab",
+      "label": "Baseline Strategy",
+      "model": "Volatility Guard",
+      "strategy": "volatility_guard",
       "symbols": []
     },
     {

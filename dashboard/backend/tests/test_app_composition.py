@@ -215,6 +215,10 @@ EXPECTED_FULL_CONTRACT = {
     ("GET", "/ticker"),
     ("GET", "/mission-control.html"),
     ("GET", "/api/v1/mission-control/overview"),
+    ("GET", "/strategy-catalog.html"),
+    ("GET", "/api/v1/strategy-catalog"),
+    ("POST", "/api/v1/strategy-catalog/{key}/paper"),
+    ("POST", "/api/v1/strategy-catalog/{key}/live"),
 }
 
 

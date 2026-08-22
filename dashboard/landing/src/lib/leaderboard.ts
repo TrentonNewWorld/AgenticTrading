@@ -59,7 +59,7 @@ export type BoardData = {
  *  Two, not five, and the same two screen 0 picks. The question the card exists
  *  to answer -- is +7.49% good? -- needs one strategy baseline and one index,
  *  not the whole baseline roster. */
-export const BOARD_BASELINE_IDS = ['buy_hold_djia', 'spy_index'];
+export const BOARD_BASELINE_IDS = ['buy_hold_djia', 'djia_index'];
 
 /** Mirrors `MODEL_COLOR_PALETTE` in dashboard/frontend/js/leaderboard.js, in
  *  order. A visitor who signs up lands on a board whose curves they have

@@ -33,6 +33,19 @@ from .pattern_recognition import PatternRecognitionStrategy
 from .universal_macd import UniversalMACDStrategy
 from .almgren_chriss_twap import AlmgrenChrissTwapStrategy
 
+# Marketplace templates (Strategy Lab catalog), translated by hand from their
+# natural-language trading instructions into explicit deterministic rules --
+# the templates themselves are LLM prompts, not numeric formulas.
+from .balanced_starter import BalancedStarterStrategy
+from .momentum_scout import MomentumScoutStrategy
+from .three_step_analyst import ThreeStepAnalystStrategy
+from .ai_hedge_fund import AIHedgeFundStrategy
+from .blue_chip_steady import BlueChipSteadyStrategy
+from .even_split_dow import EvenSplitDowStrategy
+from .contrarian_dip_buyer import ContrarianDipBuyerStrategy
+from .sector_rotator import SectorRotatorStrategy
+from .volatility_guard import VolatilityGuardStrategy
+
 _STRATEGY_CLASSES = [
     BuyHoldStrategy,
     EqualWeightIndexStrategy,
@@ -54,6 +67,15 @@ _STRATEGY_CLASSES = [
     PatternRecognitionStrategy,
     UniversalMACDStrategy,
     AlmgrenChrissTwapStrategy,
+    BalancedStarterStrategy,
+    MomentumScoutStrategy,
+    ThreeStepAnalystStrategy,
+    AIHedgeFundStrategy,
+    BlueChipSteadyStrategy,
+    EvenSplitDowStrategy,
+    ContrarianDipBuyerStrategy,
+    SectorRotatorStrategy,
+    VolatilityGuardStrategy,
 ]
 
 _REGISTRY: Dict[str, Type[BaselineStrategy]] = {cls.key: cls for cls in _STRATEGY_CLASSES}

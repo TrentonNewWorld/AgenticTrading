@@ -16,6 +16,7 @@ from dashboard.backend.api.routers.news import router as news_router
 from dashboard.backend.api.routers.portfolio import router as portfolio_router
 from dashboard.backend.api.routers.runs import router as runs_router
 from dashboard.backend.api.routers.strategies import router as strategies_router
+from dashboard.backend.api.routers.strategy_catalog import router as strategy_catalog_router
 from dashboard.backend.api.routers.robinhood_live import router as robinhood_router
 from dashboard.backend.api.v2.router import v2_router
 
@@ -34,6 +35,7 @@ api_router.include_router(environments_router)
 api_router.include_router(leaderboard_router)
 api_router.include_router(mission_control_router)
 api_router.include_router(strategies_router)
+api_router.include_router(strategy_catalog_router)
 api_router.include_router(portfolio_router)
 api_router.include_router(news_router)
 api_router.include_router(robinhood_router)

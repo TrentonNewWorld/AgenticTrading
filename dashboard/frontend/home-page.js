@@ -1435,7 +1435,7 @@ function updateHomeAgentModule() {
  *  Two, not five. This chart is 187-280px tall and already carries seven model
  *  curves; the question it exists to answer -- is +21.0% good? -- needs one
  *  strategy baseline and one index, not the whole baseline roster. */
-const HOME_CHART_BASELINE_IDS = ['buy_hold_djia', 'spy_index'];
+const HOME_CHART_BASELINE_IDS = ['buy_hold_djia', 'djia_index'];
 
 /** Entries the CHART draws: every model, plus the two reference baselines.
  *
