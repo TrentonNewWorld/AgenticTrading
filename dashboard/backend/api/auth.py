@@ -6,6 +6,7 @@ import logging
 import math
 import os
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from urllib.parse import urlencode
@@ -436,6 +437,52 @@ async def signup(payload: SignupRequest, request: Request):
             raise HTTPException(status_code=409, detail="Email is already registered") from exc
         raise
 
+    token, entitlements = await asyncio.to_thread(_issue_session, user, request)
+    return _auth_json(user, token, entitlements=entitlements)
+
+
+#: Strict opt-in, off by default -- matches every other env-gated capability
+#: in this codebase (LEADERBOARD_DAILY_AUTO_DEPLOY, CREDITS_METERING_ENABLED,
+#: ...). This one is meant ONLY for a single operator running the app on
+#: their own machine who wants zero login friction; arming it on a shared or
+#: publicly reachable deployment would let ANY visitor land already
+#: authenticated as the fixed local account below, with no password check at
+#: all. Never set this in the Render dashboard or any hosted environment.
+_LOCAL_AUTO_LOGIN_EMAIL = "local@agentic-trading-lab.local"
+_LOCAL_AUTO_LOGIN_DISPLAY_NAME = "Local User"
+
+
+def local_auto_login_enabled() -> bool:
+    return os.getenv("LOCAL_AUTO_LOGIN_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+
+
+@router.post("/dev-auto-login", response_model=AuthResponse)
+async def dev_auto_login(request: Request):
+    """Silently sign in as a fixed local account -- no password, no signup
+    step. Exists purely so a solo local operator never sees a login screen;
+    gated behind ``LOCAL_AUTO_LOGIN_ENABLED`` (see the constant above) and
+    returns 404 -- not merely "disabled" -- when unset, so the endpoint's
+    existence is not even discoverable on a deployment where it isn't meant
+    to be armed.
+    """
+    if not local_auto_login_enabled():
+        raise HTTPException(status_code=404)
+
+    def _get_or_create() -> dict:
+        existing = users_module.user_store.get_user_by_email(_LOCAL_AUTO_LOGIN_EMAIL)
+        if existing is not None:
+            return public_user(existing)
+        # The password is never used again -- dev_auto_login never checks
+        # it, and nobody is meant to log in as this account any other way --
+        # so a random value satisfies create_user's password policy without
+        # this endpoint holding a real, reusable secret.
+        return users_module.user_store.create_user(
+            email=_LOCAL_AUTO_LOGIN_EMAIL,
+            display_name=_LOCAL_AUTO_LOGIN_DISPLAY_NAME,
+            password=secrets.token_urlsafe(32),
+        )
+
+    user = await asyncio.to_thread(_get_or_create)
     token, entitlements = await asyncio.to_thread(_issue_session, user, request)
     return _auth_json(user, token, entitlements=entitlements)
 

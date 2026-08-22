@@ -3081,6 +3081,14 @@ const AuthAPI = {
     return this.request('/api/auth/logout', { method: 'POST' });
   },
 
+  // Only ever succeeds when the server has LOCAL_AUTO_LOGIN_ENABLED set --
+  // a solo-operator opt-in, off by default. A 404 here (the normal case on
+  // any shared/hosted deployment) is expected and handled by the caller,
+  // not an error worth surfacing.
+  devAutoLogin() {
+    return this.request('/api/auth/dev-auto-login', { method: 'POST' });
+  },
+
   changePassword(currentPassword, newPassword) {
     return this.request('/api/auth/change-password', {
       method: 'POST',
@@ -4326,7 +4334,28 @@ async function refreshAuthUser() {
     window.AUTH_USER = data.user;
     updateAuthUI();
     await claimAgentsForUser();
+    return;
   } catch (error) {
+    if (error?.status === 401) {
+      // No session yet. On a normal hosted deployment devAutoLogin() 404s
+      // (LOCAL_AUTO_LOGIN_ENABLED is unset) and this just falls through to
+      // the guest state below, same as before this existed. It only
+      // succeeds when the operator has explicitly armed local-only
+      // auto-login, in which case it silently establishes a real session
+      // (same cookies signup/login set) with no login screen ever shown.
+      try {
+        const auto = await AuthAPI.devAutoLogin();
+        clearLegacyAuthToken();
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(auto.user));
+        window.AUTH_USER = auto.user;
+        updateAuthUI();
+        await claimAgentsForUser();
+        return;
+      } catch (autoError) {
+        // 404 means the feature is off (the common case) -- fall through
+        // to the guest/expired-session handling below silently.
+      }
+    }
     if (getStoredAuthUser()) {
       console.warn('Auth session expired:', error.message);
     }
@@ -5035,6 +5064,27 @@ document.addEventListener('DOMContentLoaded', async () => {
             await refreshAuthUser();
         } catch (error) {
             console.warn('Boot refreshAuthUser failed:', error?.message || error);
+        }
+    } else {
+        // No prior session cached -- the normal case for every guest, and
+        // refreshAuthUser() is skipped here on purpose to save a pointless
+        // /api/auth/me round trip. But a first-ever visit is exactly when
+        // LOCAL_AUTO_LOGIN_ENABLED (see AuthAPI.devAutoLogin) needs its one
+        // shot to establish a session; on any deployment where that flag
+        // isn't armed this 404s immediately and changes nothing.
+        try {
+            const auto = await AuthAPI.devAutoLogin();
+            clearLegacyAuthToken();
+            localStorage.setItem(AUTH_USER_KEY, JSON.stringify(auto.user));
+            window.AUTH_USER = auto.user;
+            updateAuthUI();
+            await claimAgentsForUser();
+        } catch (error) {
+            // 404 (feature off) is the expected outcome almost everywhere --
+            // not logged, so it never masquerades as a real boot failure.
+            if (error?.status !== 404) {
+                console.warn('Dev auto-login attempt failed:', error?.message || error);
+            }
         }
     }
     // Claim phase settled (or there was nothing to claim): gated loadAgents

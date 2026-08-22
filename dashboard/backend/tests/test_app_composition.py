@@ -95,6 +95,7 @@ EXPECTED_FULL_CONTRACT = {
     ("GET", "/api/algo/setup"),
     ("GET", "/api/algo/status"),
     ("GET", "/api/algo/submissions"),
+    ("POST", "/api/auth/dev-auto-login"),
     ("POST", "/api/auth/login"),
     ("POST", "/api/auth/logout"),
     ("POST", "/api/auth/logout-all"),

@@ -138,6 +138,12 @@ os.environ.pop("IFIND_REFRESH_TOKEN", None)
 os.environ.pop("IFIND_ACCESS_TOKEN", None)
 os.environ.pop("IFIND_BASE_URL", None)
 
+# Local-only convenience flag (see api/auth.py::dev_auto_login) -- a developer
+# with LOCAL_AUTO_LOGIN_ENABLED=true in their own dashboard/.env would
+# otherwise have every "no session -> 401/guest" test in the suite silently
+# auto-authenticate instead. Individual tests re-enable it via monkeypatch.
+os.environ.pop("LOCAL_AUTO_LOGIN_ENABLED", None)
+
 
 @atexit.register
 def _cleanup_test_db_dir() -> None:

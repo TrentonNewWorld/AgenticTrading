@@ -92,6 +92,38 @@ def test_signup_login_me_logout_flow(client):
     assert me_after.status_code == 401
 
 
+def test_dev_auto_login_404s_when_disabled_by_default(client, monkeypatch):
+    """LOCAL_AUTO_LOGIN_ENABLED is strict opt-in -- unset (the default, and
+    what every real hosted deployment must stay at) means the endpoint isn't
+    even discoverable, not merely refused."""
+    monkeypatch.delenv("LOCAL_AUTO_LOGIN_ENABLED", raising=False)
+    response = client.post("/api/auth/dev-auto-login")
+    assert response.status_code == 404
+
+
+def test_dev_auto_login_signs_in_with_no_credentials_when_armed(client, monkeypatch):
+    monkeypatch.setenv("LOCAL_AUTO_LOGIN_ENABLED", "true")
+    response = client.post("/api/auth/dev-auto-login")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["email"] == "local@agentic-trading-lab.local"
+    assert body["user"]["display_name"] == "Local User"
+    assert "password_hash" not in body["user"]
+    assert "token" not in body
+    assert _session_token(client)  # the real session + CSRF cookies were set
+
+    me = client.get("/api/auth/me")
+    assert me.status_code == 200
+    assert me.json()["user"]["email"] == "local@agentic-trading-lab.local"
+
+
+def test_dev_auto_login_reuses_the_same_account_on_repeat_calls(client, monkeypatch):
+    monkeypatch.setenv("LOCAL_AUTO_LOGIN_ENABLED", "true")
+    first = client.post("/api/auth/dev-auto-login").json()["user"]
+    second = client.post("/api/auth/dev-auto-login").json()["user"]
+    assert first["id"] == second["id"]
+
+
 def test_me_requires_auth(client):
     response = client.get("/api/auth/me")
     assert response.status_code == 401
