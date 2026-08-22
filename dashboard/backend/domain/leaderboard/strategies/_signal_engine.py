@@ -25,12 +25,42 @@ not a bug, and documented per-strategy.
 from __future__ import annotations
 
 import datetime as dt
+import json
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import pandas as pd
 
 from ._common import build_price_cache, market_timestamps, timestamp_date, timestamps_in_contest
+from dashboard.backend.paths import REPO_ROOT
+
+#: Where a strategy's persistent live-trading state (held positions, entry
+#: dates) is stored between separate `run_alpaca_paper_strategy.py`
+#: invocations -- each run is a fresh process, so anything an entry/exit
+#: strategy needs to remember must round-trip through disk, not memory.
+LIVE_STATE_DIR = REPO_ROOT / "dashboard" / "storage" / "data" / "paper_strategy_state"
+
+
+def load_strategy_state(key: str) -> Dict[str, Any]:
+    """Read a strategy's persisted live-trading state. Missing or corrupt
+    state is treated as "fresh start" (empty dict), never raises -- a strategy
+    that can't remember its held positions should re-derive them from the
+    broker's actual positions rather than crash the run."""
+    path = LIVE_STATE_DIR / f"{key}.json"
+    if not path.exists():
+        return {}
+    try:
+        with path.open(encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def save_strategy_state(key: str, state: Dict[str, Any]) -> None:
+    LIVE_STATE_DIR.mkdir(parents=True, exist_ok=True)
+    path = LIVE_STATE_DIR / f"{key}.json"
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(state, f)
 
 
 @dataclass
@@ -103,14 +133,21 @@ def make_entry_exit_weight_fn(
     symbols: List[str],
     max_positions: int = 8,
     min_history: int = 2,
+    initial_held: Optional[List[str]] = None,
 ) -> WeightFn:
     """Shared 'held set' bookkeeping for strategies that decide per-symbol
     entry/exit each day from the latest available history, rather than
     re-ranking a fresh target set every rebalance (e.g. Bandtastic,
     Supertrend, hlhb). `entry_fn(history, symbol)` / `exit_fn(history, symbol)`
     look only at `history` (already sliced to strictly before today) and
-    should read whatever trailing window they need off its tail themselves."""
-    held: set = set()
+    should read whatever trailing window they need off its tail themselves.
+
+    `initial_held` seeds the held set (used for live trading, where a
+    strategy's state must survive across separate process runs -- see
+    `load_strategy_state`/`save_strategy_state`). The returned function
+    carries a live reference to the held set as `.held`, so a caller can read
+    it back after invocation and persist it."""
+    held: set = set(initial_held or ())
 
     def weight_fn(history: DailyHistory, cur_date, day_index):
         if len(history) < min_history:
@@ -128,7 +165,22 @@ def make_entry_exit_weight_fn(
             return {}
         return {s: 1.0 / len(held) for s in held}
 
+    weight_fn.held = held
     return weight_fn
+
+
+def decide_live(weight_fn: WeightFn, history: DailyHistory) -> Dict[str, float]:
+    """Ask a strategy's weight_fn for today's target allocation, using ALL
+    available history as "the past" -- there is no future data to leak when
+    the question is "what should I do right now". Mirrors how `run()` calls
+    `weight_fn(history_full.before(cur_date), cur_date, day_index)` during a
+    backtest, but for live use `history` already stops at the most recent
+    available bar, so no `.before()` slicing is needed."""
+    if history.close.empty:
+        return {}
+    cur_date = history.close.index[-1].date()
+    day_index = len(history) - 1
+    return weight_fn(history, cur_date, day_index) or {}
 
 
 def run_daily_signal_strategy(

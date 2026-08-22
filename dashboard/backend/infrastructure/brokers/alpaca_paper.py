@@ -15,6 +15,9 @@ import os
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.requests import StockLatestQuoteRequest
+
 from dashboard.backend.paths import CREDENTIALS_DIR
 
 
@@ -201,6 +204,56 @@ class AlpacaPaperTradingClient:
             print(f"Exception in get_activities: {e}")
             return []
     
+    def get_positions_qty_map(self) -> Dict[str, float]:
+        """Return ``{symbol: qty}`` for every held position -- the shape a risk
+        gate / rebalancer needs. Separate from :meth:`get_positions` (which
+        returns full ``Position`` objects for display) so existing callers of
+        that method are never affected by this one."""
+        return {p.symbol.upper(): float(p.qty) for p in self.get_positions()}
+
+    def get_quotes(self, symbols: List[str]) -> Dict[str, float]:
+        """Return ``{symbol: last_quote_price}`` for the given symbols. Missing
+        or unpriceable symbols are simply absent -- callers must treat an
+        absent symbol as "no usable quote", never as price 0."""
+        if not symbols:
+            return {}
+        try:
+            data_client = StockHistoricalDataClient(self.api_key, self.secret_key)
+            request = StockLatestQuoteRequest(symbol_or_symbols=symbols)
+            quotes = data_client.get_stock_latest_quote(request)
+        except Exception as e:
+            print(f"Exception in AlpacaPaperTradingClient.get_quotes: {e}")
+            return {}
+
+        prices: Dict[str, float] = {}
+        for symbol, quote in quotes.items():
+            price = getattr(quote, "ask_price", None) or getattr(quote, "bid_price", None)
+            if price and price > 0:
+                prices[symbol.upper()] = float(price)
+        return prices
+
+    def submit_market_order(self, symbol: str, qty: float, side: str) -> Optional[Dict]:
+        """Submit a paper market order. Callers must have already run this
+        order through a risk gate -- this method performs no clamping or
+        sizing of its own."""
+        try:
+            url = f"{self.base_url}/v2/orders"
+            payload = {
+                "symbol": symbol,
+                "qty": str(qty),
+                "side": side.lower(),
+                "type": "market",
+                "time_in_force": "day",
+            }
+            response = requests.post(url, headers=self.headers, json=payload, timeout=10)
+            if response.status_code in (200, 201):
+                return response.json()
+            print(f"Error submitting order: {response.status_code} {response.text[:200]}")
+            return None
+        except Exception as e:
+            print(f"Exception in submit_market_order: {e}")
+            return None
+
     def get_portfolio_history(self, timeframe: str = "1D") -> Optional[Dict]:
         """
         Get portfolio performance history.

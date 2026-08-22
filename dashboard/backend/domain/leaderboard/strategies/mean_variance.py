@@ -10,7 +10,7 @@ not the contest month being evaluated.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -27,6 +27,9 @@ from ._common import (
     timestamps_in_contest,
     timestamps_in_reference,
 )
+from ._signal_engine import DailyHistory, load_strategy_state, save_strategy_state
+
+_REFIT_LOOKBACK_DAYS = 21
 
 
 class MeanVarianceStrategy(BaselineStrategy):
@@ -132,3 +135,31 @@ class MeanVarianceStrategy(BaselineStrategy):
 
     def num_trades(self) -> int:
         return getattr(self, "_num_positions", 0)
+
+    def decide(self, history: DailyHistory) -> Optional[Dict[str, float]]:
+        """Live/paper-trading entrypoint. Re-fits monthly (a ~21-trading-day
+        reference window, same out-of-sample principle as ``run()``'s
+        prior-month contest reference), persisting the fitted weights and the
+        month they were fit in. Calls within the same month return ``None``
+        ("make no trades this cycle") rather than refitting on noise every
+        single day."""
+        state = load_strategy_state(self.key)
+        cur_month = str(history.close.index[-1].to_period("M"))
+        if state.get("month") == cur_month and state.get("weights"):
+            return None
+
+        close = history.close.dropna(axis=1, how="any")
+        window = min(_REFIT_LOOKBACK_DAYS, len(close))
+        if window < 3 or close.shape[1] == 0:
+            return None
+        ref_returns = close.iloc[-window:].pct_change().dropna(how="all").values
+        if ref_returns.shape[0] < 3:
+            return None
+
+        active_symbols = list(close.columns)
+        weights = self._optimal_weights(ref_returns)
+        target = {sym: float(w) for sym, w in zip(active_symbols, weights) if w > 0}
+        if not target:
+            return None
+        save_strategy_state(self.key, {"month": cur_month, "weights": target})
+        return target

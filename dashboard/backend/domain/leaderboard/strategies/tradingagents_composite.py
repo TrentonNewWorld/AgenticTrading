@@ -30,7 +30,7 @@ from dashboard.backend.infrastructure.llm.validator import DJIA_30
 
 from .base import BaselineStrategy
 from ._indicators import bollinger, macd, rsi, zscore_row
-from ._signal_engine import DailyHistory, available_window, run_daily_signal_strategy
+from ._signal_engine import DailyHistory, available_window, decide_live, run_daily_signal_strategy
 
 _TOP_N = 8
 _REBALANCE_DAYS = 5
@@ -42,6 +42,44 @@ class TradingAgentsCompositeStrategy(BaselineStrategy):
     def required_symbols(self) -> List[str]:
         symbols = self.config.get("symbols")
         return list(symbols) if symbols else list(DJIA_30)
+
+    def _weight_fn(self, history: DailyHistory, cur_date, day_index) -> Dict[str, float]:
+        n = len(history)
+        if n < 25:
+            return {}
+        close = history.close
+        rsi14 = rsi(close, min(14, available_window(history, 14)))
+        _, _, hist_line = macd(close)
+        sma50 = close.rolling(available_window(history, 50)).mean()
+        sma200 = close.rolling(available_window(history, 200)).mean()
+        _, _, _, pctb = bollinger(close, available_window(history, 20), 2.0)
+
+        last_rsi = rsi14.iloc[-1]
+        last_hist = hist_line.iloc[-1]
+        last_close = close.iloc[-1]
+        last_sma50 = sma50.iloc[-1]
+        last_sma200 = sma200.iloc[-1]
+        last_pctb = pctb.iloc[-1]
+
+        rsi_signed = 50 - last_rsi
+        sma_pos = (last_close - last_sma50) / last_sma50 + (last_close - last_sma200) / last_sma200
+        bb = last_pctb - 0.5
+
+        frame = pd.DataFrame(
+            {
+                "rsi": zscore_row(rsi_signed),
+                "macd": zscore_row(last_hist),
+                "trend": zscore_row(sma_pos),
+                "bb": zscore_row(-bb),
+            }
+        )
+        composite = frame.mean(axis=1).dropna()
+        top = composite.sort_values(ascending=False).head(_TOP_N)
+        top = top[top > 0]
+        if top.empty:
+            return {}
+        shifted = top - top.min() + 0.1
+        return (shifted / shifted.sum()).to_dict()
 
     def run(
         self,
@@ -55,46 +93,8 @@ class TradingAgentsCompositeStrategy(BaselineStrategy):
         if not bars_subset:
             return []
 
-        def weight_fn(history: DailyHistory, cur_date, day_index):
-            n = len(history)
-            if n < 25:
-                return {}
-            close = history.close
-            rsi14 = rsi(close, min(14, available_window(history, 14)))
-            _, _, hist_line = macd(close)
-            sma50 = close.rolling(available_window(history, 50)).mean()
-            sma200 = close.rolling(available_window(history, 200)).mean()
-            _, _, _, pctb = bollinger(close, available_window(history, 20), 2.0)
-
-            last_rsi = rsi14.iloc[-1]
-            last_hist = hist_line.iloc[-1]
-            last_close = close.iloc[-1]
-            last_sma50 = sma50.iloc[-1]
-            last_sma200 = sma200.iloc[-1]
-            last_pctb = pctb.iloc[-1]
-
-            rsi_signed = 50 - last_rsi
-            sma_pos = (last_close - last_sma50) / last_sma50 + (last_close - last_sma200) / last_sma200
-            bb = last_pctb - 0.5
-
-            frame = pd.DataFrame(
-                {
-                    "rsi": zscore_row(rsi_signed),
-                    "macd": zscore_row(last_hist),
-                    "trend": zscore_row(sma_pos),
-                    "bb": zscore_row(-bb),
-                }
-            )
-            composite = frame.mean(axis=1).dropna()
-            top = composite.sort_values(ascending=False).head(_TOP_N)
-            top = top[top > 0]
-            if top.empty:
-                return {}
-            shifted = top - top.min() + 0.1
-            return (shifted / shifted.sum()).to_dict()
-
         curve, n_trades = run_daily_signal_strategy(
-            bars_subset, start_date, end_date, initial_capital, weight_fn,
+            bars_subset, start_date, end_date, initial_capital, self._weight_fn,
             rebalance_every_days=_REBALANCE_DAYS,
         )
         self._num_trades = n_trades
@@ -102,3 +102,9 @@ class TradingAgentsCompositeStrategy(BaselineStrategy):
 
     def num_trades(self) -> int:
         return getattr(self, "_num_trades", 0)
+
+    def decide(self, history: DailyHistory) -> Dict[str, float]:
+        """Live/paper-trading entrypoint: today's target weights from ALL
+        available history, for use outside a backtest (see
+        ``dashboard/scripts/run_alpaca_paper_strategy.py``)."""
+        return decide_live(self._weight_fn, history)

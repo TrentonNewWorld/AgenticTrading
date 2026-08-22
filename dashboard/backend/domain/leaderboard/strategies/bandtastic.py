@@ -21,7 +21,14 @@ from dashboard.backend.infrastructure.llm.validator import DJIA_30
 
 from .base import BaselineStrategy
 from ._indicators import bollinger, ema, rsi
-from ._signal_engine import DailyHistory, make_entry_exit_weight_fn, run_daily_signal_strategy
+from ._signal_engine import (
+    DailyHistory,
+    decide_live,
+    load_strategy_state,
+    make_entry_exit_weight_fn,
+    run_daily_signal_strategy,
+    save_strategy_state,
+)
 
 _MAX_POSITIONS = 8
 _MIN_HISTORY = 50
@@ -33,6 +40,34 @@ class BandtasticStrategy(BaselineStrategy):
     def required_symbols(self) -> List[str]:
         symbols = self.config.get("symbols")
         return list(symbols) if symbols else list(DJIA_30)
+
+    def _entry(self, history: DailyHistory, sym: str) -> bool:
+        close = history.close[sym].dropna()
+        if len(close) < _MIN_HISTORY:
+            return False
+        _, _, bb_lower, _ = bollinger(close.to_frame(), 20, 2.0)
+        rsi14 = rsi(close.to_frame(), 14)
+        ema10 = ema(close.to_frame(), 10)
+        ema50 = ema(close.to_frame(), 50)
+        return bool(
+            close.iloc[-1] < bb_lower.iloc[-1, 0]
+            and rsi14.iloc[-1, 0] < 52
+            and ema10.iloc[-1, 0] > ema50.iloc[-1, 0]
+        )
+
+    def _exit(self, history: DailyHistory, sym: str) -> bool:
+        close = history.close[sym].dropna()
+        if len(close) < _MIN_HISTORY:
+            return False
+        bb_upper, _, _, _ = bollinger(close.to_frame(), 20, 2.0)
+        rsi14 = rsi(close.to_frame(), 14)
+        ema10 = ema(close.to_frame(), 10)
+        ema50 = ema(close.to_frame(), 50)
+        return bool(
+            close.iloc[-1] > bb_upper.iloc[-1, 0]
+            and rsi14.iloc[-1, 0] > 57
+            and ema10.iloc[-1, 0] < ema50.iloc[-1, 0]
+        )
 
     def run(
         self,
@@ -46,35 +81,7 @@ class BandtasticStrategy(BaselineStrategy):
         if not bars_subset:
             return []
 
-        def entry(history: DailyHistory, sym: str) -> bool:
-            close = history.close[sym].dropna()
-            if len(close) < _MIN_HISTORY:
-                return False
-            _, _, bb_lower, _ = bollinger(close.to_frame(), 20, 2.0)
-            rsi14 = rsi(close.to_frame(), 14)
-            ema10 = ema(close.to_frame(), 10)
-            ema50 = ema(close.to_frame(), 50)
-            return bool(
-                close.iloc[-1] < bb_lower.iloc[-1, 0]
-                and rsi14.iloc[-1, 0] < 52
-                and ema10.iloc[-1, 0] > ema50.iloc[-1, 0]
-            )
-
-        def exit_(history: DailyHistory, sym: str) -> bool:
-            close = history.close[sym].dropna()
-            if len(close) < _MIN_HISTORY:
-                return False
-            bb_upper, _, _, _ = bollinger(close.to_frame(), 20, 2.0)
-            rsi14 = rsi(close.to_frame(), 14)
-            ema10 = ema(close.to_frame(), 10)
-            ema50 = ema(close.to_frame(), 50)
-            return bool(
-                close.iloc[-1] > bb_upper.iloc[-1, 0]
-                and rsi14.iloc[-1, 0] > 57
-                and ema10.iloc[-1, 0] < ema50.iloc[-1, 0]
-            )
-
-        weight_fn = make_entry_exit_weight_fn(entry, exit_, symbols, _MAX_POSITIONS, _MIN_HISTORY)
+        weight_fn = make_entry_exit_weight_fn(self._entry, self._exit, symbols, _MAX_POSITIONS, _MIN_HISTORY)
         curve, n_trades = run_daily_signal_strategy(
             bars_subset, start_date, end_date, initial_capital, weight_fn,
             rebalance_every_days=1,
@@ -84,3 +91,19 @@ class BandtasticStrategy(BaselineStrategy):
 
     def num_trades(self) -> int:
         return getattr(self, "_num_trades", 0)
+
+    def decide(self, history: DailyHistory) -> Dict[str, float]:
+        """Live/paper-trading entrypoint. The held-position set must survive
+        across separate process runs (each invocation of
+        ``run_alpaca_paper_strategy.py`` is a fresh process), so it round-trips
+        through ``load_strategy_state``/``save_strategy_state`` rather than
+        living only in memory like the backtest path above."""
+        symbols = self.required_symbols()
+        state = load_strategy_state(self.key)
+        weight_fn = make_entry_exit_weight_fn(
+            self._entry, self._exit, symbols, _MAX_POSITIONS, _MIN_HISTORY,
+            initial_held=state.get("held"),
+        )
+        weights = decide_live(weight_fn, history)
+        save_strategy_state(self.key, {"held": sorted(weight_fn.held)})
+        return weights

@@ -22,7 +22,7 @@ import pandas as pd
 from dashboard.backend.infrastructure.llm.validator import DJIA_30
 
 from .base import BaselineStrategy
-from ._signal_engine import DailyHistory, available_window, run_daily_signal_strategy
+from ._signal_engine import DailyHistory, available_window, decide_live, run_daily_signal_strategy
 
 _LOOKBACK_DAYS = 60
 _MIN_HISTORY = 30
@@ -36,6 +36,33 @@ class CAPMAlphaRankingStrategy(BaselineStrategy):
         symbols = self.config.get("symbols")
         return list(symbols) if symbols else list(DJIA_30)
 
+    def _weight_fn(self, history: DailyHistory, cur_date, day_index) -> Dict[str, float]:
+        window = available_window(history, _LOOKBACK_DAYS)
+        if window < _MIN_HISTORY:
+            return {}
+        close = history.close.iloc[-window:]
+        returns = close.pct_change().dropna(how="all")
+        if returns.shape[0] < _MIN_HISTORY - 1:
+            return {}
+        mkt_ret = returns.mean(axis=1)
+        if mkt_ret.std() == 0:
+            return {}
+        x_c = mkt_ret - mkt_ret.mean()
+        var_x = (x_c ** 2).sum()
+
+        alphas: Dict[str, float] = {}
+        for sym in returns.columns:
+            ys = returns[sym]
+            valid = ys.notna() & mkt_ret.notna()
+            if valid.sum() < _MIN_HISTORY - 1:
+                continue
+            beta = (x_c[valid] * (ys[valid] - ys[valid].mean())).sum() / var_x
+            alphas[sym] = ys[valid].mean() - beta * mkt_ret[valid].mean()
+        if not alphas:
+            return {}
+        top2 = pd.Series(alphas).sort_values(ascending=False).head(2)
+        return {sym: 0.5 for sym in top2.index}
+
     def run(
         self,
         bars_by_symbol: Dict[str, pd.DataFrame],
@@ -48,35 +75,8 @@ class CAPMAlphaRankingStrategy(BaselineStrategy):
         if not bars_subset:
             return []
 
-        def weight_fn(history: DailyHistory, cur_date, day_index):
-            window = available_window(history, _LOOKBACK_DAYS)
-            if window < _MIN_HISTORY:
-                return {}
-            close = history.close.iloc[-window:]
-            returns = close.pct_change().dropna(how="all")
-            if returns.shape[0] < _MIN_HISTORY - 1:
-                return {}
-            mkt_ret = returns.mean(axis=1)
-            if mkt_ret.std() == 0:
-                return {}
-            x_c = mkt_ret - mkt_ret.mean()
-            var_x = (x_c ** 2).sum()
-
-            alphas: Dict[str, float] = {}
-            for sym in returns.columns:
-                ys = returns[sym]
-                valid = ys.notna() & mkt_ret.notna()
-                if valid.sum() < _MIN_HISTORY - 1:
-                    continue
-                beta = (x_c[valid] * (ys[valid] - ys[valid].mean())).sum() / var_x
-                alphas[sym] = ys[valid].mean() - beta * mkt_ret[valid].mean()
-            if not alphas:
-                return {}
-            top2 = pd.Series(alphas).sort_values(ascending=False).head(2)
-            return {sym: 0.5 for sym in top2.index}
-
         curve, n_trades = run_daily_signal_strategy(
-            bars_subset, start_date, end_date, initial_capital, weight_fn,
+            bars_subset, start_date, end_date, initial_capital, self._weight_fn,
             rebalance_every_days=_REBALANCE_DAYS,
         )
         self._num_trades = n_trades
@@ -84,3 +84,8 @@ class CAPMAlphaRankingStrategy(BaselineStrategy):
 
     def num_trades(self) -> int:
         return getattr(self, "_num_trades", 0)
+
+    def decide(self, history: DailyHistory) -> Dict[str, float]:
+        """Live/paper-trading entrypoint: today's target weights from ALL
+        available history."""
+        return decide_live(self._weight_fn, history)

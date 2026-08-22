@@ -31,7 +31,15 @@ from dashboard.backend.infrastructure.llm.validator import DJIA_30
 
 from .base import BaselineStrategy
 from ._indicators import ema, macd, rsi
-from ._signal_engine import DailyHistory, available_window, make_entry_exit_weight_fn, run_daily_signal_strategy
+from ._signal_engine import (
+    DailyHistory,
+    available_window,
+    decide_live,
+    load_strategy_state,
+    make_entry_exit_weight_fn,
+    run_daily_signal_strategy,
+    save_strategy_state,
+)
 
 _MAX_POSITIONS = 8
 _MIN_HISTORY = 25
@@ -54,6 +62,32 @@ class TrendRiderStrategy(BaselineStrategy):
         symbols = self.config.get("symbols")
         return list(symbols) if symbols else list(DJIA_30)
 
+    def _entry(self, history: DailyHistory, sym: str) -> bool:
+        close = history.close[sym].dropna()
+        if len(close) < _MIN_HISTORY + 1:
+            return False
+        c, ema10, ema50, sma200, hist_line, rsi14 = _series(history, sym)
+        golden_cross = (
+            ema10.iloc[-1, 0] > ema50.iloc[-1, 0] and ema10.iloc[-2, 0] <= ema50.iloc[-2, 0]
+        )
+        rsi_bounce = (
+            rsi14.iloc[-2, 0] < 30 and rsi14.iloc[-1, 0] >= 30 and c.iloc[-1, 0] > sma200.iloc[-1, 0]
+        )
+        macd_cross = hist_line.iloc[-1, 0] > 0 and hist_line.iloc[-2, 0] <= 0
+        return bool(golden_cross or rsi_bounce or macd_cross)
+
+    def _exit(self, history: DailyHistory, sym: str) -> bool:
+        close = history.close[sym].dropna()
+        if len(close) < _MIN_HISTORY + 1:
+            return False
+        c, ema10, ema50, sma200, _, rsi14 = _series(history, sym)
+        bearish_cross = ema10.iloc[-1, 0] < ema50.iloc[-1, 0]
+        return bool(
+            rsi14.iloc[-1, 0] > 78
+            or bearish_cross
+            or c.iloc[-1, 0] < sma200.iloc[-1, 0] * 0.99
+        )
+
     def run(
         self,
         bars_by_symbol: Dict[str, pd.DataFrame],
@@ -66,33 +100,7 @@ class TrendRiderStrategy(BaselineStrategy):
         if not bars_subset:
             return []
 
-        def entry(history: DailyHistory, sym: str) -> bool:
-            close = history.close[sym].dropna()
-            if len(close) < _MIN_HISTORY + 1:
-                return False
-            c, ema10, ema50, sma200, hist_line, rsi14 = _series(history, sym)
-            golden_cross = (
-                ema10.iloc[-1, 0] > ema50.iloc[-1, 0] and ema10.iloc[-2, 0] <= ema50.iloc[-2, 0]
-            )
-            rsi_bounce = (
-                rsi14.iloc[-2, 0] < 30 and rsi14.iloc[-1, 0] >= 30 and c.iloc[-1, 0] > sma200.iloc[-1, 0]
-            )
-            macd_cross = hist_line.iloc[-1, 0] > 0 and hist_line.iloc[-2, 0] <= 0
-            return bool(golden_cross or rsi_bounce or macd_cross)
-
-        def exit_(history: DailyHistory, sym: str) -> bool:
-            close = history.close[sym].dropna()
-            if len(close) < _MIN_HISTORY + 1:
-                return False
-            c, ema10, ema50, sma200, _, rsi14 = _series(history, sym)
-            bearish_cross = ema10.iloc[-1, 0] < ema50.iloc[-1, 0]
-            return bool(
-                rsi14.iloc[-1, 0] > 78
-                or bearish_cross
-                or c.iloc[-1, 0] < sma200.iloc[-1, 0] * 0.99
-            )
-
-        weight_fn = make_entry_exit_weight_fn(entry, exit_, symbols, _MAX_POSITIONS, _MIN_HISTORY)
+        weight_fn = make_entry_exit_weight_fn(self._entry, self._exit, symbols, _MAX_POSITIONS, _MIN_HISTORY)
         curve, n_trades = run_daily_signal_strategy(
             bars_subset, start_date, end_date, initial_capital, weight_fn,
             rebalance_every_days=1,
@@ -102,3 +110,15 @@ class TrendRiderStrategy(BaselineStrategy):
 
     def num_trades(self) -> int:
         return getattr(self, "_num_trades", 0)
+
+    def decide(self, history: DailyHistory) -> Dict[str, float]:
+        """Live/paper-trading entrypoint (see bandtastic.py for the pattern)."""
+        symbols = self.required_symbols()
+        state = load_strategy_state(self.key)
+        weight_fn = make_entry_exit_weight_fn(
+            self._entry, self._exit, symbols, _MAX_POSITIONS, _MIN_HISTORY,
+            initial_held=state.get("held"),
+        )
+        weights = decide_live(weight_fn, history)
+        save_strategy_state(self.key, {"held": sorted(weight_fn.held)})
+        return weights

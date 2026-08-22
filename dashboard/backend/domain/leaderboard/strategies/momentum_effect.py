@@ -22,7 +22,7 @@ import pandas as pd
 from dashboard.backend.infrastructure.llm.validator import DJIA_30
 
 from .base import BaselineStrategy
-from ._signal_engine import DailyHistory, run_daily_signal_strategy
+from ._signal_engine import DailyHistory, decide_live, run_daily_signal_strategy
 
 _TOP_N = 10
 _DESIRED_LOOKBACK_DAYS = 252
@@ -37,6 +37,18 @@ class MomentumEffectStrategy(BaselineStrategy):
         symbols = self.config.get("symbols")
         return list(symbols) if symbols else list(DJIA_30)
 
+    def _weight_fn(self, history: DailyHistory, cur_date, day_index) -> Dict[str, float]:
+        n = len(history)
+        if n < _MIN_HISTORY:
+            return {}
+        lookback = min(_DESIRED_LOOKBACK_DAYS, n - 1)
+        close = history.close
+        trailing_return = close.iloc[-1] / close.iloc[-1 - lookback] - 1
+        top = trailing_return.dropna().sort_values(ascending=False).head(_TOP_N)
+        if top.empty:
+            return {}
+        return {sym: 1.0 / len(top) for sym in top.index}
+
     def run(
         self,
         bars_by_symbol: Dict[str, pd.DataFrame],
@@ -49,20 +61,8 @@ class MomentumEffectStrategy(BaselineStrategy):
         if not bars_subset:
             return []
 
-        def weight_fn(history: DailyHistory, cur_date, day_index):
-            n = len(history)
-            if n < _MIN_HISTORY:
-                return {}
-            lookback = min(_DESIRED_LOOKBACK_DAYS, n - 1)
-            close = history.close
-            trailing_return = close.iloc[-1] / close.iloc[-1 - lookback] - 1
-            top = trailing_return.dropna().sort_values(ascending=False).head(_TOP_N)
-            if top.empty:
-                return {}
-            return {sym: 1.0 / len(top) for sym in top.index}
-
         curve, n_trades = run_daily_signal_strategy(
-            bars_subset, start_date, end_date, initial_capital, weight_fn,
+            bars_subset, start_date, end_date, initial_capital, self._weight_fn,
             rebalance_every_days=_REBALANCE_DAYS,
         )
         self._num_trades = n_trades
@@ -70,3 +70,8 @@ class MomentumEffectStrategy(BaselineStrategy):
 
     def num_trades(self) -> int:
         return getattr(self, "_num_trades", 0)
+
+    def decide(self, history: DailyHistory) -> Dict[str, float]:
+        """Live/paper-trading entrypoint: today's target weights from ALL
+        available history."""
+        return decide_live(self._weight_fn, history)

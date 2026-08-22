@@ -9,12 +9,13 @@ off the index. For a plain ticker, the Alpaca bars are normalized instead.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
 from .base import BaselineStrategy
 from ._common import build_price_cache, market_timestamps
+from ._signal_engine import DailyHistory, load_strategy_state, save_strategy_state
 from ._yahoo import fetch_index_hourly
 
 
@@ -82,3 +83,22 @@ class MarketIndexStrategy(BaselineStrategy):
             return []
         levels = [(ts, prices[ts]) for ts in timestamps]
         return self._curve_from_levels(levels, initial_capital)
+
+    def decide(self, history: DailyHistory) -> Optional[Dict[str, float]]:
+        """Live/paper-trading entrypoint. A ``^``-prefixed symbol (e.g. ^DJI,
+        ^GSPC) is a synthetic index level, not a tradeable security -- there
+        is nothing to buy, so this returns ``None`` for those configs rather
+        than inventing an ETF substitute the config didn't ask for. For a
+        real tradeable ticker (e.g. DIA, SPY), behaves like buy & hold: a
+        one-time 100% allocation, then ``None`` (no further rebalancing) on
+        every subsequent call."""
+        symbol = self._configured_symbol()
+        if not symbol or symbol.startswith("^"):
+            return None
+        state = load_strategy_state(self.key)
+        if state.get("established"):
+            return None
+        if symbol not in history.close.columns or pd.isna(history.close[symbol].iloc[-1]):
+            return None
+        save_strategy_state(self.key, {"established": True})
+        return {symbol: 1.0}

@@ -15,6 +15,7 @@ from dashboard.backend.baseline_generator import BaselineGenerator
 from dashboard.backend.infrastructure.llm.validator import DJIA_30
 
 from .base import BaselineStrategy
+from ._signal_engine import DailyHistory
 
 
 class EqualWeightIndexStrategy(BaselineStrategy):
@@ -35,3 +36,13 @@ class EqualWeightIndexStrategy(BaselineStrategy):
         return BaselineGenerator().generate_index_baseline(
             bars_by_symbol, start_date, end_date, initial_capital, symbols
         )
+
+    def decide(self, history: DailyHistory) -> Dict[str, float]:
+        """Live/paper-trading entrypoint. Continuously-rebalanced means every
+        call returns a fresh equal-weight target (unlike buy & hold's
+        one-time allocation) -- no persisted state needed."""
+        symbols = self.required_symbols()
+        valid = [s for s in symbols if s in history.close.columns and pd.notna(history.close[s].iloc[-1])]
+        if not valid:
+            return {}
+        return {s: 1.0 / len(valid) for s in valid}
