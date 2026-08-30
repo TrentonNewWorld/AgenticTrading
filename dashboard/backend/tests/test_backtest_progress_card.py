@@ -59,7 +59,8 @@ _LIVE_PROGRESS = (
 
 def _node(script: str) -> object:
     result = subprocess.run(
-        ["node", "-e", script], capture_output=True, text=True, timeout=30
+        ["node", "-e", script], capture_output=True, text=True,
+        encoding="utf-8", timeout=30,
     )
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)

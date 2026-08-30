@@ -64,8 +64,11 @@ except (ImportError, AttributeError):
     # ``HAS_ANTHROPIC`` before using the client.
     Anthropic = None
     HAS_ANTHROPIC = False
-    print("⚠️  Anthropic SDK not installed. Fallback to rule-based trading.")
-    print("   To enable LLM: pip install anthropic")
+    # ASCII only: this print runs at import time, and a stdout that cannot
+    # encode it (e.g. a cp1252 Windows console) would turn the warning itself
+    # into the import crash this handler exists to prevent.
+    print("WARNING: Anthropic SDK not installed. Fallback to rule-based trading.")
+    print("         To enable LLM: pip install anthropic")
 
 # Default model name (model selection). Re-exported by the legacy script.
 LLM_MODEL_NAME = anthropic_native.DEFAULT_MODEL

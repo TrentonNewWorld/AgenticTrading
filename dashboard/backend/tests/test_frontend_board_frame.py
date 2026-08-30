@@ -94,7 +94,8 @@ function makeLabels(n, name, value) {
         ]
     )
     proc = subprocess.run(
-        [node, "-e", harness], capture_output=True, text=True, timeout=30
+        [node, "-e", harness], capture_output=True, text=True,
+        encoding="utf-8", timeout=30,
     )
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
@@ -134,7 +135,8 @@ function makeChart(datasets, metas) {
         ]
     )
     proc = subprocess.run(
-        [node, "-e", harness], capture_output=True, text=True, timeout=30
+        [node, "-e", harness], capture_output=True, text=True,
+        encoding="utf-8", timeout=30,
     )
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
@@ -193,7 +195,8 @@ function makeCtx() {
         ]
     )
     proc = subprocess.run(
-        [node, "-e", harness], capture_output=True, text=True, timeout=30
+        [node, "-e", harness], capture_output=True, text=True,
+        encoding="utf-8", timeout=30,
     )
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)
@@ -690,7 +693,8 @@ def _run_stack_node(script: str):
         [_board_constants(), _extract_function("boardStackLabels"), script]
     )
     proc = subprocess.run(
-        [node, "-e", harness], capture_output=True, text=True, timeout=30
+        [node, "-e", harness], capture_output=True, text=True,
+        encoding="utf-8", timeout=30,
     )
     assert proc.returncode == 0, proc.stderr
     return json.loads(proc.stdout)

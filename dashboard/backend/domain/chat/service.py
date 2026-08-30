@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 from anthropic import APIError, AsyncAnthropic
@@ -13,7 +14,14 @@ from dashboard.backend.infrastructure.llm.backtest_harness import (
 )
 
 
-load_dotenv()
+# The canonical env file is dashboard/.env — the same file app.py loads. A bare
+# load_dotenv() walks UP from this module and can land on a repo-root or
+# ancestor .env instead; under pytest that leaked the developer's real
+# ANTHROPIC_API_KEY into os.environ at collection time, flipping every
+# use_llm backtest in the suite into live-key LLM mode.
+_env_path = Path(__file__).resolve().parents[3] / ".env"
+if _env_path.exists():
+    load_dotenv(_env_path)
 
 
 # CommonStack is the "model we host": one key reaches frontier models behind an

@@ -182,6 +182,31 @@ def pytest_configure(config):
     )
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _strip_llm_provider_keys():
+    """Known-unset baseline for LLM provider keys, applied AFTER collection.
+
+    An import-time ``os.environ.pop`` (like the strips above) is not enough for
+    these: importing ``app`` — or any module that runs ``load_dotenv`` — during
+    test collection re-adds the developer's real keys from ``dashboard/.env``
+    *after* this conftest has run. ``make_llm_client()`` then finds a live key
+    and every ``use_llm=True`` backtest in the suite silently runs in LLM mode
+    (seen as test_ifind_engine_resolves_csi300_sample20_and_records_provenance
+    failing ``use_llm is False`` in full-suite order only). A session-scoped
+    autouse fixture runs at first-test setup, after every collection import.
+    Tests that need a key set an explicit fake via monkeypatch.
+    """
+    for _key_var in (
+        "ANTHROPIC_API_KEY",
+        "COMMONSTACK_API_KEY",
+        "OPENROUTER_API_KEY",
+        "OPENAI_API_KEY",
+        "DEEPSEEK_API_KEY",
+    ):
+        os.environ.pop(_key_var, None)
+    yield
+
+
 @pytest.fixture(autouse=True)
 def _clear_ifind_access_token_cache():
     """Keep the process-wide iFinD token cache from leaking between tests.

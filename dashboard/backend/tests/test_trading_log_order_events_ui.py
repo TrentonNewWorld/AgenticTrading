@@ -42,6 +42,9 @@ def _run_node(lines):
         ["node", "-e", "\n".join(lines)],
         capture_output=True,
         text=True,
+        # node writes UTF-8; without this, Windows decodes with the locale
+        # codepage and every non-ASCII glyph in the markup garbles in memory.
+        encoding="utf-8",
         timeout=30,
     )
     assert result.returncode == 0, result.stderr
