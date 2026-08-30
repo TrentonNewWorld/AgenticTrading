@@ -364,11 +364,6 @@ def test_decision_source_fallback_label_says_ai_not_llm():
     assert "'LLM / Rule-based'" not in _JS
 
 
-def test_algo_submit_status_says_ai_not_llm():
-    assert "Submitting backtest — real market data + AI…" in _JS
-    assert "Submitting real backtest (Alpaca + LLM)…" not in _JS
-
-
 # --- Final-review fix wave (2026-08-05) -------------------------------------
 
 

@@ -7,9 +7,7 @@ behave exactly as before. No real Alpaca or Anthropic calls are made.
 
 import ast
 import os
-import subprocess
 import sys
-import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -432,30 +430,6 @@ def test_baselines_empty_data(monkeypatch):
     assert bt.run_djia_baseline() == (None, [])
 
 
-# ---------------------------------------------------------------------------
-# Custom-algo subclass compatibility (verified in its run context)
-# ---------------------------------------------------------------------------
-
-def test_custom_algo_subclasses_canonical_engine():
-    code = (
-        "import backtest_custom_algo as bca\n"
-        "from dashboard.backend.domain.backtesting.engine import HourlyBacktester\n"
-        "assert issubclass(bca.CustomAlgoBacktester, HourlyBacktester), 'not a subclass'\n"
-        "assert HourlyBacktester in bca.CustomAlgoBacktester.__mro__\n"
-        "print('OK')\n"
-    )
-    scripts_dir = _REPO_ROOT / "dashboard" / "scripts"
-    with tempfile.TemporaryDirectory(prefix="atl_engine_") as tmp:
-        env = {**os.environ, "DATABASE_PATH": os.path.join(tmp, "t.db")}
-        proc = subprocess.run(
-            [sys.executable, "-c", code],
-            cwd=str(scripts_dir),
-            env=env,
-            capture_output=True,
-            text=True,
-        )
-    assert proc.returncode == 0, f"subprocess failed:\n{proc.stderr}"
-    assert "OK" in proc.stdout
 
 
 def _hosted_backtester(runner, *, symbols=("AAPL", "MSFT", "JPM")):

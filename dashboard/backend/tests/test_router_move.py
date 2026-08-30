@@ -1,6 +1,6 @@
 """Phase 3A3 / 3B3 / 3C2 — HTTP router move verification.
 
-Confirms the agent, run, environment, external-backtest, and algo HTTP routers
+Confirms the agent, run, environment, and external-backtest HTTP routers
 live in the canonical ``dashboard.backend.api.routers`` package, with identical
 route registration and no duplicate routes. (The legacy ``api/<name>.py`` shims
 have been removed.)
@@ -18,7 +18,6 @@ from dashboard.backend.api import protocol_auth
 from dashboard.backend.api import router as router_module
 from dashboard.backend.api.routers import agent_versions as versions_canon
 from dashboard.backend.api.routers import agents as agents_canon
-from dashboard.backend.api.routers import algo as algo_canon
 from dashboard.backend.api.routers import environments as environments_canon
 from dashboard.backend.api.routers import external_backtest as external_backtest_canon
 from dashboard.backend.api.routers import leaderboard as leaderboard_canon
@@ -101,15 +100,6 @@ EXPECTED_EXTERNAL_BACKTEST_ROUTES = {
     ("GET", "/v1/backtest/{backtest_id}/decisions", "api_backtest_decisions"),
     ("GET", "/v1/backtest/{backtest_id}/steps/current", "api_get_current_step"),
     ("POST", "/v1/backtest/{backtest_id}/steps/current/decisions", "api_submit_decisions"),
-}
-
-EXPECTED_ALGO_ROUTES = {
-    ("GET", "/algo/setup", "algo_setup_status"),
-    ("GET", "/algo/defaults", "algo_defaults"),
-    ("POST", "/algo/chat", "algo_chat"),
-    ("POST", "/algo/execute", "algo_execute"),
-    ("GET", "/algo/status", "algo_execution_status"),
-    ("GET", "/algo/submissions", "list_submissions"),
 }
 
 EXPECTED_LEADERBOARD_ROUTES = {
@@ -204,8 +194,6 @@ def test_router_prefixes_and_tags_unchanged():
     assert environments_canon.router.tags == ["environments"]
     assert external_backtest_canon.router.prefix == "/v1/backtest"
     assert external_backtest_canon.router.tags == ["external-backtest"]
-    assert algo_canon.router.prefix == "/algo"
-    assert algo_canon.router.tags == ["algo"]
     assert leaderboard_canon.router.prefix == "/v1/leaderboard"
     assert leaderboard_canon.router.tags == ["leaderboard"]
 
@@ -244,27 +232,20 @@ def test_canonical_environment_router_imports_domain_module():
 
 
 # ---------------------------------------------------------------------------
-# External-backtest / Algo router move (Phase 3C2)
+# External-backtest router move (Phase 3C2)
 # ---------------------------------------------------------------------------
 
 def test_backtesting_canonical_modules_import():
     assert external_backtest_canon.router.__class__.__name__ == "APIRouter"
-    assert algo_canon.router.__class__.__name__ == "APIRouter"
 
 
 def test_external_backtest_router_route_contract_unchanged():
     assert _route_triples(external_backtest_canon.router) == EXPECTED_EXTERNAL_BACKTEST_ROUTES
 
 
-def test_algo_router_route_contract_unchanged():
-    assert _route_triples(algo_canon.router) == EXPECTED_ALGO_ROUTES
-
-
 def test_canonical_backtesting_routers_use_canonical_services():
     ext_modules = _all_imported_modules(external_backtest_canon.__file__)
     assert "dashboard.backend.domain.backtesting.external_run_service" in ext_modules
-    algo_modules = _all_imported_modules(algo_canon.__file__)
-    assert "dashboard.backend.domain.backtesting.algo_service" in algo_modules
 
 
 # ---------------------------------------------------------------------------
@@ -386,7 +367,7 @@ def test_each_endpoint_registered_exactly_once_in_app():
     all_routes = (
         EXPECTED_AGENT_ROUTES | EXPECTED_VERSION_ROUTES
         | EXPECTED_RUN_ROUTES | EXPECTED_ENV_ROUTES
-        | EXPECTED_EXTERNAL_BACKTEST_ROUTES | EXPECTED_ALGO_ROUTES
+        | EXPECTED_EXTERNAL_BACKTEST_ROUTES
         | EXPECTED_LEADERBOARD_ROUTES
     )
     for method, path, _ in all_routes:
@@ -413,7 +394,6 @@ def test_router_py_uses_canonical_imports():
     assert "dashboard.backend.api.routers.runs" in modules
     assert "dashboard.backend.api.routers.environments" in modules
     assert "dashboard.backend.api.routers.external_backtest" in modules
-    assert "dashboard.backend.api.routers.algo" in modules
     assert "dashboard.backend.api.routers.leaderboard" in modules
     # Must not import the routers from the legacy shim locations.
     assert "dashboard.backend.api.agents" not in modules
@@ -421,7 +401,6 @@ def test_router_py_uses_canonical_imports():
     assert "dashboard.backend.api.runs" not in modules
     assert "dashboard.backend.api.environments" not in modules
     assert "dashboard.backend.api.external_backtest" not in modules
-    assert "dashboard.backend.api.algo" not in modules
     assert "dashboard.backend.api.leaderboard" not in modules
 
 
@@ -436,7 +415,6 @@ def test_no_circular_imports():
         "import dashboard.backend.api.routers.runs\n"
         "import dashboard.backend.api.routers.environments\n"
         "import dashboard.backend.api.routers.external_backtest\n"
-        "import dashboard.backend.api.routers.algo\n"
         "import dashboard.backend.api.routers.leaderboard\n"
         "import dashboard.backend.api.router\n"
         "import dashboard.backend.api.protocol_auth\n"

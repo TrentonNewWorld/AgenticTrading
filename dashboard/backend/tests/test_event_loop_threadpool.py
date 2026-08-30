@@ -38,11 +38,6 @@ BLOCKING_IO_ROUTER_MODULES = {
     "dashboard.backend.api.routers.discord",
     "dashboard.backend.api.routers.external_backtest",
     "dashboard.backend.api.v2.leaderboard",
-    # algo/* is the most expensive offender of the lot: /api/algo/chat calls
-    # anthropic's synchronous client.messages.create(), which parks the loop for
-    # as long as the model takes to answer. In the threadpool it costs one
-    # worker thread instead of the whole server.
-    "dashboard.backend.api.routers.algo",
 }
 
 # Handlers in modules that legitimately mix awaited and blocking work, so the

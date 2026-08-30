@@ -17,7 +17,6 @@ from dashboard.backend.app import app
 from dashboard.backend.tests.auth_cookies_helpers import _cookie_session_token
 from dashboard.backend.api.routers import market as market_mod
 from dashboard.backend.api.routers import paper_trading as paper_mod
-from dashboard.backend.domain.backtesting import algo_service
 
 client = TestClient(app)
 
@@ -77,23 +76,6 @@ def test_paper_start_session_error_body_hides_exception_detail(monkeypatch):
         ).json()
     assert data["success"] is False
     assert "TRACE-MARKER" not in str(data)
-
-
-def test_llm_chat_fallback_reply_hides_exception_detail(monkeypatch):
-    """``process_chat`` appended ``str(exc)`` to the user-visible reply."""
-
-    class _Messages:
-        def create(self, **kwargs):
-            raise RuntimeError(_MARKER)
-
-    class _Client:
-        messages = _Messages()
-
-    monkeypatch.setattr(algo_service, "_get_anthropic_client", lambda: _Client())
-    result = algo_service.process_chat("use momentum", None)
-    assert "TRACE-MARKER" not in result["reply"]
-    # The degraded mode must still be communicated, just without internals.
-    assert "fallback" in result["reply"].lower()
 
 
 def test_routers_never_return_raw_exception_text():

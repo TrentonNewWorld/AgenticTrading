@@ -44,8 +44,8 @@ from dashboard.backend.infrastructure.llm.validator import DJIA_30
 # Optional: LLM integration. Phase 2C2 moved the Anthropic SDK import, the
 # default model name, and the LLM request/parse workflow into the canonical
 # harness at dashboard.backend.infrastructure.llm.backtest_harness. These symbols
-# are re-exported here so existing consumers (engines/strategies/llm_agent.py,
-# backtest_custom_algo.py, and bha.* callers) keep working unchanged.
+# are re-exported here so existing consumers (engines/strategies/llm_agent.py
+# and bha.* callers) keep working unchanged.
 #
 # Bound by assignment from a module alias rather than a bare `from ... import X`
 # so each re-export is explicit and static analysis sees it as used -- the
@@ -161,9 +161,8 @@ TIMEFRAME = "1h"  # Hourly
 
 # `PortfolioManager` now lives in
 # dashboard.backend.domain.backtesting.portfolio_manager and is re-exported
-# here so the legacy public path (bha.PortfolioManager) and existing
-# subclasses (e.g. backtest_custom_algo) keep working unchanged. Explicit
-# assignment, as above.
+# here so the legacy public path (bha.PortfolioManager) and any existing
+# subclasses keep working unchanged. Explicit assignment, as above.
 import dashboard.backend.domain.backtesting.portfolio_manager as _portfolio_manager
 
 PortfolioManager = _portfolio_manager.PortfolioManager
@@ -175,8 +174,8 @@ PortfolioManager = _portfolio_manager.PortfolioManager
 
 # `HourlyBacktester` now lives in
 # dashboard.backend.domain.backtesting.engine and is re-exported here so the
-# legacy public path (bha.HourlyBacktester), main() below, and existing
-# subclasses (e.g. backtest_custom_algo) keep working unchanged.
+# legacy public path (bha.HourlyBacktester), main() below, and any existing
+# subclasses keep working unchanged.
 from dashboard.backend.domain.backtesting.engine import HourlyBacktester
 
 

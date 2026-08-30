@@ -40,13 +40,13 @@ dashboard/
 │   │   ├── dependencies.py     # shared auth/ownership FastAPI deps
 │   │   ├── auth.py, protocol_auth.py, health.py
 │   │   └── routers/            # agents, agent_versions, runs, environments,
-│   │                           #   external_backtest, algo, leaderboard, backtests,
+│   │                           #   external_backtest, leaderboard, backtests,
 │   │                           #   paper_trading, market, config, admin, health
 │   ├── domain/
 │   │   ├── agents/             # repository, version_repository, service,
 │   │   │                       #   credential_store, runtime (hosted-runtime dispatch)
 │   │   ├── backtesting/        # engine, portfolio_manager, features, metrics,
-│   │   │                       #   constants, algo_service, external_run_service,
+│   │   │                       #   constants, external_run_service,
 │   │   │                       #   reference_agent, baselines/paper.py
 │   │   ├── chat/               # service (agent chat; import-safe, lazy client)
 │   │   ├── leaderboard/        # service, baselines, strategies/*
@@ -139,7 +139,6 @@ dashboard/
 │   │       ├── runs.py
 │   │       ├── backtests.py           # merges external_backtest + legacy /backtest routes from app.py
 │   │       ├── paper_trading.py       # paper account/positions/trades/baselines (lifted from app.py)
-│   │       ├── algo.py
 │   │       ├── leaderboard.py
 │   │       └── environments.py
 │   │
@@ -164,7 +163,6 @@ dashboard/
 │   │   │   ├── metrics.py             # sharpe / max_dd
 │   │   │   ├── serialization.py       # result-dict assembly
 │   │   │   ├── external_run_service.py# external-agent loop (was external_backtest_service)
-│   │   │   ├── algo_service.py        # custom-algo orchestration
 │   │   │   └── baselines/             # generator.py · paper.py · queries.py · leaderboard.py
 │   │   ├── trading/
 │   │   │   ├── portfolio.py           # portfolio state/valuation (from PortfolioManager)
@@ -185,7 +183,6 @@ dashboard/
 │   │   │   └── alpaca_paper.py        # (was paper_trading.py)
 │   │   └── llm/
 │   │       ├── validator.py           # (was llm_validator.py validation core)
-│   │       ├── prompts.py             # (was algo_prompt.py + prompt builders)
 │   │       ├── token_cost.py
 │   │       ├── backtest_harness.py    # make_trading_decision_with_llm + Anthropic wiring
 │   │       └── decision_parsing.py    # fix_json_formatting + parsing
@@ -199,7 +196,6 @@ dashboard/
 ├── scripts/
 │   ├── backtest/
 │   │   ├── run_hourly_agent.py        # thin CLI -> backend.domain.backtesting
-│   │   ├── run_custom_algo.py         # thin CLI (subprocess target)
 │   │   └── legacy_backtest.py         # (archived backtest.py + backtest_engine.py) if retained
 │   ├── operations/
 │   │   └── deploy_leaderboard_model.py

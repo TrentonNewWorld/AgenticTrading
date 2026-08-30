@@ -270,6 +270,11 @@ _DELETED_SHIMS = [
     "dashboard.backend.services",
     "dashboard.backend.services.agent_chat_service",
     "dashboard.backend.services.leaderboard_service",
+    # My Trading Algo feature removed 2026-08: the frontend view was orphaned
+    # dead code and no external consumer (SDK, Discord bot) called /api/algo/*.
+    "dashboard.backend.api.routers.algo",
+    "dashboard.backend.domain.backtesting.algo_service",
+    "dashboard.backend.infrastructure.llm.prompts",
 ]
 
 

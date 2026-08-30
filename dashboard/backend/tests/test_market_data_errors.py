@@ -59,14 +59,13 @@ def test_engine_load_data_empty_raises_not_exits():
 
 
 def test_cli_entrypoints_translate_the_error_to_an_exit_code():
-    """The CLI boundary is where process exit belongs: both backtest scripts'
-    __main__ blocks must catch MarketDataUnavailableError and sys.exit(1)
+    """The CLI boundary is where process exit belongs: the backtest script's
+    __main__ block must catch MarketDataUnavailableError and sys.exit(1)
     (source-level guard, same style as tests/integrations/)."""
     from pathlib import Path
 
     scripts_dir = Path(__file__).resolve().parents[2] / "scripts"
-    for name in ("backtest_hourly_agent.py", "backtest_custom_algo.py"):
-        source = (scripts_dir / name).read_text(encoding="utf-8")
-        assert "MarketDataUnavailableError" in source, (
-            f"{name} must translate MarketDataUnavailableError to an exit code"
-        )
+    source = (scripts_dir / "backtest_hourly_agent.py").read_text(encoding="utf-8")
+    assert "MarketDataUnavailableError" in source, (
+        "backtest_hourly_agent.py must translate MarketDataUnavailableError to an exit code"
+    )

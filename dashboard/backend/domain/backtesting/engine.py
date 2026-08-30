@@ -4,8 +4,8 @@ Moved verbatim (Phase 2C5) from ``dashboard/scripts/backtest_hourly_agent.py``.
 ``HourlyBacktester`` runs the hourly agent backtest plus the configured buy-and-hold
 and optional index baselines, persisting results to the database. The class body is functionally
 identical to the legacy implementation; only the imports are canonical. The
-legacy script re-exports this exact class so ``bha.HourlyBacktester`` and existing
-subclasses (e.g. ``backtest_custom_algo``) keep working unchanged.
+legacy script re-exports this exact class so ``bha.HourlyBacktester`` and any
+existing subclasses keep working unchanged.
 
 This module is backend domain code: it must NOT import dashboard scripts,
 ``backtest_hourly_agent``, FastAPI routers, or the CLI bootstrap helpers.
@@ -546,7 +546,7 @@ class HourlyBacktester:
         )
         if not self.all_data:
             # Raise, don't sys.exit(1): this runs inside server threads
-            # (external runs, algo service) where SystemExit evades
+            # (external runs) where SystemExit evades
             # `except Exception` and strands the run (the B0 class).
             print("❌ No data fetched.")
             raise MarketDataUnavailableError(

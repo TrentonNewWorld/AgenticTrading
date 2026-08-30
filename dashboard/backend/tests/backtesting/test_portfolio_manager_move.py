@@ -509,7 +509,7 @@ def test_safe_trading_ranking_survives_nan_indicator_bars(monkeypatch):
 
 def test_safe_trading_threads_custom_strategy_prompt(monkeypatch):
     """A custom strategy_prompt is threaded through to create_prompt via
-    custom_prompt= (the 'My Trading Algo' / strategy-share path)."""
+    custom_prompt= (the strategy-share path)."""
     from dashboard.backend.domain.backtesting import portfolio_manager as pm_mod
     captured = {}
 
