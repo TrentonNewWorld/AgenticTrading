@@ -10,12 +10,21 @@
   </a>
 </p>
 
-**NewWorldTrading is a platform for LLM-powered trading agents.**
-Turn trading ideas into traceable experiments: prototype agents, run backtests and paper-trading simulations, inspect reasoning and decision logs, benchmark against market baselines, and — when you're ready — trade live under per-order risk caps.
+<p align="center">
+  <a href="https://github.com/TrentonNewWorld/NewWorldTrading/releases/latest"><img src="https://img.shields.io/github/v/release/TrentonNewWorld/NewWorldTrading?style=flat-square&color=22d3ee" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-OpenMDW--1.0-4ade80?style=flat-square" alt="License"></a>
+  <img src="https://img.shields.io/badge/python-3.11%2B-3776ab?style=flat-square&logo=python&logoColor=white" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Docker-8ea0b8?style=flat-square" alt="Windows | Linux | Docker">
+  <a href="https://github.com/TrentonNewWorld/NewWorldTrading/stargazers"><img src="https://img.shields.io/github/stars/TrentonNewWorld/NewWorldTrading?style=flat-square&color=fbbf24" alt="GitHub stars"></a>
+</p>
+
+**NewWorldTrading is a free, open-source, self-hosted trading bot and algorithmic-trading platform** — a full trading lab for stocks, options, futures, forex, crypto, and prediction markets that runs entirely on your own machine. Write trading strategies in Python or build AI trading agents from plain-English instructions, backtest them instantly on real market data, paper-trade them with simulated money, and only ever go live behind a double-gated switch with per-order risk caps.
 
 <div align="center">
   <img src="./docs/images/screenshots/home.png" alt="NewWorldTrading home screen" width="800">
 </div>
+
+**Jump to:** [Download](#-download) · [How It Works](#how-it-works) · [Screenshots](#screenshots) · [Features](#key-features) · [Setup Guide](#full-setup-guide-windows--linux) · [FAQ](#faq) · [License](#license)
 
 ## 📥 Download
 
@@ -206,6 +215,26 @@ verify behavior for at least several sessions before arming anything live.
 This repository ships with **empty strategy catalogs** — a blank-slate platform.
 Write your own strategies in the built-in editor (see the Manual page in-app),
 build an AI agent from a plain-English instruction, or upload strategy files.
+
+## FAQ
+
+**Is it really free?** Yes. The platform is free and open source. It ships with empty strategy catalogs — write your own strategies in-app for free, or add strategy files from anywhere.
+
+**Do I need to know how to code?** No. You can build an AI trading agent from a plain-English instruction on the My Agents page. If you *can* write a little Python, the built-in editor gives you full control with a single `decide()` function.
+
+**Which brokers does it work with?** Alpaca (stocks — free paper-trading keys are all you need to start), Robinhood via OAuth, Kalshi and Polymarket for prediction markets, OANDA practice for forex, and Tradovate demo for futures. Paper trading works without funding anything.
+
+**Is my money at risk when I install this?** Not by default. Everything starts in backtests and paper trading with simulated money. Live trading requires connecting a broker, activating a specific strategy for live, AND flipping a master switch — and even then per-order risk caps apply.
+
+**Does it guarantee profits?** No — and be suspicious of anything that says otherwise. Backtested and simulated results do not guarantee future returns. Read [DISCLAIMER.md](DISCLAIMER.md).
+
+**Windows or Linux?** Both, with identical behavior — plus a one-command Docker option. See the [setup guide](#full-setup-guide-windows--linux).
+
+**Where do I get help?** [Join the Discord](https://discord.gg/xyC3MQAWNj) — there's a `/support` bot and a community of people running the same stack.
+
+## Support the project
+
+If this saved you from paying $99/month for a black-box "AI trading bot", **star the repo** ⭐ — it's how other traders find it — and come say hi on [Discord](https://discord.gg/xyC3MQAWNj).
 
 ## License
 
