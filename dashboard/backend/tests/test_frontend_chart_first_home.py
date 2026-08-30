@@ -626,6 +626,8 @@ def test_the_sample_rows_carry_real_entry_ids():
             (_CONFIG / "leaderboard.json").read_text(encoding="utf-8")
         )["strategies"]
     }
+    if not roster:
+        pytest.skip("blank-slate build: leaderboard.json has no strategies configured")
     mock = _const_block(_HOME_JS, "HOME_MOCK_LEADERBOARD")
     ids = re.findall(r"entry_id:\s*'([^']+)'", mock)
     assert len(ids) == mock.count("rank:"), "every sample row needs an entry_id"
@@ -653,6 +655,8 @@ def test_the_charts_baseline_ids_are_on_the_board():
             (_CONFIG / "leaderboard.json").read_text(encoding="utf-8")
         )["strategies"]
     }
+    if not roster:
+        pytest.skip("blank-slate build: leaderboard.json has no strategies configured")
     ids = re.findall(
         r"'([^']+)'", _const_block(_HOME_JS, "HOME_CHART_BASELINE_IDS")
     )

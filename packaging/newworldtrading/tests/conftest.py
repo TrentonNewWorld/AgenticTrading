@@ -8,7 +8,7 @@ import urllib.error
 
 import pytest
 
-import agentictrading.atl_client as atl_client
+import newworldtrading.legacy_client as legacy_client
 
 
 class FakeResponse:
@@ -51,7 +51,7 @@ class FakeHTTP:
 def fake_http(monkeypatch):
     def _install(responder):
         fake = FakeHTTP(responder)
-        monkeypatch.setattr(atl_client.urllib.request, "urlopen", fake.urlopen)
+        monkeypatch.setattr(legacy_client.urllib.request, "urlopen", fake.urlopen)
         return fake
 
     return _install

@@ -514,7 +514,7 @@ def build_export(key: str) -> Dict[str, Any]:
     from dashboard.backend.domain.leaderboard.strategy_overrides import effective_params, schema_for
 
     return {
-        "format": "agentic-trading-lab-strategy-reference-v1",
+        "format": "newworldtrading-strategy-reference-v1",
         "executable": False,
         "name": strat_entry.get("name") or key,
         "description": _description_for(key, strat_entry.get("name") or key, strat_entry)["description"],

@@ -40,7 +40,7 @@ except ImportError:  # pragma: no cover
     def runtime_checkable(cls):  # type: ignore
         return cls
 
-from .atl_client import ATLClient
+from .legacy_client import ATLClient
 from .exceptions import ATLAPIError, ATLConflictError, ATLRunFailedError, ATLTimeoutError
 from .models import Decision, Observation, RunResult
 

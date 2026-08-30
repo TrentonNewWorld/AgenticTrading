@@ -1,4 +1,4 @@
-"""Robinhood Agentic Trading MCP OAuth (PKCE + dynamic client registration)."""
+"""Robinhood trading MCP OAuth (PKCE + dynamic client registration)."""
 
 from __future__ import annotations
 

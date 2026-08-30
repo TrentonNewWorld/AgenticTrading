@@ -78,7 +78,7 @@ _lock = threading.Lock()
 # hold every authenticated agent to its quota while this route ran unbounded
 # beside it.
 #
-# Note this is the shipping SDK's path too (packaging/agentictrading calls
+# Note this is the shipping SDK's path too (packaging/newworldtrading calls
 # POST /api/v1/backtest/start), not only an abuse surface — hence a per-session
 # budget of 5, matching MAX_ACTIVE_RUNS_PER_AGENT, rather than something
 # punitive. It bounds one naive or looping client; keyed on a header the caller

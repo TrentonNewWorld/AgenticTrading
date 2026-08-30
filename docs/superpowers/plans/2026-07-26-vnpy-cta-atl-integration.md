@@ -15,7 +15,7 @@ The local `VnpyCtaAdapter` buffers one bar, calls the strategy through a minimal
 data, positions, fills, and equity.
 
 **Stack:** Python 3.10+, vn.py 4.4.0, `vnpy_ctastrategy` 1.3.0, the ATL
-`agentictrading` SDK, and pytest.
+`newworldtrading` SDK, and pytest.
 
 **Design:**
 `docs/superpowers/specs/2026-07-26-vnpy-cta-atl-integration-design.md`
@@ -102,9 +102,9 @@ Commit: `feat(protocol): expose current OHLCV bars`
 
 **Files:**
 
-- Add `packaging/agentictrading/src/agentictrading/integrations/_vnpy_cta_core.py`.
-- Add `packaging/agentictrading/src/agentictrading/integrations/vnpy_cta.py`.
-- Extend `packaging/agentictrading/tests/test_vnpy_cta_integration.py`.
+- Add `packaging/newworldtrading/src/newworldtrading/integrations/_vnpy_cta_core.py`.
+- Add `packaging/newworldtrading/src/newworldtrading/integrations/vnpy_cta.py`.
+- Extend `packaging/newworldtrading/tests/test_vnpy_cta_integration.py`.
 
 ### Step 1: Add failing core tests
 
@@ -130,8 +130,8 @@ and hashing. This task does not import vn.py, create a strategy, or send HTTP.
 ### Step 3: Verify
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_vnpy_cta_integration.py -q
-python -m pytest packaging/agentictrading/tests -q
+python -m pytest packaging/newworldtrading/tests/test_vnpy_cta_integration.py -q
+python -m pytest packaging/newworldtrading/tests -q
 git diff --check
 ```
 
@@ -179,8 +179,8 @@ Do not add these packages to mandatory SDK dependencies.
 ### Step 3: Verify
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_vnpy_cta_integration.py -q
-python -m pytest packaging/agentictrading/tests -q
+python -m pytest packaging/newworldtrading/tests/test_vnpy_cta_integration.py -q
+python -m pytest packaging/newworldtrading/tests -q
 git diff --check
 ```
 
@@ -218,8 +218,8 @@ Keep the adapter focused on ordering, runtime calls, and audit state. Reuse
 ### Step 3: Verify
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_vnpy_cta_integration.py -q
-python -m pytest packaging/agentictrading/tests -q
+python -m pytest packaging/newworldtrading/tests/test_vnpy_cta_integration.py -q
+python -m pytest packaging/newworldtrading/tests -q
 ```
 
 Commit: `feat(sdk): adapt vn.py CTA signals at T+1`
@@ -254,7 +254,7 @@ idempotency, polling, or error handling.
 ### Step 3: Verify
 
 ```bash
-python -m pytest packaging/agentictrading/tests -q
+python -m pytest packaging/newworldtrading/tests -q
 python -m pytest dashboard/backend/tests/test_protocol_api.py -q
 git diff --check
 ```
@@ -287,7 +287,7 @@ Cover:
 ### Step 2: Implement the local CLI
 
 Import and initialize the strategy before creating an ATL run. Write artifacts
-under `~/.agentictrading/vnpy-cta/runs/` by default and use temporary directories
+under `~/.newworldtrading/vnpy-cta/runs/` by default and use temporary directories
 in tests.
 
 ### Step 3: Document the user contract
@@ -301,7 +301,7 @@ and the fact that backtest profit does not prove future performance.
 
 ```bash
 python dashboard/examples/vnpy_cta_atl_backtest.py --help
-python -m pytest packaging/agentictrading/tests/test_vnpy_cta_integration.py -q
+python -m pytest packaging/newworldtrading/tests/test_vnpy_cta_integration.py -q
 git diff --check
 ```
 
@@ -312,8 +312,8 @@ Commit: `docs: add vn.py CTA ATL quickstart`
 ### Step 1: Run all affected tests
 
 ```bash
-python -m pip install -e 'packaging/agentictrading[vnpy]'
-python -m pytest packaging/agentictrading/tests -q
+python -m pip install -e 'packaging/newworldtrading[vnpy]'
+python -m pytest packaging/newworldtrading/tests -q
 python -m pytest dashboard/backend/tests -q
 git diff --check
 ```

@@ -1,10 +1,10 @@
-name: Publish agentictrading to PyPI
+name: Publish newworldtrading to PyPI
 
-# Publishes the `agentictrading` package (packaging/agentictrading) to PyPI.
+# Publishes the `newworldtrading` package (packaging/newworldtrading) to PyPI.
 # Triggered by pushing a version tag like `v0.1.1`, or run manually.
 #
 # Uses PyPI Trusted Publishing (OIDC) -- no API token/secret needed.
-# One-time setup on PyPI: see packaging/agentictrading/RELEASING.md
+# One-time setup on PyPI: see packaging/newworldtrading/RELEASING.md
 
 on:
   push:
@@ -17,7 +17,7 @@ permissions:
 
 defaults:
   run:
-    working-directory: packaging/agentictrading
+    working-directory: packaging/newworldtrading
 
 jobs:
   build:
@@ -37,7 +37,7 @@ jobs:
       - name: Verify tag matches package version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          PKG_VERSION="$(grep -E '^__version__' src/agentictrading/__init__.py | sed -E 's/.*"([^"]+)".*/\1/')"
+          PKG_VERSION="$(grep -E '^__version__' src/newworldtrading/__init__.py | sed -E 's/.*"([^"]+)".*/\1/')"
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           echo "Package version: $PKG_VERSION"
           echo "Tag version:     $TAG_VERSION"
@@ -58,7 +58,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: packaging/agentictrading/dist/
+          path: packaging/newworldtrading/dist/
 
   publish:
     name: Publish to PyPI
@@ -66,7 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/agentictrading/
+      url: https://pypi.org/project/newworldtrading/
     permissions:
       id-token: write
     steps:

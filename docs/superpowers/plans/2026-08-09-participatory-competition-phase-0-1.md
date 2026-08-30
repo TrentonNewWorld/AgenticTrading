@@ -962,7 +962,7 @@ Create `dashboard/landing/src/lib/leaderboard.ts`:
  *
  * Same-origin by design: the Vercel rewrite proxies /api/* to Render, and the
  * CSP on both origins allows connect-src 'self'. MarketTicker.tsx hardcodes
- * https://agentictrading.onrender.com instead — do not copy that; it defeats the
+ * https://newworldtrading.onrender.com instead — do not copy that; it defeats the
  * rewrite and pins the frontend to one backend hostname.
  */
 
@@ -1633,15 +1633,15 @@ A 1200×630 PNG carrying the product name and the hook sentence
 In `index.html`, after line 14:
 
 ```html
-    <meta property="og:image" content="https://agentictrading.com/images/og-card.png" />
+    <meta property="og:image" content="https://newworldtrading.com/images/og-card.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta name="twitter:image" content="https://agentictrading.com/images/og-card.png" />
+    <meta name="twitter:image" content="https://newworldtrading.com/images/og-card.png" />
 ```
 
 > Absolute URLs are required — crawlers do not resolve relative `og:image`
 > paths. Replace the host with the production domain if it differs from
-> `agentictrading.com`; check the Vercel project's assigned domain first.
+> `newworldtrading.com`; check the Vercel project's assigned domain first.
 
 - [ ] **Step 3: Verify the asset resolves**
 
@@ -1916,7 +1916,7 @@ EOF
 Merging to the upstream org `main` auto-deploys. After the deploy completes:
 
 ```bash
-curl -s https://agentictrading.onrender.com/api/v1/leaderboard | python -c "
+curl -s https://newworldtrading.onrender.com/api/v1/leaderboard | python -c "
 import json,sys
 p=json.load(sys.stdin)
 ids=[e.get('entry_id') for e in p['entries']]

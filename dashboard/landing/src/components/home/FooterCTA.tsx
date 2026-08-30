@@ -25,7 +25,7 @@ export function FooterCTA() {
           <div>
             © 2026 NewWorldTrading ·{" "}
             <a
-              href="https://github.com/TrentonNewWorld/AgenticTrading"
+              href="https://github.com/TrentonNewWorld/NewWorldTrading"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-foreground"

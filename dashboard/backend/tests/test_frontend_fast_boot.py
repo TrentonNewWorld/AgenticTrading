@@ -108,7 +108,7 @@ def test_initial_navigation_respects_user_click():
 
 def test_app_html_preconnects_to_api_origin():
     assert (
-        '<link rel="preconnect" href="https://agentictrading.onrender.com" crossorigin>'
+        '<link rel="preconnect" href="https://newworldtrading.onrender.com" crossorigin>'
         in APP_HTML
     )
 
@@ -193,9 +193,9 @@ def test_cache_busters_bumped():
     assert "app.js?v=138" in APP_HTML
     assert "styles.css?v=143" in APP_HTML
     assert "js/leaderboard.js?v=43" in APP_HTML
-    assert "home-page.js?v=54" in APP_HTML
+    assert "home-page.js?v=55" in APP_HTML
     assert "js/connections.js?v=5" in APP_HTML
     assert "js/strategy-testing.js?v=3" in APP_HTML
     assert "js/prediction.js?v=1" in APP_HTML
-    assert "js/manual.js?v=8" in APP_HTML
-    assert "js/strategy-catalog.js?v=7" in APP_HTML
+    assert "js/manual.js?v=9" in APP_HTML
+    assert "js/strategy-catalog.js?v=8" in APP_HTML

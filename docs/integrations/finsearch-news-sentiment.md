@@ -8,7 +8,7 @@
 
 ## What this is
 
-Plan 1 of the three-plan programme **News Feed → Sentiment → Agent Trading Lab**: turn Agentic FinSearch's daily news feed into a **per-ticker sentiment signal** — a **thin sentiment pass** we compute over the feed we own — and inject it at `snapshot["news_sentiment"]` so news becomes an **auditable, sourced signal** a human can read and a trading agent can act on (closed loop / 链路闭环). The goal is **measurement, not alpha-seeking**: we are building the apparatus that lets us observe how agents trade on real news, not shipping a money-maker.
+Plan 1 of the three-plan programme **News Feed → Sentiment → Agent Trading Lab**: turn FinSearch's daily news feed into a **per-ticker sentiment signal** — a **thin sentiment pass** we compute over the feed we own — and inject it at `snapshot["news_sentiment"]` so news becomes an **auditable, sourced signal** a human can read and a trading agent can act on (closed loop / 链路闭环). The goal is **measurement, not alpha-seeking**: we are building the apparatus that lets us observe how agents trade on real news, not shipping a money-maker.
 
 The sentiment computation lives behind **one frozen seam**. When the group's dedicated "Sentiment Signals of Financial News" work (Qinchuan & Chris) lands, it replaces the producer's internals and this output contract is unchanged.
 

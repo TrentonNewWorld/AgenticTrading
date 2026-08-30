@@ -14,7 +14,7 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from agentictrading.integrations.vnpy_cta import (
+from newworldtrading.integrations.vnpy_cta import (
     ARTIFACT_SCHEMA_VERSION,
     ArtifactValidationError,
     CapturedCtaOrder,
@@ -36,8 +36,8 @@ from agentictrading.integrations.vnpy_cta import (
     sanitize_error_message,
     save_audit_artifact,
 )
-from agentictrading import ATLAPIError, ATLConflictError
-from agentictrading.models import ExecutionResult, Observation, Run, RunResult, Step
+from newworldtrading import ATLAPIError, ATLConflictError
+from newworldtrading.models import ExecutionResult, Observation, Run, RunResult, Step
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -84,7 +84,7 @@ def test_public_import_does_not_load_optional_vnpy_dependencies():
     sys.modules.pop("vnpy", None)
     sys.modules.pop("vnpy_ctastrategy", None)
 
-    module = importlib.reload(importlib.import_module("agentictrading.integrations.vnpy_cta"))
+    module = importlib.reload(importlib.import_module("newworldtrading.integrations.vnpy_cta"))
 
     assert module.ARTIFACT_SCHEMA_VERSION == "vnpy-cta-atl-v1"
     assert "vnpy" not in sys.modules
@@ -396,7 +396,7 @@ def test_load_vnpy_bindings_reports_missing_optional_dependency():
     def missing_import(name):
         raise ModuleNotFoundError(name)
 
-    with pytest.raises(VnpyCtaDependencyError, match=r"agentictrading\[vnpy\]"):
+    with pytest.raises(VnpyCtaDependencyError, match=r"newworldtrading\[vnpy\]"):
         load_vnpy_bindings(import_module=missing_import)
 
 
@@ -1111,7 +1111,7 @@ def test_vnpy_runner_rejects_bad_dates_before_creating_run(tmp_path, start, end)
 
 
 def test_vnpy_cli_help_is_lazy_and_needs_no_credentials(tmp_path):
-    script = _REPO_ROOT / "dashboard" / "examples" / "vnpy_cta_atl_backtest.py"
+    script = _REPO_ROOT / "dashboard" / "examples" / "vnpy_cta_backtest.py"
     blocked = tmp_path / "blocked-imports"
     blocked.mkdir()
     (blocked / "vnpy_ctastrategy.py").write_text(
@@ -1125,7 +1125,7 @@ def test_vnpy_cli_help_is_lazy_and_needs_no_credentials(tmp_path):
         encoding="utf-8",
     )
     env = dict(os.environ)
-    source = str(_REPO_ROOT / "packaging" / "agentictrading" / "src")
+    source = str(_REPO_ROOT / "packaging" / "newworldtrading" / "src")
     env["PYTHONPATH"] = os.pathsep.join(
         part for part in (str(blocked), source, env.get("PYTHONPATH")) if part
     )
@@ -1155,7 +1155,7 @@ def test_vnpy_cli_help_is_lazy_and_needs_no_credentials(tmp_path):
 
 
 def test_vnpy_cli_validates_inputs_environment_and_strategy_spec(tmp_path, monkeypatch):
-    cli = _load_example("vnpy_cta_atl_backtest.py", "_test_vnpy_cta_cli_validation")
+    cli = _load_example("vnpy_cta_backtest.py", "_test_vnpy_cta_cli_validation")
 
     assert cli.validate_inputs("aapl", "2026-04-15", "2026-04-16") == "AAPL"
     with pytest.raises(ValueError, match="AAPL only"):
@@ -1181,7 +1181,7 @@ def test_vnpy_cli_validates_inputs_environment_and_strategy_spec(tmp_path, monke
 def test_vnpy_cli_initializes_strategy_before_client_and_redacts_settings(
     tmp_path, monkeypatch, capsys
 ):
-    cli = _load_example("vnpy_cta_atl_backtest.py", "_test_vnpy_cta_cli_run")
+    cli = _load_example("vnpy_cta_backtest.py", "_test_vnpy_cta_cli_run")
     settings_path = tmp_path / "settings.json"
     settings_path.write_text(
         json.dumps({"fast_window": 2, "api_key": "settings-secret"}),
@@ -1268,7 +1268,7 @@ def test_vnpy_cli_initializes_strategy_before_client_and_redacts_settings(
 
 
 def test_vnpy_cli_summary_contains_result_metrics_diagnostics_and_artifact(tmp_path):
-    cli = _load_example("vnpy_cta_atl_backtest.py", "_test_vnpy_cta_cli_summary")
+    cli = _load_example("vnpy_cta_backtest.py", "_test_vnpy_cta_cli_summary")
     artifact = build_audit_artifact(
         manifest={}, records=(_record(status="strategy_hold"),)
     )

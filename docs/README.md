@@ -1,4 +1,4 @@
-# Agentic Trading Documentation
+# NewWorldTrading Documentation
 
 Sphinx sources for Read the Docs. From the **repository root**:
 

@@ -8,8 +8,8 @@ import urllib.error
 
 import pytest
 
-import agentictrading.atl_client as atl_client
-from agentictrading import (
+import newworldtrading.legacy_client as legacy_client
+from newworldtrading import (
     ATLAPIError,
     ATLAuthenticationError,
     ATLClient,
@@ -355,7 +355,7 @@ def test_empty_response_returns_none(monkeypatch):
         def __exit__(self, *exc):
             return False
 
-    monkeypatch.setattr(atl_client.urllib.request, "urlopen", lambda req, timeout=None: _Empty())
+    monkeypatch.setattr(legacy_client.urllib.request, "urlopen", lambda req, timeout=None: _Empty())
     assert _client()._request("GET", "/x") is None
 
 
@@ -363,7 +363,7 @@ def test_non_json_error_body(monkeypatch):
     def boom(req, timeout=None):
         raise urllib.error.HTTPError(req.full_url, 500, "err", {}, io.BytesIO(b"<html>nope</html>"))
 
-    monkeypatch.setattr(atl_client.urllib.request, "urlopen", boom)
+    monkeypatch.setattr(legacy_client.urllib.request, "urlopen", boom)
     with pytest.raises(ATLAPIError) as ei:
         _client().get_run("run_1")
     assert ei.value.status_code == 500
@@ -374,7 +374,7 @@ def test_timeout_mapping(monkeypatch):
     def boom(req, timeout=None):
         raise TimeoutError("slow")
 
-    monkeypatch.setattr(atl_client.urllib.request, "urlopen", boom)
+    monkeypatch.setattr(legacy_client.urllib.request, "urlopen", boom)
     with pytest.raises(ATLTimeoutError):
         _client().get_run("run_1")
 
@@ -387,7 +387,7 @@ def test_socket_timeout_maps_to_timeout_error(monkeypatch):
     def boom(req, timeout=None):
         raise socket.timeout("The read operation timed out")
 
-    monkeypatch.setattr(atl_client.urllib.request, "urlopen", boom)
+    monkeypatch.setattr(legacy_client.urllib.request, "urlopen", boom)
     with pytest.raises(ATLTimeoutError):
         _client().get_run("run_1")
 
@@ -400,7 +400,7 @@ def test_client_catches_socket_timeout_explicitly():
     runtime-indistinguishable."""
     import inspect
 
-    src = inspect.getsource(atl_client)
+    src = inspect.getsource(legacy_client)
     assert "except socket.timeout" in src, (
-        "atl_client must catch socket.timeout explicitly for Python 3.9 support"
+        "legacy_client must catch socket.timeout explicitly for Python 3.9 support"
     )

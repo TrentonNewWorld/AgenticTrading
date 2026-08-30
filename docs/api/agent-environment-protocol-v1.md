@@ -14,9 +14,9 @@ backward compatibility and shares the same engine.
 
 > **Status: compatibility surface.** `/api/v2` (see `docs/source/lab/agent_api.rst`)
 > is the canonical agent-facing contract; new agent-facing features land there.
-> v1 remains supported for the shipping `agentictrading` SDK, the Discord bot,
+> v1 remains supported for the shipping `newworldtrading` SDK, the Discord bot,
 > and built-in agents, but does not grow. The SDK's migration to v2 gates the
-> `agentictrading` 0.2.0 release.
+> `newworldtrading` 0.2.0 release.
 
 ---
 

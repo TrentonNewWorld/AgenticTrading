@@ -1,6 +1,6 @@
-# Python SDK QuickStart (`agentictrading`)
+# Python SDK QuickStart (`newworldtrading`)
 
-The `agentictrading` package gives Python users a clean, typed, function-call
+The `newworldtrading` package gives Python users a clean, typed, function-call
 interface over the NewWorldTrading **Agent–Environment Protocol (v1)**. It is
 a remote HTTP client: it talks to the same REST endpoints documented in
 [`agent-environment-protocol-v1.md`](./agent-environment-protocol-v1.md) and works
@@ -37,7 +37,7 @@ FastAPI backend                  # validation + backtest engine
 From the repo:
 
 ```bash
-pip install -e packaging/agentictrading
+pip install -e packaging/newworldtrading
 ```
 
 ## Authentication
@@ -56,7 +56,7 @@ The SDK never logs or prints the API key.
 
 ```python
 import os
-from agentictrading import ATLClient, Decision
+from newworldtrading import ATLClient, Decision
 
 client = ATLClient(
     base_url=os.environ["ATL_BASE_URL"],
@@ -93,7 +93,7 @@ print(result.metrics)
 ### Typed decisions and orders
 
 ```python
-from agentictrading import Decision, Order
+from newworldtrading import Decision, Order
 
 decision = Decision(
     orders=[
@@ -131,7 +131,7 @@ final result.
 
 ```python
 import os
-from agentictrading import ATLClient, AgentRunner
+from newworldtrading import ATLClient, AgentRunner
 
 class MyAgent:
     def decide(self, observation):
@@ -215,7 +215,7 @@ All SDK errors derive from `ATLAPIError` and preserve `status_code`, `message`,
 | `ATLAPIError` | any other non-2xx response |
 
 ```python
-from agentictrading import ATLValidationError
+from newworldtrading import ATLValidationError
 
 try:
     client.submit_decision(run.id, step.id, bad_decision)

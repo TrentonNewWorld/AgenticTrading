@@ -1,11 +1,11 @@
-"""Command-line interface for the ``agentictrading`` package.
+"""Command-line interface for the ``newworldtrading`` package.
 
-Run ``agentictrading`` for project info, or a subcommand to hit a live API:
+Run ``newworldtrading`` for project info, or a subcommand to hit a live API:
 
-    agentictrading                       # show project info + links
-    agentictrading health --api URL
-    agentictrading leaderboard --api URL
-    agentictrading ticker AAPL,NVDA --api URL
+    newworldtrading                       # show project info + links
+    newworldtrading health --api URL
+    newworldtrading leaderboard --api URL
+    newworldtrading ticker AAPL,NVDA --api URL
 """
 
 from __future__ import annotations
@@ -15,12 +15,12 @@ import json
 import sys
 
 from . import DOCS_URL, LIVE_DEMO_URL, SOURCE_URL, __version__, info
-from .client import DEFAULT_BASE_URL, AgenticTradingClient, ApiError
+from .client import DEFAULT_BASE_URL, NewWorldTradingClient, ApiError
 
 
 def _print_info() -> int:
     data = info()
-    print(f"agentictrading {data['version']}")
+    print(f"newworldtrading {data['version']}")
     print(data["summary"])
     print()
     print(f"  Live demo : {LIVE_DEMO_URL}")
@@ -28,18 +28,18 @@ def _print_info() -> int:
     print(f"  Source    : {SOURCE_URL}")
     print()
     print("Quickstart:")
-    print("  from agentictrading import AgenticTradingClient")
-    print(f"  client = AgenticTradingClient({DEFAULT_BASE_URL!r})")
+    print("  from newworldtrading import NewWorldTradingClient")
+    print(f"  client = NewWorldTradingClient({DEFAULT_BASE_URL!r})")
     print("  print(client.health())")
     return 0
 
 
 def main(argv: list | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="agentictrading",
+        prog="newworldtrading",
         description="Lightweight client for the NewWorldTrading REST API.",
     )
-    parser.add_argument("--version", action="version", version=f"agentictrading {__version__}")
+    parser.add_argument("--version", action="version", version=f"newworldtrading {__version__}")
 
     # Shared option so each subcommand accepts --api after the command name.
     common = argparse.ArgumentParser(add_help=False)
@@ -57,7 +57,7 @@ def main(argv: list | None = None) -> int:
     if args.command in (None, "info"):
         return _print_info()
 
-    client = AgenticTradingClient(args.api)
+    client = NewWorldTradingClient(args.api)
     try:
         if args.command == "health":
             result = client.health()

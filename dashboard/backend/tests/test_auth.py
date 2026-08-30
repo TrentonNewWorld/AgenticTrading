@@ -106,7 +106,7 @@ def test_dev_auto_login_signs_in_with_no_credentials_when_armed(client, monkeypa
     response = client.post("/api/auth/dev-auto-login")
     assert response.status_code == 200
     body = response.json()
-    assert body["user"]["email"] == "local@agentic-trading-lab.local"
+    assert body["user"]["email"] == "local@newworldtrading.local"
     assert body["user"]["display_name"] == "Local User"
     assert "password_hash" not in body["user"]
     assert "token" not in body
@@ -114,7 +114,7 @@ def test_dev_auto_login_signs_in_with_no_credentials_when_armed(client, monkeypa
 
     me = client.get("/api/auth/me")
     assert me.status_code == 200
-    assert me.json()["user"]["email"] == "local@agentic-trading-lab.local"
+    assert me.json()["user"]["email"] == "local@newworldtrading.local"
 
 
 def test_dev_auto_login_reuses_the_same_account_on_repeat_calls(client, monkeypatch):

@@ -1,14 +1,14 @@
 # vn.py 模拟行情接入（Loop 1）
 
 当前接入用于在没有券商账号、IB Gateway 和真实行情权限时，先验证
-AgenticTrading 能正确接收 vn.py 的行情对象并完成回测。
+NewWorldTrading 能正确接收 vn.py 的行情对象并完成回测。
 
 ## 当前已经接通的流程
 
 ```text
 vn.py BarData
     -> OHLCV DataFrame
-    -> AgenticTrading 回测引擎
+    -> NewWorldTrading 回测引擎
     -> Agent / Buy and Hold / DJIA 三类结果
     -> Dashboard 图表、指标和交易记录
 ```

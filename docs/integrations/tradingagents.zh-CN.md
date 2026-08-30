@@ -39,10 +39,10 @@ source .venv/bin/activate
 pip install .
 ```
 
-再安装 ATL 的轻量 SDK。下面的路径替换为本机 AgenticTrading 仓库路径：
+再安装 ATL 的轻量 SDK。下面的路径替换为本机 NewWorldTrading 仓库路径：
 
 ```bash
-pip install -e /path/to/AgenticTrading/packaging/agentictrading
+pip install -e /path/to/NewWorldTrading/packaging/newworldtrading
 ```
 
 当前集成针对 TradingAgents v0.3.1 和 0.3.x 兼容版本测试。它不是 ATL 后端的核心依赖；
@@ -69,12 +69,12 @@ AgentVersion：
 
 ```bash
 export ATL_API_KEY="ag_xxxxxxxx"
-export ATL_BASE_URL="https://agentictrading.onrender.com"
+export ATL_BASE_URL="https://newworldtrading.onrender.com"
 export ATL_AGENT_ID="agt_xxxxxxxx"
 
 python - <<'PY'
 import os
-from agentictrading import ATLClient
+from newworldtrading import ATLClient
 
 client = ATLClient(
     base_url=os.environ["ATL_BASE_URL"],
@@ -134,7 +134,7 @@ python dashboard/examples/tradingagents_atl_backtest.py \
 生成的 JSON 默认保存在：
 
 ```text
-~/.agentictrading/tradingagents/decisions/
+~/.newworldtrading/tradingagents/decisions/
 ```
 
 也可以使用 `--output /safe/path/aapl.json` 指定位置。
@@ -146,7 +146,7 @@ python dashboard/examples/tradingagents_atl_backtest.py \
 ```bash
 python dashboard/examples/tradingagents_atl_backtest.py \
   --symbol AAPL \
-  --decisions-file ~/.agentictrading/tradingagents/decisions/aapl-xxx.json \
+  --decisions-file ~/.newworldtrading/tradingagents/decisions/aapl-xxx.json \
   --start-date 2026-04-06 \
   --end-date 2026-04-24
 ```
@@ -248,7 +248,7 @@ TradingAgents 可能在一个分析日期使用当天完整数据，因此 ATL �
 **提示缺少时区数据库（ZoneInfoNotFoundError）**
 
 回放需要把 ATL 的 Step 时间戳换算成美东日期，这依赖系统的 IANA 时区数据库。
-Windows 不自带，精简版容器镜像也常常删掉它。在 Windows 上安装 `agentictrading`
+Windows 不自带，精简版容器镜像也常常删掉它。在 Windows 上安装 `newworldtrading`
 会自动带上 `tzdata` 依赖；其他环境下手动执行 `pip install tzdata` 即可。
 
 **出现 timeout_holds**

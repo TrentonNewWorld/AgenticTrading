@@ -1,6 +1,6 @@
 # Discord → Backtest → Dashboard
 
-Short note for the Discord demo path ([Issue #79](https://github.com/TrentonNewWorld/AgenticTrading/issues/79)). Backend layering: [`dashboard-target-structure.md`](./dashboard-target-structure.md).
+Short note for the Discord demo path ([Issue #79](https://github.com/TrentonNewWorld/NewWorldTrading/issues/79)). Backend layering: [`dashboard-target-structure.md`](./dashboard-target-structure.md).
 
 ## Current workflow (user steps)
 

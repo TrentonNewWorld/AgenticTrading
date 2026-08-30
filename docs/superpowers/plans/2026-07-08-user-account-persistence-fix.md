@@ -521,7 +521,7 @@ git commit -m "docs: document USERS_DATABASE_URL and the account-persistence inc
 
 ### Task 5: Provision Neon and deploy — MANUAL, human only
 
-Not eligible for autonomous/subagent execution: it needs a Neon account and Render dashboard secret entry, plus a merge from Allan (per `[[render-prod-architecture]]`, `FlyM1ss` has no push access to `TrentonNewWorld/AgenticTrading`, and Render deploys from that fork's `main`, not `TrentonNewWorld/AgenticTrading` `main`).
+Not eligible for autonomous/subagent execution: it needs a Neon account and Render dashboard secret entry, plus a merge from Allan (per `[[render-prod-architecture]]`, `FlyM1ss` has no push access to `TrentonNewWorld/NewWorldTrading`, and Render deploys from that fork's `main`, not `TrentonNewWorld/NewWorldTrading` `main`).
 
 **Files:** none — this is an operational task.
 
@@ -533,7 +533,7 @@ Sign up / log in at neon.tech (free, no credit card). Create a new project (any 
 
 In the Neon project dashboard, copy the **pooled** connection string (the one with `-pooler` in the hostname) — this is what `USERS_DATABASE_URL` should be set to, per the Global Constraints note about avoiding client-side pooling.
 
-- [ ] **Step 3: Open a PR with Tasks 1-4 and get it merged to `TrentonNewWorld/AgenticTrading` main**
+- [ ] **Step 3: Open a PR with Tasks 1-4 and get it merged to `TrentonNewWorld/NewWorldTrading` main**
 
 Standard PR flow. Nothing in this PR touches prod behavior yet (`USERS_DATABASE_URL` is unset everywhere until Step 4), so it's safe to merge on its own.
 
@@ -543,14 +543,14 @@ Open `the upstream org:main → TrentonNewWorld:main` (per existing process in `
 
 - [ ] **Step 5: Set `USERS_DATABASE_URL` in the Render dashboard**
 
-In the Render dashboard for service `srv-d7lbmpjbc2fs73bcr6t0` ("AgenticTrading") → Environment, add `USERS_DATABASE_URL` with the pooled connection string from Step 2. Saving triggers a redeploy automatically.
+In the Render dashboard for service `srv-d7lbmpjbc2fs73bcr6t0` ("NewWorldTrading") → Environment, add `USERS_DATABASE_URL` with the pooled connection string from Step 2. Saving triggers a redeploy automatically.
 
 - [ ] **Step 6: Verify — signup, then force a second deploy, then confirm the account survived**
 
 After the redeploy from Step 5 finishes:
 
 ```bash
-curl -s -X POST https://agentictrading.onrender.com/api/auth/signup \
+curl -s -X POST https://newworldtrading.onrender.com/api/auth/signup \
   -H "Content-Type: application/json" \
   -d '{"email":"persistence-verify@example.com","display_name":"Verify","password":"testpassword123"}'
 ```
@@ -560,7 +560,7 @@ Expected: `200` with a `user`/`token` payload.
 Trigger any redeploy (e.g. a trivial docs commit merged through the same PR flow, or manually redeploy from the Render dashboard), wait for it to finish, then:
 
 ```bash
-curl -s -X POST https://agentictrading.onrender.com/api/auth/login \
+curl -s -X POST https://newworldtrading.onrender.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"persistence-verify@example.com","password":"testpassword123"}'
 ```

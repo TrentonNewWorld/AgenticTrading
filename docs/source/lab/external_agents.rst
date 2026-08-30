@@ -70,7 +70,7 @@ cookie — there is no user-visible token) additionally ties the agent to you:
 
 .. code-block:: bash
 
-   curl -X POST https://agentictrading.onrender.com/api/v1/agents \
+   curl -X POST https://newworldtrading.onrender.com/api/v1/agents \
      -H "Content-Type: application/json" \
      -H "X-Session-Id: my-browser-or-client-id" \
      -d '{"name": "my-agent", "model_name": "gpt-4o-mini"}'
@@ -87,7 +87,7 @@ Given an ``api_key``, resolve it to the session id at any time:
 
 .. code-block:: bash
 
-   curl https://agentictrading.onrender.com/api/v1/agents/resolve \
+   curl https://newworldtrading.onrender.com/api/v1/agents/resolve \
      -H "X-API-Key: ag_xxxxxxxx"
    # -> { "agent_id": "...", "name": "...", "session_id": "sess_...", "model_name": "..." }
 
@@ -101,7 +101,7 @@ Step 2 — Start a backtest
 
 .. code-block:: bash
 
-   curl -X POST https://agentictrading.onrender.com/api/v1/backtest/start \
+   curl -X POST https://newworldtrading.onrender.com/api/v1/backtest/start \
      -H "Content-Type: application/json" \
      -H "X-Session-Id: sess_..." \
      -d '{
@@ -185,7 +185,7 @@ Submit:
 
 .. code-block:: bash
 
-   curl -X POST https://agentictrading.onrender.com/api/v1/backtest/bt_xxx/steps/current/decisions \
+   curl -X POST https://newworldtrading.onrender.com/api/v1/backtest/bt_xxx/steps/current/decisions \
      -H "Content-Type: application/json" \
      -H "X-Session-Id: sess_..." \
      -d '{"actions": [{"action":"hold","symbol":"AAPL","confidence":0.5,"reasoning":"no signal","position_size":0}]}'
@@ -203,7 +203,7 @@ The easiest way to drive all of this is the official client:
 
 .. code-block:: bash
 
-   pip install agentictrading
+   pip install newworldtrading
 
 Provide an API key (it resolves the session for you), implement a ``strategy``
 function that maps a snapshot to a list of actions, and call ``run_backtest`` —
@@ -211,10 +211,10 @@ it runs the whole poll/submit loop:
 
 .. code-block:: python
 
-   from agentictrading import AgenticTradingClient
+   from newworldtrading import NewWorldTradingClient
 
-   client = AgenticTradingClient(
-       base_url="https://agentictrading.onrender.com",
+   client = NewWorldTradingClient(
+       base_url="https://newworldtrading.onrender.com",
        api_key="ag_xxxxxxxx",          # from My Agents (resolves session_id)
    )
 
@@ -262,8 +262,8 @@ example:
 
 .. code-block:: bash
 
-   python -m pip install -e 'packaging/agentictrading[vnpy]'
-   export ATL_BASE_URL="https://agentictrading.onrender.com"
+   python -m pip install -e 'packaging/newworldtrading[vnpy]'
+   export ATL_BASE_URL="https://newworldtrading.onrender.com"
    export ATL_API_KEY="ag_xxxxxxxx"
    export ATL_AGENT_VERSION_ID="agv_xxxxxxxx"
 
@@ -272,7 +272,7 @@ example:
 
 The MVP is long-only, uses T+1 market execution, and does not connect a broker
 or vn.py Gateway. See the `vn.py CTA integration guide
-<https://github.com/TrentonNewWorld/AgenticTrading/blob/main/docs/integrations/vnpy-cta.md>`_
+<https://github.com/TrentonNewWorld/NewWorldTrading/blob/main/docs/integrations/vnpy-cta.md>`_
 for settings, custom ``module:Class`` strategies, audit artifacts, and the full
 compatibility limits.
 
@@ -288,10 +288,10 @@ always return valid JSON actions:
 
    import json
    from openai import OpenAI            # any provider works
-   from agentictrading import AgenticTradingClient
+   from newworldtrading import NewWorldTradingClient
 
    llm = OpenAI()
-   client = AgenticTradingClient(api_key="ag_xxxxxxxx")
+   client = NewWorldTradingClient(api_key="ag_xxxxxxxx")
 
    SYSTEM = (
        "You are a trading agent for DJIA stocks. Given a market snapshot, "
@@ -350,7 +350,7 @@ analysis date. Replaying an existing artifact makes no LLM calls at all.
 
 Run it with ``dashboard/examples/tradingagents_atl_backtest.py`` (English
 ``--help`` and console output). The full setup guide,
-`TradingAgents 接入 ATL <https://github.com/TrentonNewWorld/AgenticTrading/blob/main/docs/integrations/tradingagents.zh-CN.md>`_,
+`TradingAgents 接入 ATL <https://github.com/TrentonNewWorld/NewWorldTrading/blob/main/docs/integrations/tradingagents.zh-CN.md>`_,
 is written in Simplified Chinese.
 
 
@@ -364,7 +364,7 @@ reference client lives in the repo at
 .. code-block:: bash
 
    python3 dashboard/examples/external_agent_client.py \
-     --api https://agentictrading.onrender.com \
+     --api https://newworldtrading.onrender.com \
      --api-key ag_xxxxxxxx \
      --start 2026-04-15 --end 2026-04-16
 
@@ -389,7 +389,7 @@ Viewing results
 Endpoint reference
 ------------------
 
-All paths are under the API base (``https://agentictrading.onrender.com`` or
+All paths are under the API base (``https://newworldtrading.onrender.com`` or
 ``http://localhost:8000``). Backtest endpoints require the ``X-Session-Id``
 header.
 

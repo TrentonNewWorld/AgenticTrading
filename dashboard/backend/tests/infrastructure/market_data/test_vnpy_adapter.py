@@ -1,4 +1,4 @@
-"""Conversion contract from real vn.py BarData to AgenticTrading OHLCV.
+"""Conversion contract from real vn.py BarData to NewWorldTrading OHLCV.
 
 These require the optional ``vnpy`` dependency (``requirements-vnpy.txt``); when
 it is absent the whole module is skipped so the suite stays green on minimal

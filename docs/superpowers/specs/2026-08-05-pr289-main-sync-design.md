@@ -193,7 +193,7 @@ Cover:
 ### 9.3 Full Regression
 
 - Run the complete `dashboard/backend/tests` suite.
-- Run the complete `packaging/agentictrading/tests` suite.
+- Run the complete `packaging/newworldtrading/tests` suite.
 - Run the relevant frontend Node/static-contract tests.
 - Confirm that no new failures are introduced.
 

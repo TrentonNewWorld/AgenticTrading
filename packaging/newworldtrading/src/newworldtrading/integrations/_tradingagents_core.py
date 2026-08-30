@@ -277,7 +277,7 @@ def default_decision_artifact_path(symbol: str) -> Path:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return (
         Path.home()
-        / ".agentictrading"
+        / ".newworldtrading"
         / "tradingagents"
         / "decisions"
         / f"{clean_symbol}-{stamp}.json"

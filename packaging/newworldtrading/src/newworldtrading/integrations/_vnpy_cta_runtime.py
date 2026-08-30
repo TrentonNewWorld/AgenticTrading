@@ -48,7 +48,7 @@ def _module(import_module: Callable[[str], ModuleType], name: str) -> ModuleType
     except (ImportError, ModuleNotFoundError) as exc:
         raise VnpyCtaDependencyError(
             "vn.py CTA integration requires optional dependencies; install with "
-            "pip install 'agentictrading[vnpy]'"
+            "pip install 'newworldtrading[vnpy]'"
         ) from exc
 
 
@@ -68,7 +68,7 @@ def load_vnpy_bindings(
     except importlib.metadata.PackageNotFoundError as exc:
         raise VnpyCtaDependencyError(
             "vn.py CTA package metadata is missing; install with "
-            "pip install 'agentictrading[vnpy]'"
+            "pip install 'newworldtrading[vnpy]'"
         ) from exc
 
     return VnpyBindings(

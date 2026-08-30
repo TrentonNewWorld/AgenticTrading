@@ -6,14 +6,14 @@ import json
 
 import pytest
 
-from agentictrading import (
+from newworldtrading import (
     AgentRunner,
     ATLClient,
     ATLRunFailedError,
     ATLTimeoutError,
     RunResult,
 )
-from agentictrading.runner import wait_for_poll
+from newworldtrading.runner import wait_for_poll
 
 API_KEY = "ag_secret_should_never_leak"
 
@@ -227,7 +227,7 @@ def test_runner_unexpected_status_raises(fake_http):
         def decide(self, observation):
             return {"orders": []}
 
-    from agentictrading import ATLAPIError
+    from newworldtrading import ATLAPIError
 
     backend = RunnerBackend([{"status": "weird", "run_id": "run_1"}])
     fake_http(backend)
@@ -310,7 +310,7 @@ def test_runner_step_already_finalized_advances(fake_http):
 def test_runner_other_conflict_still_raises_with_run_id(fake_http):
     """A conflict that is NOT an auto-hold (e.g. run_completed) still raises, and
     the run id is attached to the error."""
-    from agentictrading import ATLConflictError
+    from newworldtrading import ATLConflictError
 
     backend = ConflictOnDecideBackend([_AWAITING, _COMPLETED], code="run_completed")
     fake_http(backend)
@@ -371,7 +371,7 @@ def test_runner_rejects_nonpositive_poll_interval():
 
 
 def test_runner_attaches_run_id_to_backend_errors(fake_http):
-    from agentictrading import ATLAPIError
+    from newworldtrading import ATLAPIError
 
     backend = RunnerBackend([{"status": "weird", "run_id": "run_1"}])
     fake_http(backend)

@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from agentictrading import (
+from newworldtrading import (
     ATLConflictError,
     ATLRunFailedError,
     ATLValidationError,
@@ -21,7 +21,7 @@ from agentictrading import (
     RunResult,
     Step,
 )
-from agentictrading.integrations.tradingagents import (
+from newworldtrading.integrations.tradingagents import (
     ARTIFACT_SCHEMA_VERSION,
     ArtifactValidationError,
     TradingAgentsDecisionGenerator,
@@ -292,7 +292,7 @@ def test_default_artifact_path_follows_the_storage_convention():
     passes --output explicitly.
     """
     path = default_decision_artifact_path("aapl")
-    assert path.parent == Path.home() / ".agentictrading" / "tradingagents" / "decisions"
+    assert path.parent == Path.home() / ".newworldtrading" / "tradingagents" / "decisions"
     assert path.name.startswith("aapl-")
     assert path.suffix == ".json"
     # Case and surrounding whitespace must not produce a second directory.
@@ -859,7 +859,7 @@ def test_replay_explains_how_to_fix_a_missing_timezone_database(monkeypatch):
     """Windows ships no IANA database; a bare lookup error is not actionable."""
     from zoneinfo import ZoneInfoNotFoundError
 
-    from agentictrading.integrations import _tradingagents_replay as replay_module
+    from newworldtrading.integrations import _tradingagents_replay as replay_module
 
     def _no_database(key):
         raise ZoneInfoNotFoundError(key)
@@ -1284,7 +1284,7 @@ def test_atl_runner_preflights_symbol_against_environment():
 
 def _load_cli_module():
     repo_root = Path(__file__).resolve().parents[3]
-    path = repo_root / "dashboard" / "examples" / "tradingagents_atl_backtest.py"
+    path = repo_root / "dashboard" / "examples" / "tradingagents_backtest.py"
     spec = importlib.util.spec_from_file_location("tradingagents_atl_cli", path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None

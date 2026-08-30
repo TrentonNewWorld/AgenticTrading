@@ -1,7 +1,7 @@
 Overview
 ==========
 
-NewWorldTrading is a research and educational environment for studying trading systems powered by large language models. It is built alongside a survey of 130+ agentic trading papers and is designed to make that research accessible: customize agents, evaluate performance, and observe behavior under realistic market constraints.
+NewWorldTrading is a research and educational environment for studying trading systems powered by large language models. It is built alongside a survey of 130+ trading papers and is designed to make that research accessible: customize agents, evaluate performance, and observe behavior under realistic market constraints.
 
 **Live app:** `localhost:8000 <https://localhost:8000/>`_ · **Community:** `Discord <https://discord.gg/9HnQ6XDG98>`_
 
@@ -17,7 +17,7 @@ Repository layout
 
 .. code-block:: text
 
-   AgenticTrading/
+   NewWorldTrading/
    ├── dashboard/       NewWorldTrading web application
    │   ├── backend/     FastAPI app, SQLite, paper trading, LLM validator
    │   ├── frontend/    Dashboard (served at http://localhost:8000 when local)

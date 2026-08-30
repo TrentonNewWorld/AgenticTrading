@@ -14,13 +14,13 @@ Neither the password nor the API key is ever printed.
 Prerequisites:
   - Backend running, e.g.:
       cd dashboard/backend && python -m uvicorn app:app --host 127.0.0.1 --port 8000
-  - The agentictrading package importable (run via the command below).
+  - The newworldtrading package importable (run via the command below).
   - Your account credentials in the environment:
       export ATL_EMAIL="you@example.com"
       export ATL_PASSWORD="your-password"
 
 Run it:
-  PYTHONPATH=packaging/agentictrading/src \
+  PYTHONPATH=packaging/newworldtrading/src \
     python3 dashboard/examples/sdk_quickstart_selftest.py
 
 Optional env overrides:
@@ -37,7 +37,7 @@ import sys
 import urllib.request
 import uuid
 
-from agentictrading import AgentRunner, ATLClient
+from newworldtrading import AgentRunner, ATLClient
 
 NUM_NAMES = 5
 DOLLARS_PER_NAME = 15_000

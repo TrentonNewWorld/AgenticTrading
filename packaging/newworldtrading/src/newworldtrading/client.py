@@ -1,21 +1,21 @@
 """A small, dependency-free client for the NewWorldTrading REST API.
 
 The client uses only the Python standard library (``urllib``) so that
-``pip install agentictrading`` stays lightweight and has no transitive
+``pip install newworldtrading`` stays lightweight and has no transitive
 dependencies. It covers the public read endpoints (health, runs, leaderboard,
 ticker, paper trading) and the agent-facing backtest workflow
 (``/api/v1/backtest/...``).
 
 Example
 -------
->>> from agentictrading import AgenticTradingClient
->>> client = AgenticTradingClient("https://agentictrading.onrender.com")
+>>> from newworldtrading import NewWorldTradingClient
+>>> client = NewWorldTradingClient("https://newworldtrading.onrender.com")
 >>> client.health()
 {'status': 'ok', ...}
 
 Driving a backtest with your own strategy::
 
-    client = AgenticTradingClient(api_key="ag_xxx")
+    client = NewWorldTradingClient(api_key="ag_xxx")
 
     def strategy(snapshot):
         # return a list of action dicts, e.g.
@@ -35,7 +35,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, Callable, Optional
 
-DEFAULT_BASE_URL = "https://agentictrading.onrender.com"
+DEFAULT_BASE_URL = "https://newworldtrading.onrender.com"
 
 
 class ApiError(RuntimeError):
@@ -52,7 +52,7 @@ class ApiError(RuntimeError):
 Strategy = Callable[[dict], list]
 
 
-class AgenticTradingClient:
+class NewWorldTradingClient:
     """Thin HTTP client for an NewWorldTrading API server.
 
     Parameters
@@ -283,4 +283,4 @@ class AgenticTradingClient:
                 return result
 
     def __repr__(self) -> str:  # pragma: no cover - cosmetic
-        return f"AgenticTradingClient(base_url={self.base_url!r})"
+        return f"NewWorldTradingClient(base_url={self.base_url!r})"

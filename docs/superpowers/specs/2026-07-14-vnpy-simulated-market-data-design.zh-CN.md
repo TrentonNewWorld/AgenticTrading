@@ -2,12 +2,12 @@
 
 - **日期：** 2026-07-14
 - **状态：** 设计已批准，等待书面规格审阅
-- **项目：** AgenticTrading
+- **项目：** NewWorldTrading
 - **迭代：** vn.py 行情数据接入第 1 轮
 
 ## 1. 背景
 
-AgenticTrading 当前通过 `AlpacaDataLoader` 直接加载美股小时 K 线。主要回测路径与
+NewWorldTrading 当前通过 `AlpacaDataLoader` 直接加载美股小时 K 线。主要回测路径与
 DJIA-30 股票池、美东交易时间以及 Alpaca 凭据绑定。项目计划使用 vn.py 接入行情，
 并在后续通过 Interactive Brokers（IB，盈透证券）接入交易。
 
@@ -23,7 +23,7 @@ vn.py 的数据契约，再尝试连接真实券商接口。
 本轮验证以下数据链路：
 
 ```text
-vn.py BarData -> 标准 OHLCV DataFrame -> 现有 AgenticTrading 回测
+vn.py BarData -> 标准 OHLCV DataFrame -> 现有 NewWorldTrading 回测
 ```
 
 本轮不能证明 IB 账户能够成功连接，也不能证明策略在真实市场中能够盈利。
@@ -44,7 +44,7 @@ vn.py BarData -> 标准 OHLCV DataFrame -> 现有 AgenticTrading 回测
 
 | 决策项 | 选择 | 原因 |
 |---|---|---|
-| 首期市场 | 美股 | 与当前 AgenticTrading 产品及未来 `vnpy_ib` 路径一致。 |
+| 首期市场 | 美股 | 与当前 NewWorldTrading 产品及未来 `vnpy_ib` 路径一致。 |
 | 首个数据模式 | 历史小时 K 线 | 与当前回测输入一致，端到端路径最短。 |
 | 凭据 | 第 1 轮不需要 | 目前没有 IB 访问条件。 |
 | 交付入口 | 现有 Dashboard 回测页面 | 能得到用户可见的端到端结果。 |
@@ -235,7 +235,7 @@ Python 进程变化的 `hash()`。
 
 适配器执行以下明确映射：
 
-| vn.py `BarData` | AgenticTrading DataFrame |
+| vn.py `BarData` | NewWorldTrading DataFrame |
 |---|---|
 | `datetime` | `timestamp` 索引 |
 | `open_price` | `open` |
@@ -332,7 +332,7 @@ Alpaca 客户端，也不读取凭据。只有真正从 Alpaca 拉取数据的�
 ```text
 1. 安装 vn.py 开发环境可选依赖。
 2. 设置 ENABLE_VNPY_SIMULATION=true。
-3. 启动 AgenticTrading。
+3. 启动 NewWorldTrading。
 4. 打开 Dashboard -> Playground -> Backtest。
 5. 选择 vn.py Simulation。
 6. 使用标准 DJIA-30 演示日期（2026-04-01 到 2026-04-23）运行回测。

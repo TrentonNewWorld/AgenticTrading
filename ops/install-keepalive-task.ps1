@@ -55,7 +55,7 @@ Register-ScheduledTask `
     -Action $action `
     -Trigger $trigger `
     -Settings $settings `
-    -Description "Every $IntervalHours hours from 00:00: probe http://127.0.0.1:8000/health and start the Agentic Trading Lab backend if it is down." `
+    -Description "Every $IntervalHours hours from 00:00: probe http://127.0.0.1:8000/health and start the NewWorldTrading backend if it is down." `
     -Force | Out-Null
 
 Write-Output "Registered scheduled task '$TaskName' (every $IntervalHours h from 00:00)."

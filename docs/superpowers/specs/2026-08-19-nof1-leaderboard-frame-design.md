@@ -208,7 +208,7 @@ axis does not show.
 
 Follow the precedent already in the bundle: `MarketTicker.tsx`'s `apiBase()`,
 which returns `window.location.origin` on localhost and
-`https://agentictrading.onrender.com` otherwise, with an `AbortController`
+`https://newworldtrading.onrender.com` otherwise, with an `AbortController`
 timeout. Do not introduce a second base-URL convention —
 `test_frontend_api_base.py` exists.
 

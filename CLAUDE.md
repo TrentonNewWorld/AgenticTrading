@@ -40,7 +40,7 @@ python -m dashboard.backend.app                       # equivalent module entryp
 pytest dashboard/backend/tests/ -v
 pytest dashboard/backend/tests/test_protocol_api.py -v            # single file
 # The PyPI SDK has its own suite:
-pytest packaging/agentictrading/tests/ -v
+pytest packaging/newworldtrading/tests/ -v
 
 # Backtest CLIs (from the repo root)
 python dashboard/scripts/backtest_hourly_agent.py     # main hourly agent backtest
@@ -163,14 +163,14 @@ test passing period `"live"` or season `3` passes anyway).
 
 - **Protocol Run API** (`api/routers/runs.py` → `domain/runs/*`): an external agent authenticates with its Agent API key (`X-API-Key`) and drives a backtest step-by-step (`POST /api/v1/runs`, poll steps, submit decisions). Each step has a decision deadline (default 60s); a late decision auto-holds that step rather than failing the run. A server-wide active-run backstop (`MAX_ACTIVE_RUNS_GLOBAL`, default 100; 0 disables) rejects creates on both surfaces with 429 + `Retry-After` once at capacity.
 - **External backtest engine** (`domain/backtesting/external_run_service.py`): the hour-by-hour session behind both the protocol and the legacy `/api/v1/backtest/*` routes.
-- **PyPI client** (`packaging/agentictrading/`): stdlib-only Python SDK + `AgentRunner`. Published via `.github/workflows/publish-pypi.yml`.
+- **PyPI client** (`packaging/newworldtrading/`): stdlib-only Python SDK + `AgentRunner`. Published via `.github/workflows/publish-pypi.yml`.
 
 ### Agent API v2 (`/api/v2`) — the canonical agent-facing contract
 
 Two step-driven agent surfaces coexist; they are **not peers**:
 
 - **`/api/v2` is canonical** (`api/v2/*` routers + `execution/` backends over the same domain engines): typed Pydantic contract, per-agent scopes + token-bucket rate limits, canonical `run_id`, DB-backed idempotency (`(run_id, idem_key)`), `context_ref` provenance, self-describing `GET /api/v2/schema`. Spec/plan: `docs/superpowers/{specs,plans}/2026-06-23-agent-api-foundation-*`. New agent-facing features land here. **Phase B** (paper/live via `ExecutionBackend`) and **Phase C** (MCP façade) are **not built yet** — `execution/paper_backend.py` is a stub.
-- **`/api/v1` is the compatibility surface** for the shipping SDK (`packaging/agentictrading`), Discord bot, and built-in agents. Keep it working; do not grow it. Migrating the SDK to v2 is the gate for publishing `agentictrading` 0.2.0.
+- **`/api/v1` is the compatibility surface** for the shipping SDK (`packaging/newworldtrading`), Discord bot, and built-in agents. Keep it working; do not grow it. Migrating the SDK to v2 is the gate for publishing `newworldtrading` 0.2.0.
 - **Unified run lifecycle (v1 + v2).** The two surfaces share one active-run cap ledger (under a single lock), one reaper sweep (`register_reaper_sweep()` reaches v2 runs), and multi-worker heartbeat recovery (`owner_instance`/`heartbeat_at` columns, `RUN_HEARTBEAT_STALE_SECONDS`). Terminal v2 runs are swapped for a DB-backed `ArchivedBacktestBackend` tombstone; step/idempotency state persists across process restarts; v2 `cancel`/`status` report the true terminal status (not always "closed").
 - `execution/` sits at the backend root (not `domain/`) deliberately: the backends bind domain engines to the v2 API contract, and `test_architecture_boundaries` forbids `domain/` → `api/` imports.
 
@@ -186,7 +186,7 @@ Two step-driven agent surfaces coexist; they are **not peers**:
 
 - **Never push follow-up work to a branch whose PR is already merged.** Cut a new branch. GitHub gives **no notification, no reopening, and no warning** when commits land behind a merged PR — they orphan silently, and the only signal is a human noticing the branch is ahead of the PR that consumed it. (This is exactly how PR #107 shipped without the fix that was meant to be part of it; the follow-ups had to be re-landed as #110 off the same ref.) Check before pushing: `gh pr list --head <branch> --state all`.
 - **If a PR must not merge yet, publish that where GitHub shows or enforces it** — **open it as a draft**, or add a `blocked` label, and put the gate as an imperative in the *first line of the body* ("DO NOT MERGE until X ships"). A comment is not a gate, and a body that explains why the change is *safe* to land early ("depends on X, but falls back transparently until then") reads as *please merge me*. A gating instruction posted after the merge is worthless — intent that only exists in a local worktree or an agent session's memory does not exist.
-- **Never record in notes/memory that a merge was sequenced deliberately unless a session actually verified and pressed the button.** Check `gh api repos/TrentonNewWorld/AgenticTrading/pulls/N --jq '.merged_by.login'`. Writing down a gate that nobody applied teaches every later reader that the gate works.
+- **Never record in notes/memory that a merge was sequenced deliberately unless a session actually verified and pressed the button.** Check `gh api repos/TrentonNewWorld/NewWorldTrading/pulls/N --jq '.merged_by.login'`. Writing down a gate that nobody applied teaches every later reader that the gate works.
 
 ### Fail-closed is not fail-visible
 

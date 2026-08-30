@@ -143,7 +143,7 @@ function m10ExportStrategy(key) {
     const s = m10StrategiesCache.find(x => x.key === key);
     if (!s || !s.code) { alert('No exportable code for this strategy.'); return; }
     const pkg = {
-        format: 'agentic-trading-lab-strategy-v1',
+        format: 'newworldtrading-strategy-v1',
         name: s.name,
         description: s.description || '',
         code: s.code,

@@ -15,7 +15,7 @@ function apiBase(): string {
   if (host === "localhost" || host === "127.0.0.1") {
     return window.location.origin;
   }
-  return "https://agentictrading.onrender.com";
+  return "https://newworldtrading.onrender.com";
 }
 
 function sortQuotes(quotes: Quote[]): Quote[] {

@@ -46,7 +46,7 @@ jobs:
         env:
           # Overridable so a fork or a staging service can point elsewhere
           # without editing the workflow.
-          HEALTH_URL: ${{ vars.KEEP_WARM_URL || 'https://agentictrading.onrender.com/health' }}
+          HEALTH_URL: ${{ vars.KEEP_WARM_URL || 'https://newworldtrading.onrender.com/health' }}
         run: |
           curl --silent --show-error --fail \
             --max-time 90 \

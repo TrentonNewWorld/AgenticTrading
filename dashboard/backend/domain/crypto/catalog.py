@@ -21,7 +21,7 @@ LEADERBOARD_CRYPTO_CONFIG_PATH = CONFIG_DIR / "leaderboard_crypto.json"
 CACHE_TTL_HOURS = 24
 INITIAL_CAPITAL = 1000.0
 
-EXPORT_FORMAT = "agentic-trading-lab-strategy-v1"
+EXPORT_FORMAT = "newworldtrading-strategy-v1"
 
 _DESCRIPTIONS: Dict[str, Dict[str, str]] = {
     "cx_momentum_basket": {"source": "Crypto Strategy",
@@ -258,7 +258,7 @@ def build_export(key: str) -> Dict[str, Any]:
     code = strat.code() if strat else None
     if not code:
         return {
-            "format": "agentic-trading-lab-strategy-reference-v1",
+            "format": "newworldtrading-strategy-reference-v1",
             "executable": False,
             "name": strat_entry.get("name") or key,
             "description": _description_for(key, strat_entry.get("name") or key, strat_entry)["description"],

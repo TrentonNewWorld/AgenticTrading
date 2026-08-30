@@ -2,7 +2,7 @@
 
 - **日期：** 2026-07-24
 - **状态：** 设计已逐段确认，等待书面规格复核
-- **项目：** AgenticTrading（下文简称 ATL）
+- **项目：** NewWorldTrading（下文简称 ATL）
 - **分支：** `feat/ifind-ashare-market-data`
 - **迭代：** iFinD/A 股数据接入第 2 轮
 

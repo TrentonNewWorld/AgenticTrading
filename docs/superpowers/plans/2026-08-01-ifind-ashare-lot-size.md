@@ -52,7 +52,7 @@ No product-code changes.
 Checks:
 
 ```bash
-gh pr view 272 --repo TrentonNewWorld/AgenticTrading \
+gh pr view 272 --repo TrentonNewWorld/NewWorldTrading \
   --json state,mergedAt,mergeCommit,statusCheckRollup
 git log --oneline --decorate -8
 git status --short --branch
@@ -365,7 +365,7 @@ python -m pytest -q \
   dashboard/backend/tests/infrastructure/market_data/test_vnpy_adapter.py \
   dashboard/backend/tests/infrastructure/market_data/test_vnpy_simulation.py \
   dashboard/backend/tests/test_vnpy_simulation_frontend.py \
-  packaging/agentictrading/tests/test_vnpy_cta_integration.py
+  packaging/newworldtrading/tests/test_vnpy_cta_integration.py
 ```
 
 ---
@@ -381,7 +381,7 @@ python -m pytest -q dashboard/backend/tests
 2. Run the packaging suite:
 
 ```bash
-python -m pytest -q packaging/agentictrading/tests
+python -m pytest -q packaging/newworldtrading/tests
 ```
 
 3. Run integrity checks:

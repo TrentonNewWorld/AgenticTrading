@@ -18,7 +18,7 @@ Usage:
   # New Run API (protocol v1) — only needs the agent API key:
   python3 examples/external_agent_client.py \\
     --protocol v1 \\
-    --api https://agentictrading.onrender.com \\
+    --api https://newworldtrading.onrender.com \\
     --api-key ag_xxxxxxxx \\
     --start 2026-04-15 --end 2026-04-16
 

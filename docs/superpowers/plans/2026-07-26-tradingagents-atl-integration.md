@@ -10,7 +10,7 @@ ATL 当前 Agent-Environment Protocol v1 完成 T+1 模拟成交、指标、曲�
 可重放的 JSON artifact。ATL 集成适配器把评级转换为 BUY/HOLD/SELL，使用 typed
 `ATLClient` 驱动现有 `us-equity-hourly-v1` 环境。模型生成阶段与 ATL 回放阶段完全分开。
 
-**技术栈：** Python 3.10+、TradingAgents v0.3.1、ATL `agentictrading` 轻量 SDK、
+**技术栈：** Python 3.10+、TradingAgents v0.3.1、ATL `newworldtrading` 轻量 SDK、
 标准库 `dataclasses/json/hashlib/zoneinfo/urllib`、pytest。
 
 **设计规格：**
@@ -23,7 +23,7 @@ ATL 当前 Agent-Environment Protocol v1 完成 T+1 模拟成交、指标、曲�
 - TradingAgents 只能延迟导入，不能成为 SDK 或 ATL 后端的核心依赖。
 - ATL 后端不能调用用户的 TradingAgents、LLM 或数据供应商。
 - 不修改通用 `AgentRunner` 的 `decide(observation)` 协议。
-- 不使用旧的 `AgenticTradingClient.run_backtest(strategy=...)` 接口。
+- 不使用旧的 `NewWorldTradingClient.run_backtest(strategy=...)` 接口。
 - 不把格式错误默认为主动 Hold；必须使用上游 `parse_rating(..., default="")` 校验。
 - 生成阶段完成后才创建 ATL run，回放阶段不得调用 LLM。
 - 不将完整环境变量或包含 Key、Token、Secret、Password、Credential 的值持久化。
@@ -38,9 +38,9 @@ ATL 当前 Agent-Environment Protocol v1 完成 T+1 模拟成交、指标、曲�
 
 **文件：**
 
-- 新建：`packaging/agentictrading/src/agentictrading/integrations/__init__.py`
-- 新建：`packaging/agentictrading/src/agentictrading/integrations/tradingagents.py`
-- 新建：`packaging/agentictrading/tests/test_tradingagents_integration.py`
+- 新建：`packaging/newworldtrading/src/newworldtrading/integrations/__init__.py`
+- 新建：`packaging/newworldtrading/src/newworldtrading/integrations/tradingagents.py`
+- 新建：`packaging/newworldtrading/tests/test_tradingagents_integration.py`
 
 **首轮接口：**
 
@@ -76,7 +76,7 @@ def load_decision_artifact(path) -> TradingAgentsDecisionArtifact: ...
 - [ ] **Step 2：运行并确认失败**
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.py -v
+python -m pytest packaging/newworldtrading/tests/test_tradingagents_integration.py -v
 ```
 
 预期：FAIL，集成包尚不存在。
@@ -86,15 +86,15 @@ python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.p
 仅实现 dataclass、显式序列化/反序列化、字段校验、SHA-256 和安全白名单。不得在本任务
 导入 TradingAgents 或编写 ATL 网络循环。
 
-默认文件名函数使用 `~/.agentictrading/tradingagents/decisions/`，但单元测试始终使用
+默认文件名函数使用 `~/.newworldtrading/tradingagents/decisions/`，但单元测试始终使用
 pytest 临时目录。
 
 - [ ] **Step 4：运行测试并提交**
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.py -v
-git add packaging/agentictrading/src/agentictrading/integrations \
-  packaging/agentictrading/tests/test_tradingagents_integration.py
+python -m pytest packaging/newworldtrading/tests/test_tradingagents_integration.py -v
+git add packaging/newworldtrading/src/newworldtrading/integrations \
+  packaging/newworldtrading/tests/test_tradingagents_integration.py
 git commit -m "feat(sdk): add TradingAgents decision artifact"
 ```
 
@@ -104,8 +104,8 @@ git commit -m "feat(sdk): add TradingAgents decision artifact"
 
 **文件：**
 
-- 修改：`packaging/agentictrading/src/agentictrading/integrations/tradingagents.py`
-- 修改：`packaging/agentictrading/tests/test_tradingagents_integration.py`
+- 修改：`packaging/newworldtrading/src/newworldtrading/integrations/tradingagents.py`
+- 修改：`packaging/newworldtrading/tests/test_tradingagents_integration.py`
 
 **新增接口：**
 
@@ -145,7 +145,7 @@ TradingAgents、不联网也能覆盖完整行为。
 - [ ] **Step 2：运行并确认失败**
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.py -v -k generator
+python -m pytest packaging/newworldtrading/tests/test_tradingagents_integration.py -v -k generator
 ```
 
 - [ ] **Step 3：实现最小生成器**
@@ -164,10 +164,10 @@ graph，日期按排序顺序调用。每个日期最多两次完整尝试。
 - [ ] **Step 4：运行完整 SDK 测试并提交**
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.py -v
-python -m pytest packaging/agentictrading/tests -q
-git add packaging/agentictrading/src/agentictrading/integrations/tradingagents.py \
-  packaging/agentictrading/tests/test_tradingagents_integration.py
+python -m pytest packaging/newworldtrading/tests/test_tradingagents_integration.py -v
+python -m pytest packaging/newworldtrading/tests -q
+git add packaging/newworldtrading/src/newworldtrading/integrations/tradingagents.py \
+  packaging/newworldtrading/tests/test_tradingagents_integration.py
 git commit -m "feat(sdk): generate TradingAgents decisions locally"
 ```
 
@@ -177,8 +177,8 @@ git commit -m "feat(sdk): generate TradingAgents decisions locally"
 
 **文件：**
 
-- 修改：`packaging/agentictrading/src/agentictrading/integrations/tradingagents.py`
-- 修改：`packaging/agentictrading/tests/test_tradingagents_integration.py`
+- 修改：`packaging/newworldtrading/src/newworldtrading/integrations/tradingagents.py`
+- 修改：`packaging/newworldtrading/tests/test_tradingagents_integration.py`
 
 **新增接口：**
 
@@ -214,7 +214,7 @@ Planner 是纯本地状态机，不负责创建 run 或发 HTTP。它接收 type
 - [ ] **Step 2：运行并确认失败**
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.py -v -k replay
+python -m pytest packaging/newworldtrading/tests/test_tradingagents_integration.py -v -k replay
 ```
 
 - [ ] **Step 3：实现纯回放状态机**
@@ -226,9 +226,9 @@ rationale 标签。
 - [ ] **Step 4：运行测试并提交**
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.py -v
-git add packaging/agentictrading/src/agentictrading/integrations/tradingagents.py \
-  packaging/agentictrading/tests/test_tradingagents_integration.py
+python -m pytest packaging/newworldtrading/tests/test_tradingagents_integration.py -v
+git add packaging/newworldtrading/src/newworldtrading/integrations/tradingagents.py \
+  packaging/newworldtrading/tests/test_tradingagents_integration.py
 git commit -m "feat(sdk): replay TradingAgents signals at ATL T+1"
 ```
 
@@ -238,9 +238,9 @@ git commit -m "feat(sdk): replay TradingAgents signals at ATL T+1"
 
 **文件：**
 
-- 修改：`packaging/agentictrading/src/agentictrading/integrations/tradingagents.py`
-- 修改：`packaging/agentictrading/src/agentictrading/integrations/__init__.py`
-- 修改：`packaging/agentictrading/tests/test_tradingagents_integration.py`
+- 修改：`packaging/newworldtrading/src/newworldtrading/integrations/tradingagents.py`
+- 修改：`packaging/newworldtrading/src/newworldtrading/integrations/__init__.py`
+- 修改：`packaging/newworldtrading/tests/test_tradingagents_integration.py`
 
 **新增接口：**
 
@@ -280,7 +280,7 @@ fake client 提供 `create_run/get_next_step/submit_decision/get_run_result/get_
 - [ ] **Step 2：运行并确认失败**
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.py -v -k runner
+python -m pytest packaging/newworldtrading/tests/test_tradingagents_integration.py -v -k runner
 ```
 
 - [ ] **Step 3：实现最小 ATL 循环**
@@ -292,10 +292,10 @@ CLI 层。
 - [ ] **Step 4：运行 SDK 与协议契约回归测试并提交**
 
 ```bash
-python -m pytest packaging/agentictrading/tests -q
+python -m pytest packaging/newworldtrading/tests -q
 python -m pytest dashboard/backend/tests/test_protocol_api.py -q
-git add packaging/agentictrading/src/agentictrading/integrations \
-  packaging/agentictrading/tests/test_tradingagents_integration.py
+git add packaging/newworldtrading/src/newworldtrading/integrations \
+  packaging/newworldtrading/tests/test_tradingagents_integration.py
 git commit -m "feat(sdk): run TradingAgents artifacts on ATL"
 ```
 
@@ -308,7 +308,7 @@ git commit -m "feat(sdk): run TradingAgents artifacts on ATL"
 - 新建：`dashboard/examples/tradingagents_atl_backtest.py`
 - 新建：`docs/integrations/tradingagents.zh-CN.md`
 - 修改：`docs/source/lab/external_agents.rst`
-- 修改：`packaging/agentictrading/tests/test_tradingagents_integration.py`
+- 修改：`packaging/newworldtrading/tests/test_tradingagents_integration.py`
 
 - [ ] **Step 1：写 CLI 参数与配置失败测试**
 
@@ -325,7 +325,7 @@ git commit -m "feat(sdk): run TradingAgents artifacts on ATL"
 - [ ] **Step 2：运行并确认失败**
 
 ```bash
-python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.py -v -k cli
+python -m pytest packaging/newworldtrading/tests/test_tradingagents_integration.py -v -k cli
 ```
 
 - [ ] **Step 3：实现一条命令的两阶段流程**
@@ -353,11 +353,11 @@ python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.p
 
 ```bash
 python dashboard/examples/tradingagents_atl_backtest.py --help
-python -m pytest packaging/agentictrading/tests/test_tradingagents_integration.py -v
+python -m pytest packaging/newworldtrading/tests/test_tradingagents_integration.py -v
 git diff --check
 git add dashboard/examples/tradingagents_atl_backtest.py \
   docs/integrations/tradingagents.zh-CN.md docs/source/lab/external_agents.rst \
-  packaging/agentictrading/tests/test_tradingagents_integration.py
+  packaging/newworldtrading/tests/test_tradingagents_integration.py
 git commit -m "docs: add TradingAgents ATL quickstart"
 ```
 
@@ -370,7 +370,7 @@ git commit -m "docs: add TradingAgents ATL quickstart"
 - [ ] **Step 1：运行完整相关测试**
 
 ```bash
-python -m pytest packaging/agentictrading/tests -q
+python -m pytest packaging/newworldtrading/tests -q
 python -m pytest dashboard/backend/tests/test_protocol_api.py -q
 python -m pytest dashboard/backend/tests/test_deadline_and_holds.py -q
 python -m pytest dashboard/backend/tests/test_app_composition.py -q

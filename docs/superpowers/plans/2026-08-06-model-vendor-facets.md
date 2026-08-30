@@ -61,7 +61,7 @@ PRs 1 and 2 are independent and may run in parallel.
 **PR 4's gate is a production probe, not a merge badge.** Merging to `main` auto-deploys, but Render lags Vercel by 10–40 minutes. Before merging PR 4, both of these must return the new shapes **from prod**:
 
 ```bash
-curl -s https://agentictrading.onrender.com/openapi.json \
+curl -s https://newworldtrading.onrender.com/openapi.json \
   | python3 -c "import json,sys; d=json.load(sys.stdin); \
 print('duplicate route:', '/api/v1/agents/{agent_id}/duplicate' in d['paths']); \
 print('clone model_name:', 'model_name' in d['components']['schemas']['CloneMarketplaceBody']['properties'])"

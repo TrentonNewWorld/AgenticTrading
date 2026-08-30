@@ -14,8 +14,8 @@ from pathlib import Path
 from typing import Any, Mapping, Optional, Sequence
 from urllib.parse import urljoin
 
-from agentictrading import ATLClient, __version__ as atl_sdk_version
-from agentictrading.integrations.vnpy_cta import (
+from newworldtrading import ATLClient, __version__ as atl_sdk_version
+from newworldtrading.integrations.vnpy_cta import (
     VnpyCtaAdapter,
     VnpyCtaATLRunner,
     VnpyCtaRunSummary,
@@ -68,7 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--output",
-        help="audit artifact JSON path (default: ~/.agentictrading/vnpy-cta/runs/)",
+        help="audit artifact JSON path (default: ~/.newworldtrading/vnpy-cta/runs/)",
     )
     return parser
 
@@ -121,7 +121,7 @@ def load_strategy_class(spec: str) -> type:
 def default_output_path() -> Path:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     name = f"vnpy-cta-{stamp}-{uuid.uuid4().hex[:8]}.json"
-    return Path.home() / ".agentictrading" / "vnpy-cta" / "runs" / name
+    return Path.home() / ".newworldtrading" / "vnpy-cta" / "runs" / name
 
 
 def build_manifest(
@@ -136,7 +136,7 @@ def build_manifest(
                 "settings": dict(settings),
             },
             "versions": {
-                "agentictrading": atl_sdk_version,
+                "newworldtrading": atl_sdk_version,
                 "vnpy": runtime.bindings.vnpy_version,
                 "vnpy_ctastrategy": runtime.bindings.cta_version,
             },

@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Agentic Trading Documentation'
+project = 'NewWorldTrading Documentation'
 copyright = '2025, NewWorldTrading'
 author = 'the upstream project'
 release = '1.0'
@@ -64,7 +64,7 @@ html_css_files = [
 html_context = {
     "display_github": True, # Integrate GitHub
     "github_user": "TrentonNewWorld", # Username
-    "github_repo": "AgenticTrading", # Repo name
+    "github_repo": "NewWorldTrading", # Repo name
     "github_version": "main", # Version
     "conf_py_path": "/docs/source/", # Path in the checkout to the docs root
 }

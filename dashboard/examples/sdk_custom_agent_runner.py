@@ -21,7 +21,7 @@ from __future__ import annotations
 import os
 import sys
 
-from agentictrading import AgentRunner, ATLClient
+from newworldtrading import AgentRunner, ATLClient
 
 
 class MomentumAgent:

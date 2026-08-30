@@ -424,7 +424,7 @@ become accurate and should be revisited:
   (resolve api_key "at any time"), `:310` (leaderboard ranking of registered agents)
 - `docs/api/python-sdk-quickstart.md:161-182` ("create agent once, reuse across runs";
   `create_agent_version`)
-- `packaging/agentictrading/README.md:66` (register on dashboard to get an API key)
+- `packaging/newworldtrading/README.md:66` (register on dashboard to get an API key)
 - `docs/architecture/discord-to-backtest.md:9` (create a built-in agent first)
 - `README.md:50-61` (customizable agents, leaderboard competition)
 

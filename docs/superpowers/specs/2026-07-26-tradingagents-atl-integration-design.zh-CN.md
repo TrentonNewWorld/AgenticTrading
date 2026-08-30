@@ -2,7 +2,7 @@
 
 - **日期：** 2026-07-26
 - **状态：** 设计与书面规格已批准，进入实施计划
-- **项目：** AgenticTrading（ATL）
+- **项目：** NewWorldTrading（ATL）
 - **上游项目：** `TauricResearch/TradingAgents`
 - **参考版本：** TradingAgents v0.3.1；ATL `origin/main` 3a7781a
 - **迭代：** 三个热门项目接入计划的第 1 个项目
@@ -51,7 +51,7 @@ ATL 负责“模拟成交、算账和比较”
 - 所有 TradingAgents 分析在 ATL 回测开始前完成并写入决策文件。
 - ATL 使用现有 `us-equity-hourly-v1` 环境和 Alpaca 行情完成模拟成交与估值。
 - 使用 ATL 当前 typed `ATLClient` 和 Agent-Environment Protocol v1，不使用旧的
-  `AgenticTradingClient.run_backtest(strategy=...)` 接口。
+  `NewWorldTradingClient.run_backtest(strategy=...)` 接口。
 - 决策文件可以反复回放；回放不再次调用 LLM。
 - ATL API Key、LLM Key 和数据供应商 Key 只留在用户本机环境变量中。
 
@@ -152,7 +152,7 @@ ATL 通过 HTTP 请求本地 TradingAgents 服务。该方案适合未来多用�
 git clone https://github.com/TauricResearch/TradingAgents.git
 cd TradingAgents
 pip install .
-pip install -e /path/to/AgenticTrading/packaging/agentictrading
+pip install -e /path/to/NewWorldTrading/packaging/newworldtrading
 ```
 
 第一版针对 TradingAgents v0.3.1 测试。运行时记录实际包版本；发现不兼容的大版本时应
@@ -201,7 +201,7 @@ raw_decision = state["final_trade_decision"]
 决策文件为 UTF-8 JSON，默认写入用户目录而不是 Git 仓库：
 
 ```text
-~/.agentictrading/tradingagents/decisions/<symbol>-<timestamp>.json
+~/.newworldtrading/tradingagents/decisions/<symbol>-<timestamp>.json
 ```
 
 顶层结构：
@@ -382,7 +382,7 @@ TradingAgents 所选供应商要求的 LLM / 数据 Key
 ## 13. 代码边界与文件位置
 
 ```text
-packaging/agentictrading/src/agentictrading/integrations/
+packaging/newworldtrading/src/newworldtrading/integrations/
   __init__.py
   tradingagents.py
     - 稳定公开导入门面
@@ -395,7 +395,7 @@ packaging/agentictrading/src/agentictrading/integrations/
   _tradingagents_runner.py
     - ATLClient 生命周期和结果汇总
 
-packaging/agentictrading/tests/
+packaging/newworldtrading/tests/
   test_tradingagents_integration.py
 
 dashboard/examples/

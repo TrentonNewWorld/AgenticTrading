@@ -41,7 +41,7 @@ Create an isolated Python 3.10 or newer environment:
 python3.10 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e 'packaging/agentictrading[vnpy]'
+python -m pip install -e 'packaging/newworldtrading[vnpy]'
 ```
 
 The optional dependency versions are pinned to:
@@ -54,7 +54,7 @@ The optional dependency versions are pinned to:
 Create an ATL Agent and AgentVersion, then set these environment variables:
 
 ```bash
-export ATL_BASE_URL="https://agentictrading.onrender.com"
+export ATL_BASE_URL="https://newworldtrading.onrender.com"
 export ATL_API_KEY="ag_xxxxxxxx"
 export ATL_AGENT_VERSION_ID="agv_xxxxxxxx"
 ```
@@ -107,7 +107,7 @@ python dashboard/examples/vnpy_cta_atl_backtest.py \
 ```
 
 Use `--output` to select the local audit path. Without it, artifacts are written
-under `~/.agentictrading/vnpy-cta/runs/`. The CLI accepts `--initial-cash` for
+under `~/.newworldtrading/vnpy-cta/runs/`. The CLI accepts `--initial-cash` for
 forward compatibility, but the current ATL environment fixes initial equity at
 1000, so the option should normally be omitted.
 

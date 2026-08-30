@@ -1,5 +1,5 @@
 # Standalone Discord bot worker — use when the API is already deployed elsewhere
-# (e.g. free-tier web service at agentictrading.onrender.com).
+# (e.g. free-tier web service at newworldtrading.onrender.com).
 #
 # Dashboard → New → Blueprint → connect repo → set Blueprint path to this file.
 #
@@ -22,7 +22,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.13.5
       - key: ATL_API_BASE
-        value: https://agentictrading.onrender.com
+        value: https://newworldtrading.onrender.com
       # Discord deep links must open the Vercel SPA, not the Render API host.
       - key: PUBLIC_APP_URL
         value: http://localhost:8000

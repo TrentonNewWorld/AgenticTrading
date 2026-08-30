@@ -38,7 +38,7 @@ _LOCALHOST_LITERAL = re.compile(r"""['"]localhost['"]""")
 # so an initializer that merely abuts two differently-quoted strings would
 # false-pass as "uses an empty API base".
 _EMPTY_PROD_BASE = re.compile(r"""(?:''|"")""")
-_LEGACY_ONRENDER = re.compile(r"""['"]https://agentictrading\.onrender\.com['"]""")
+_LEGACY_ONRENDER = re.compile(r"""['"]https://newworldtrading\.onrender\.com['"]""")
 
 
 def _definitions():

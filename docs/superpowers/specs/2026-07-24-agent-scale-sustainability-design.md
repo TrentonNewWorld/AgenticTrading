@@ -66,7 +66,7 @@ a rewrite.
    2026-07-24 as #201 (N+1), #202 (async-def blocking), #203 (`GET /runs` pagination).
 5. **The wire contract is frozen: no new step/run statuses.** The shipped `AgentRunner`
    raises `ATLAPIError` on any `steps/next` status outside its closed allow-list
-   (`packaging/agentictrading/src/agentictrading/runner.py:143–185` — the if/elif chain,
+   (`packaging/newworldtrading/src/newworldtrading/runner.py:143–185` — the if/elif chain,
    with the unexpected-status raise at `:180–185`; locked by
    `test_atl_runner.py:183–193`). Every change below is designed so `"completed"` keeps
    meaning "results persisted" and no polling endpoint ever emits a new literal.
@@ -184,7 +184,7 @@ flip at `:605` already separates the halves):
   lands. Two caveats are permanent, not "brief": (1) the **one-shot legacy decision
   response** (`submit_decisions`' completed payload, `external_run_service.py:502–513`,
   returned verbatim by `api/routers/external_backtest.py:181–202` and treated as the
-  *final* result by the legacy `AgenticTradingClient.run_backtest` with no re-poll) builds
+  *final* result by the legacy `NewWorldTradingClient.run_backtest` with no re-poll) builds
   its `compare_url` and baseline fields before baselines exist — that snapshot permanently
   lacks them. Accepted: the dashboard compare view already resolves absent baseline ids by
   date-range fallback (`app.js:4547–4640`, verified), so the URL still renders; the
@@ -199,7 +199,7 @@ flip at `:605` already separates the halves):
   reads any of these fields for control flow.
 
 Side effect worth naming: this *fixes a shipped latent bug* — `ATLClient` uses a flat 30 s
-HTTP timeout with no per-call override (`atl_client.py:69,103`), so today's in-request
+HTTP timeout with no per-call override (`legacy_client.py:69,103`), so today's in-request
 baselines can already trip a client-side `ATLTimeoutError` on the final decision submit.
 After T2 the final submit returns in milliseconds.
 
@@ -363,7 +363,7 @@ Living docs to update in the same PRs:
 - `docs/api/agent-environment-protocol-v1.md:293` (deadline default), `:347` (document the
   new global-cap 429 code + `Retry-After` beside the per-agent one), `:323–324` (results
   note: baselines may lag completion briefly).
-- `packaging/agentictrading/README.md:47–50` (60 s; 429 guidance) and the `runner.py:62,117`
+- `packaging/newworldtrading/README.md:47–50` (60 s; 429 guidance) and the `runner.py:62,117`
   comment/docstring — docs-only SDK changes, shipped with the next SDK release; no code
   change required by this spec.
 

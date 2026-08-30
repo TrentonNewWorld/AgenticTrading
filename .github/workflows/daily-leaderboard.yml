@@ -45,7 +45,7 @@ jobs:
     steps:
       - name: POST daily refresh (202 Accepted)
         env:
-          ATL_API: ${{ vars.ATL_API || 'https://agentictrading.onrender.com' }}
+          ATL_API: ${{ vars.ATL_API || 'https://newworldtrading.onrender.com' }}
           LEADERBOARD_DAILY_REFRESH_SECRET: ${{ secrets.LEADERBOARD_DAILY_REFRESH_SECRET }}
           # Scheduled runs always deploy; a manual run honours its input. Written
           # as an explicit ternary rather than `A && B || 'true'`: that idiom

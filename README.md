@@ -14,12 +14,12 @@
 Turn trading ideas into traceable experiments: prototype agents, run backtests and paper-trading simulations, inspect reasoning and decision logs, benchmark against market baselines, and — when you're ready — trade live under per-order risk caps.
 
 <div align="center">
-  <img src="./dashboard/frontend/images/snapshot.png" alt="Website Snapshot" width="720">
+  <img src="./docs/images/screenshots/home.png" alt="NewWorldTrading home screen" width="800">
 </div>
 
 ## 📥 Download
 
-**[⬇ Download the bot (latest release)](https://github.com/TrentonNewWorld/AgenticTrading/releases/latest)** — one zip containing the full bot, the **[Setup Guide](SETUP-GUIDE.md)**, the **[Disclaimer](DISCLAIMER.md)**, and the **[License](LICENSE)**.
+**[⬇ Download the bot (latest release)](https://github.com/TrentonNewWorld/NewWorldTrading/releases/latest)** — one zip containing the full bot, the **[Setup Guide](SETUP-GUIDE.md)**, the **[Disclaimer](DISCLAIMER.md)**, and the **[License](LICENSE)**.
 
 Or clone this repository — it is the same code. Read [DISCLAIMER.md](DISCLAIMER.md) before trading anything.
 
@@ -43,6 +43,16 @@ Or clone this repository — it is the same code. Read [DISCLAIMER.md](DISCLAIME
 
 Everything runs locally on your machine (`127.0.0.1` only) — your broker keys
 never leave it, and uploaded strategies execute in a locked-down sandbox.
+
+## Screenshots
+
+| The Leaderboard | The Strategy Catalog |
+|---|---|
+| ![Leaderboard with real equity curves](docs/images/screenshots/overview-leaderboard.png) | ![Strategy catalog cards](docs/images/screenshots/strategy-catalog.png) |
+
+| Build AI Agents | |
+|---|---|
+| ![My Agents](docs/images/screenshots/my-agents.png) | |
 
 ## Key Features
 
@@ -70,7 +80,7 @@ NewWorldTrading/
 │   ├── scripts/               # CLI backtests (backtest_hourly_agent.py, …)
 │   ├── config/                # defaults.json, leaderboard*.json, marketplace.json
 │   └── storage/               # data/backtest.db + backups/
-├── packaging/agentictrading/  # PyPI SDK (AgentRunner + HTTP client)
+├── packaging/newworldtrading/  # PyPI SDK (AgentRunner + HTTP client)
 ├── credentials/               # Local only — not in git (see alpaca.json.example)
 ├── docs/                      # Sphinx docs + architecture notes
 ├── requirements.txt           # Dashboard deps

@@ -1,4 +1,4 @@
-# Releasing `agentictrading`
+# Releasing `newworldtrading`
 
 The package is published to PyPI automatically by
 `.github/workflows/publish-pypi.yml` whenever a `v*` tag is pushed.
@@ -8,11 +8,11 @@ The package is published to PyPI automatically by
 The workflow uses OIDC Trusted Publishing, so no API token is stored in GitHub.
 Configure it once on PyPI:
 
-1. Go to https://pypi.org/manage/project/agentictrading/settings/publishing/
+1. Go to https://pypi.org/manage/project/newworldtrading/settings/publishing/
    (Project → Settings → Publishing).
 2. Add a new **GitHub** trusted publisher with:
    - **Owner:** `TrentonNewWorld`
-   - **Repository:** `AgenticTrading`
+   - **Repository:** `NewWorldTrading`
    - **Workflow name:** `publish-pypi.yml`
    - **Environment:** `pypi`
 3. In the GitHub repo, create an environment named `pypi`
@@ -32,14 +32,14 @@ PyPI versions are immutable — every release needs a new version number.
 
 1. Bump the version in the single source of truth:
 
-   `src/agentictrading/__init__.py` → `__version__ = "0.1.1"`
+   `src/newworldtrading/__init__.py` → `__version__ = "0.1.1"`
 
    (`pyproject.toml` reads this automatically via `dynamic = ["version"]`.)
 
 2. Commit, then tag and push:
 
    ```bash
-   git add -A && git commit -m "Release agentictrading 0.1.1"
+   git add -A && git commit -m "Release newworldtrading 0.1.1"
    git tag v0.1.1
    git push origin main --tags
    ```
@@ -50,7 +50,7 @@ PyPI versions are immutable — every release needs a new version number.
 ## Manual fallback
 
 ```bash
-cd packaging/agentictrading
+cd packaging/newworldtrading
 rm -rf dist build src/*.egg-info
 python -m build
 python -m twine check dist/*

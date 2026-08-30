@@ -18,7 +18,7 @@ def _source() -> str:
 def test_strategy_html_uses_same_origin_api_base_off_localhost():
     src = _source()
     assert "const API = location.origin" not in src
-    assert "https://agentictrading.onrender.com" not in src
+    assert "https://newworldtrading.onrender.com" not in src
     assert 'window.location.hostname === "localhost"' in src
     assert 'window.location.hostname === "127.0.0.1"' in src
     assert ': ""' in src or ": ''" in src

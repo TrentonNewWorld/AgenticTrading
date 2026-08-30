@@ -512,7 +512,7 @@ def test_cors_preflight_allows_every_routed_method():
         response = client.options(
             "/api/v1/agents/some-agent",
             headers={
-                "Origin": "https://agentic-trading-lab.vercel.app",
+                "Origin": "https://localhost:8000",
                 "Access-Control-Request-Method": method,
             },
         )

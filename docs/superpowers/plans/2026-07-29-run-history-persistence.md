@@ -945,7 +945,7 @@ git commit -m "feat(runs): idempotent backfill script for run history"
 - [x] **Step 3: Set `AGENT_RUNS_DATABASE_URL` in the Render dashboard** — **done 2026-07-29,
       ahead of the code**, so the usual "unset silently selects ephemeral SQLite" merge gate is
       already discharged. Set via the Render API on the web service `srv-d7lbmpjbc2fs73bcr6t0`
-      (*AgenticTrading*) only — the Discord-bot worker carries neither `CONTENT_DATABASE_URL`
+      (*NewWorldTrading*) only — the Discord-bot worker carries neither `CONTENT_DATABASE_URL`
       nor `USERS_DATABASE_URL` and reaches the backend over HTTP, so it does not get this one
       either. Value is the pooled (`-pooler`) `ATL-runs-main` string, verified byte-identical by
       SHA-256 round-trip. **Setting it did not trigger a deploy** (native autoDeploy is off; the

@@ -1756,7 +1756,7 @@ gh pr create --title "feat: background baseline worker + finalize split" --body 
 - Modify: `dashboard/backend/domain/backtesting/external_run_service.py:46`
 - Modify: `dashboard/backend/tests/_v2_fakes.py:40-41,90`
 - Modify: `dashboard/backend/tests/conftest.py` (strip the timeout var)
-- Modify: `CLAUDE.md:86`, `docs/api/agent-environment-protocol-v1.md:293`, `packaging/agentictrading/README.md:47-50`, `packaging/agentictrading/src/agentictrading/runner.py` (docstring/comment mentions of "30s")
+- Modify: `CLAUDE.md:86`, `docs/api/agent-environment-protocol-v1.md:293`, `packaging/newworldtrading/README.md:47-50`, `packaging/newworldtrading/src/newworldtrading/runner.py` (docstring/comment mentions of "30s")
 - Test: `dashboard/backend/tests/test_deadline_and_holds.py` (new file, shared with Task 8)
 
 - [ ] **Step 1: Write the failing test**
@@ -1791,8 +1791,8 @@ Expected: FAIL — `assert 30 == 60`.
 
 - `CLAUDE.md:86`: "(default 30s)" → "(default 60s)".
 - `docs/api/agent-environment-protocol-v1.md:293`: "`EXTERNAL_AGENT_DECISION_TIMEOUT_SECONDS` (default 30s)" → "(default 60s)". Also `grep -n "30s\|30 s" docs/api/agent-environment-protocol-v1.md` and update any other deadline mention (the auto-hold bullet).
-- `packaging/agentictrading/README.md:47`: "default **30s**" → "default **60s**"; append to that callout: "If the backend returns **429** (server at capacity), wait and retry with backoff — the client does not retry for you."
-- `packaging/agentictrading/src/agentictrading/runner.py`: `grep -n "30s" packaging/agentictrading/src/agentictrading/` → update each comment/docstring ("default 30s" → "default 60s"). Docs-only; ships with the next SDK release, no code change.
+- `packaging/newworldtrading/README.md:47`: "default **30s**" → "default **60s**"; append to that callout: "If the backend returns **429** (server at capacity), wait and retry with backoff — the client does not retry for you."
+- `packaging/newworldtrading/src/newworldtrading/runner.py`: `grep -n "30s" packaging/newworldtrading/src/newworldtrading/` → update each comment/docstring ("default 30s" → "default 60s"). Docs-only; ships with the next SDK release, no code change.
 - Historical specs/plans that say 30 s are **not** edited (historical-record convention).
 
 - [ ] **Step 5: Run the test + fake-consuming suites**
@@ -2739,7 +2739,7 @@ gh pr create --title "perf: auth cache + last_used_at debounce + pg connection p
 
 - [ ] **Step 1: Full-suite gate**
 
-On the final branch (all tiers merged or stacked): `~/atl-venv/bin/python -m pytest dashboard/backend/tests/ -q` and `~/atl-venv/bin/python -m pytest packaging/agentictrading/tests/ -q` — both green.
+On the final branch (all tiers merged or stacked): `~/atl-venv/bin/python -m pytest dashboard/backend/tests/ -q` and `~/atl-venv/bin/python -m pytest packaging/newworldtrading/tests/ -q` — both green.
 
 - [ ] **Step 2: 100-agent acceptance run**
 

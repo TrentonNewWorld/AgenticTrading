@@ -29,7 +29,7 @@ You need:
 - a **real agent** under **Playground → My Agents**. The demo agents on the
   dashboard cannot be connected; create one, or add one from the
   :doc:`Agent Marketplace <marketplace>` first;
-- a **Robinhood account** eligible for Robinhood's Agentic Trading (MCP) access;
+- a **Robinhood account** eligible for Robinhood's NewWorldTrading (MCP) access;
 - a deployment configured for Robinhood (:ref:`robinhood-config`). If it is not,
   connecting fails with *Robinhood OAuth is not configured*.
 
@@ -196,7 +196,7 @@ Set these in ``dashboard/.env`` (see ``.env.example``):
        store refuses to read or write credentials — it deliberately does not
        fall back to a derived key.
    * - ``ROBINHOOD_MCP_URL``
-     - Robinhood Agentic Trading endpoint.
+     - Robinhood trading endpoint.
    * - ``ROBINHOOD_REDIRECT_URI``
      - OAuth callback. Must match the URL registered with Robinhood.
    * - ``ROBINHOOD_OAUTH_STATE_SECRET``

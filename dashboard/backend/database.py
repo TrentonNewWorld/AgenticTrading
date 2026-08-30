@@ -1,5 +1,5 @@
 """
-SQLite database layer for agentic trading backtesting.
+SQLite database layer for trading backtesting.
 Handles schema initialization and CRUD operations.
 
 Session isolation: session_id added to agent_runs table only.

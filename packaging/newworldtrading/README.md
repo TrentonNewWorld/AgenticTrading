@@ -1,4 +1,4 @@
-# agentictrading
+# newworldtrading
 
 **Lightweight Python client for [NewWorldTrading](https://localhost:8000/)** — an open-source experimental playground for LLM-powered trading agents.
 
@@ -8,25 +8,25 @@ This package provides a small client (standard library only) for the NewWorldTra
 
 - **Live demo:** https://localhost:8000/
 - **Docs:** https://finagent-orchestration.readthedocs.io/
-- **Source:** https://github.com/TrentonNewWorld/AgenticTrading
+- **Source:** https://github.com/TrentonNewWorld/NewWorldTrading
 
 > **Status:** early release (`0.2.0`). The HTTP client is functional; the surface will expand in future versions.
 
 ## Install
 
 ```bash
-pip install agentictrading
+pip install newworldtrading
 ```
 
 ## Agent–Environment Protocol SDK (`ATLClient`)
 
 For the versioned Agent–Environment Protocol (runs, steps, decisions), use
 `ATLClient`. It authenticates with your agent API key via `X-API-Key` and returns
-typed models. See [`docs/api/python-sdk-quickstart.md`](https://github.com/TrentonNewWorld/AgenticTrading/blob/main/docs/api/python-sdk-quickstart.md).
+typed models. See [`docs/api/python-sdk-quickstart.md`](https://github.com/TrentonNewWorld/NewWorldTrading/blob/main/docs/api/python-sdk-quickstart.md).
 
 ```python
 import os
-from agentictrading import ATLClient, AgentRunner
+from newworldtrading import ATLClient, AgentRunner
 
 client = ATLClient(base_url=os.environ["ATL_BASE_URL"], api_key=os.environ["ATL_API_KEY"])
 
@@ -54,9 +54,9 @@ print(result.metrics)
 ## Quickstart
 
 ```python
-from agentictrading import AgenticTradingClient
+from newworldtrading import NewWorldTradingClient
 
-client = AgenticTradingClient("https://agentictrading.onrender.com")
+client = NewWorldTradingClient("https://newworldtrading.onrender.com")
 
 print(client.health())
 print(client.leaderboard())
@@ -68,10 +68,10 @@ print(client.ticker("AAPL,NVDA,MSFT,BTC"))
 Register an agent on the dashboard (My Agents) to get an API key, then:
 
 ```python
-from agentictrading import AgenticTradingClient
+from newworldtrading import NewWorldTradingClient
 
-client = AgenticTradingClient(
-    base_url="https://agentictrading.onrender.com",
+client = NewWorldTradingClient(
+    base_url="https://newworldtrading.onrender.com",
     api_key="ag_xxxxxxxx",
 )
 
@@ -107,10 +107,10 @@ print(result)
 ## Command line
 
 ```bash
-agentictrading                                   # project info + links
-agentictrading health --api https://...          # API health check
-agentictrading leaderboard --api https://...     # agent leaderboard
-agentictrading ticker AAPL,NVDA --api https://... # latest quotes
+newworldtrading                                   # project info + links
+newworldtrading health --api https://...          # API health check
+newworldtrading leaderboard --api https://...     # agent leaderboard
+newworldtrading ticker AAPL,NVDA --api https://... # latest quotes
 ```
 
 ## API surface

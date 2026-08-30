@@ -21,7 +21,7 @@ HTML/CSS/JavaScript。
 
 ## 全局约束
 
-- 只在 `AgenticTrading-ifind-ashare` worktree 的
+- 只在 `NewWorldTrading-ifind-ashare` worktree 的
   `feat/ifind-ashare-market-data` 分支工作。
 - 每个任务先写失败测试，再写最小实现，最后单独提交。
 - 默认测试和 CI 不访问真实 iFinD 网络，使用官方响应结构的测试替身。

@@ -15,8 +15,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence
 
-from agentictrading import ATLAPIError, ATLClient
-from agentictrading.integrations.tradingagents import (
+from newworldtrading import ATLAPIError, ATLClient
+from newworldtrading.integrations.tradingagents import (
     ArtifactValidationError,
     TradingAgentsATLRunner,
     TradingAgentsATLRunOutcome,

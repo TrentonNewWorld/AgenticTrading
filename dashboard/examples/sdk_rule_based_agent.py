@@ -24,7 +24,7 @@ from __future__ import annotations
 import os
 import sys
 
-from agentictrading import ATLClient, Decision, Order
+from newworldtrading import ATLClient, Decision, Order
 
 NUM_NAMES = 5
 DOLLARS_PER_NAME = 15_000

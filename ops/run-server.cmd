@@ -1,5 +1,5 @@
 @echo off
-rem Launches the Agentic Trading Lab backend the canonical way:
+rem Launches the NewWorldTrading backend the canonical way:
 rem   uvicorn dashboard.backend.app:app, by import string, from the repo root.
 rem
 rem PYTHONUTF8 is load-bearing on Windows: the app's startup and migration

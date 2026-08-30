@@ -205,7 +205,7 @@ dashboard/
 │
 ├── examples/
 │   ├── http/                          # external_agent_client, protocol_policy_demo
-│   └── sdk/                           # sdk_* (use agentictrading)
+│   └── sdk/                           # sdk_* (use newworldtrading)
 │
 ├── frontend/                          # unchanged
 ├── config/                            # defaults.json, leaderboard.json (+ optimization_config if kept)
@@ -226,7 +226,7 @@ dashboard/
 | `backend/integrations/` | Out-of-band entrypoints (Discord). Compose domain like a mini-app. | `domain/`, `core/` |
 | `backend/tests/` | Tests mirroring the above; isolated DB. | everything |
 | `scripts/` | **Thin** CLI wrappers only. Parse args, call `backend.domain`/services, print/serialize. | `backend.*` |
-| `examples/` | Out-of-process demos (HTTP or SDK). Never import backend code. | `agentictrading` SDK / stdlib HTTP |
+| `examples/` | Out-of-process demos (HTTP or SDK). Never import backend code. | `newworldtrading` SDK / stdlib HTTP |
 | `frontend/` | Static UI. | (served over HTTP) |
 | `config/` | Declarative JSON config consumed by backend. | — |
 | `storage/` | Runtime data + artifacts. | — |
@@ -299,11 +299,11 @@ Ask, in order:
 - **Repositories** wrap `infrastructure/database.py`; they are the only place that knows SQL/schema.
 - **Infrastructure adapters** expose plain functions/classes; they accept config from `core/config` rather than reading env/paths ad hoc.
 - **Scripts** import `backend.domain.*` services and call them; they own argparse + serialization only. The previous "library inside a script" pattern is eliminated.
-- **Examples** call the running service over HTTP (raw or via the `agentictrading` SDK).
+- **Examples** call the running service over HTTP (raw or via the `newworldtrading` SDK).
 
 ---
 
-## 8. Relationship to the Python SDK (`packaging/agentictrading/`)
+## 8. Relationship to the Python SDK (`packaging/newworldtrading/`)
 
 - The SDK is a **standalone PyPI package** with a `src/` layout, its own `pyproject.toml`, tests, and CI (`.github/workflows/publish-pypi.yml`). It is a **pure HTTP client** of the backend's REST API (uses `urllib`/`httpx`-style calls), and **does not import any backend implementation code**. This is the correct boundary and must be preserved.
 - Direction of knowledge: **SDK → REST API (over the wire)**, never `SDK → backend` as a Python import, and never `backend → SDK`.

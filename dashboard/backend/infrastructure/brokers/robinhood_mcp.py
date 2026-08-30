@@ -1,4 +1,4 @@
-"""Robinhood Agentic Trading MCP client."""
+"""Robinhood trading MCP client."""
 
 from __future__ import annotations
 

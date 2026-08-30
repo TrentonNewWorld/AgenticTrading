@@ -21,7 +21,7 @@ from __future__ import annotations
 import os
 import sys
 
-from agentictrading import ATLClient, Decision
+from newworldtrading import ATLClient, Decision
 
 
 def resolve_agent_version_id(client: ATLClient) -> str:

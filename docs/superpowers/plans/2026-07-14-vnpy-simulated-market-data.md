@@ -579,7 +579,7 @@ python -m uvicorn dashboard.backend.app:app --host 127.0.0.1 --port 8000
 - 刷新后来源 badge 仍然存在；
 - 关闭功能开关后模拟 option 消失，Alpaca 仍是默认选项。
 
-将必要的桌面和移动端截图保存到 `/tmp/agentictrading-vnpy-qa/` 供本地审阅，不提交到
+将必要的桌面和移动端截图保存到 `/tmp/newworldtrading-vnpy-qa/` 供本地审阅，不提交到
 版本库；同时检查浏览器控制台无新增错误。
 
 - [ ] **Step 6：提交文档和最终修正**

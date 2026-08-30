@@ -2,12 +2,12 @@
 
 - **Date:** 2026-07-14
 - **Status:** Approved design, awaiting written-spec review
-- **Project:** AgenticTrading
+- **Project:** NewWorldTrading
 - **Iteration:** Loop 1 of the vn.py market-data integration
 
 ## 1. Context
 
-AgenticTrading currently loads hourly US-equity bars directly through
+NewWorldTrading currently loads hourly US-equity bars directly through
 `AlpacaDataLoader`. The main backtest path is coupled to the DJIA-30 universe,
 US Eastern market hours, and Alpaca credentials. The project intends to use
 vn.py for market data and, later, trading through Interactive Brokers (IB).
@@ -26,7 +26,7 @@ Alpaca, LLM credentials, or network access.
 This iteration proves this contract:
 
 ```text
-vn.py BarData -> normalized OHLCV DataFrame -> existing AgenticTrading backtest
+vn.py BarData -> normalized OHLCV DataFrame -> existing NewWorldTrading backtest
 ```
 
 It does not prove that an IB account can connect or that a strategy is
@@ -48,7 +48,7 @@ profitable on real market data.
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Initial market | US equities | Matches the current AgenticTrading product and future `vnpy_ib` path. |
+| Initial market | US equities | Matches the current NewWorldTrading product and future `vnpy_ib` path. |
 | First data mode | Historical hourly bars | Matches the current backtest input and provides the shortest end-to-end loop. |
 | Credentials | None in Loop 1 | IB access is not currently available. |
 | Delivery surface | Existing Dashboard backtest page | Produces a user-visible, end-to-end result. |
@@ -250,7 +250,7 @@ Every generated and converted row must satisfy:
 
 The adapter performs this explicit mapping:
 
-| vn.py `BarData` | AgenticTrading frame |
+| vn.py `BarData` | NewWorldTrading frame |
 |---|---|
 | `datetime` | `timestamp` index |
 | `open_price` | `open` |
@@ -357,7 +357,7 @@ data is prohibited.
 ```text
 1. Install the optional vn.py development dependency.
 2. Set ENABLE_VNPY_SIMULATION=true.
-3. Start AgenticTrading.
+3. Start NewWorldTrading.
 4. Open Dashboard -> Playground -> Backtest.
 5. Select vn.py Simulation.
 6. Run the canonical DJIA-30 demo window (`2026-04-01` to `2026-04-23`).

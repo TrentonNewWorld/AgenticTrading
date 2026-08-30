@@ -466,7 +466,10 @@ async def signup(payload: SignupRequest, request: Request):
 #: publicly reachable deployment would let ANY visitor land already
 #: authenticated as the fixed local account below, with no password check at
 #: all. Never set this in the Render dashboard or any hosted environment.
-_LOCAL_AUTO_LOGIN_EMAIL = "local@agentic-trading-lab.local"
+_LOCAL_AUTO_LOGIN_EMAIL = "local@newworldtrading.local"
+#: Pre-rebrand row key; an existing local DB is migrated in place on the
+#: next auto-login rather than orphaning the operator's account and state.
+_LOCAL_AUTO_LOGIN_LEGACY_EMAIL = "local@newworldtrading.local"
 _LOCAL_AUTO_LOGIN_DISPLAY_NAME = "Local User"
 
 
@@ -490,6 +493,13 @@ async def dev_auto_login(request: Request):
         existing = users_module.user_store.get_user_by_email(_LOCAL_AUTO_LOGIN_EMAIL)
         if existing is not None:
             return public_user(existing)
+        legacy = users_module.user_store.get_user_by_email(_LOCAL_AUTO_LOGIN_LEGACY_EMAIL)
+        if legacy is not None:
+            # Rebrand migration: rename the old row instead of creating a
+            # second admin account and stranding this one's data.
+            users_module.user_store.update_email(legacy["id"], _LOCAL_AUTO_LOGIN_EMAIL)
+            migrated = users_module.user_store.get_user_by_email(_LOCAL_AUTO_LOGIN_EMAIL)
+            return public_user(migrated if migrated is not None else legacy)
         # The password is never used again -- dev_auto_login never checks
         # it, and nobody is meant to log in as this account any other way --
         # so a random value satisfies create_user's password policy without

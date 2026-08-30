@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Watchdog for the Agentic Trading Lab backend. Probes /health and starts the
+    Watchdog for the NewWorldTrading backend. Probes /health and starts the
     server if the probe fails.
 
 .DESCRIPTION

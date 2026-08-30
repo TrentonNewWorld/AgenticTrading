@@ -788,7 +788,7 @@ Wire the existing `Race` section to `GET /api/v1/leaderboard`, following the
 fetch pattern `MarketTicker.tsx:13-19,77-117` establishes. Remove the
 "Illustrative" badges (`Race.tsx:74,107`) once the data is real, and fetch
 same-origin through the Vercel rewrite rather than hardcoding
-`agentictrading.onrender.com`.
+`newworldtrading.onrender.com`.
 
 **Layout:** move `Race` directly under the hero (it is currently section 5 of 5,
 immediately before `FooterCTA`). Above the chart, a **season status strip** —

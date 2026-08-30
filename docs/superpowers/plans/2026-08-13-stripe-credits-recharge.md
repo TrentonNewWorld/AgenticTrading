@@ -415,7 +415,7 @@ python -m pytest -q dashboard/backend/tests
 2. Run packaging tests:
 
 ```bash
-python -m pytest -q packaging/agentictrading/tests
+python -m pytest -q packaging/newworldtrading/tests
 ```
 
 3. Run repository checks:

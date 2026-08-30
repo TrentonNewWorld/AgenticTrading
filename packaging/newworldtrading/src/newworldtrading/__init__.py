@@ -4,7 +4,7 @@ NewWorldTrading is an open-source experimental playground for LLM-powered
 trading agents: prototype agents, run backtests and paper-trading simulations,
 inspect reasoning and decision logs, and benchmark against market baselines.
 
-This package provides a small standard-library client for the Agentic Trading
+This package provides a small standard-library client for the NewWorldTrading
 Lab REST API so you can drive backtests and read results from Python. The
 install is dependency-free on macOS and Linux; on Windows it also pulls the
 ``tzdata`` data wheel, because ``zoneinfo`` has no system IANA database there.
@@ -12,13 +12,13 @@ install is dependency-free on macOS and Linux; on Windows it also pulls the
 Links:
   - Live demo: https://localhost:8000/
   - Docs:      https://finagent-orchestration.readthedocs.io/
-  - Source:    https://github.com/TrentonNewWorld/AgenticTrading
+  - Source:    https://github.com/TrentonNewWorld/NewWorldTrading
 """
 
 from __future__ import annotations
 
-from .atl_client import ATLClient
-from .client import AgenticTradingClient, ApiError
+from .legacy_client import ATLClient
+from .client import NewWorldTradingClient, ApiError
 from .exceptions import (
     ATLAPIError,
     ATLAuthenticationError,
@@ -62,7 +62,7 @@ __all__ = [
     "ATLTimeoutError",
     "ATLRunFailedError",
     # Legacy client (backtest workflow)
-    "AgenticTradingClient",
+    "NewWorldTradingClient",
     "ApiError",
     # Metadata
     "__version__",
@@ -73,13 +73,13 @@ __version__ = "0.2.0"
 
 LIVE_DEMO_URL = "https://localhost:8000/"
 DOCS_URL = "https://finagent-orchestration.readthedocs.io/"
-SOURCE_URL = "https://github.com/TrentonNewWorld/AgenticTrading"
+SOURCE_URL = "https://github.com/TrentonNewWorld/NewWorldTrading"
 
 
 def info() -> dict:
     """Return basic package/project metadata as a dict."""
     return {
-        "name": "agentictrading",
+        "name": "newworldtrading",
         "version": __version__,
         "summary": "Lightweight Python client for the NewWorldTrading REST API.",
         "live_demo": LIVE_DEMO_URL,

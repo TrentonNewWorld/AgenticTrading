@@ -1,4 +1,4 @@
-"""Convert vn.py bar objects into AgenticTrading's normalized OHLCV schema."""
+"""Convert vn.py bar objects into NewWorldTrading's normalized OHLCV schema."""
 
 from __future__ import annotations
 

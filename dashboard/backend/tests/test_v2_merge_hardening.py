@@ -418,7 +418,7 @@ def test_rate_limit_headers_exposed_to_cors_clients():
     key, _, _ = _agent("cors-agent")
     r = client.get(
         "/api/v2/agents/me",
-        headers={"X-API-Key": key, "Origin": "https://agentic-trading-lab.vercel.app"},
+        headers={"X-API-Key": key, "Origin": "https://localhost:8000"},
     )
     exposed = r.headers.get("access-control-expose-headers", "").lower()
     for header in ("x-ratelimit-limit", "x-ratelimit-remaining",

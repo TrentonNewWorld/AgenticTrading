@@ -19,7 +19,7 @@ from dashboard.backend.domain.leaderboard.catalog import (
     load_leaderboard_config,
 )
 
-EXPORT_FORMAT = "agentic-trading-lab-strategy-v1"
+EXPORT_FORMAT = "newworldtrading-strategy-v1"
 
 
 def add_to_catalog(*, name: str, description: str, code: str) -> Dict[str, Any]:
