@@ -1,11 +1,10 @@
 """XSS guards for the vanilla-JS dashboard (CodeQL js/xss-through-exception #1098).
 
-``appendAlgoChatMessage`` renders into ``innerHTML`` so that ``**bold**`` markers
-survive, and every one of its callers feeds it text the server controls: an
+Several render paths feed server-controlled text into ``innerHTML``: an
 ``err.message`` built from a backend ``detail`` / a backtest job's ``error``
-string (which embeds the subprocess stderr tail, and therefore the user's own
-team name), the raw LLM ``reply``, and the echoed ``team_name``. Unescaped, that
-is a script-injection sink.
+string (which embeds the subprocess stderr tail), market-quote errors, and
+user-registered leaderboard names. Unescaped, each is a script-injection sink,
+and ``escapeHtml`` is the shared primitive that neutralizes all of them.
 
 The frontend has no JS test harness, so these run the *real* functions lifted out
 of ``app.js`` under node — the extraction is brace-matched against the shipped
@@ -25,7 +24,7 @@ _FRONTEND = Path(__file__).resolve().parents[2] / "frontend"
 _APP_JS = _FRONTEND / "app.js"
 _LEADERBOARD_JS = _FRONTEND / "js" / "leaderboard.js"
 
-# Payloads shaped like what actually reaches the chat bubble.
+# Payloads shaped like what actually reaches the error sinks.
 _ATTACKS = [
     "<img src=x onerror=alert(1)>",
     "Error: <script>alert(document.cookie)</script>",
@@ -49,7 +48,7 @@ def _extract_function(src: str, name: str) -> str:
         i += 1
 
 
-def _run_renderer(inputs: list[str], entry: str = "renderAlgoChatHtml") -> list[str]:
+def _run_renderer(inputs: list[str], entry: str = "escapeHtml") -> list[str]:
     """Execute the shipped escape+render functions in node against ``inputs``."""
     src = _APP_JS.read_text(encoding="utf-8")
     parts = [_extract_function(src, "escapeHtml")]
@@ -75,29 +74,6 @@ def _run_renderer(inputs: list[str], entry: str = "renderAlgoChatHtml") -> list[
 requires_node = pytest.mark.skipif(
     shutil.which("node") is None, reason="node is required to execute app.js functions"
 )
-
-
-@requires_node
-def test_chat_bubble_neutralizes_injected_markup():
-    for attack, rendered in zip(_ATTACKS, _run_renderer(_ATTACKS)):
-        assert "<img" not in rendered, attack
-        assert "<script" not in rendered, attack
-        assert "<svg" not in rendered, attack
-        assert "&lt;" in rendered, attack
-
-
-@requires_node
-def test_chat_bubble_still_renders_bold_markers():
-    # The escaping must not cost the one bit of markup the bubble deliberately
-    # supports — otherwise the fix would be a regression the next dev reverts.
-    assert _run_renderer(["Strategy updated: **4 blocks**"]) == [
-        "Strategy updated: <strong>4 blocks</strong>"
-    ]
-
-
-@requires_node
-def test_chat_bubble_escapes_quotes_and_ampersands():
-    assert _run_renderer(['a & b "c"']) == ["a &amp; b &quot;c&quot;"]
 
 
 @requires_node
@@ -145,17 +121,6 @@ def test_leaderboard_error_escapes_the_exception_text():
     assert assignments
     for line in assignments:
         assert "escapeHtml(message)" in line, line
-
-
-def test_chat_bubble_never_assigns_unescaped_text_to_inner_html():
-    """Source guard: runs even where node is absent, so CI can never fail open."""
-    src = _APP_JS.read_text(encoding="utf-8")
-    body = _extract_function(src, "appendAlgoChatMessage")
-    for line in body.splitlines():
-        if "innerHTML" in line and "=" in line:
-            assert "renderAlgoChatHtml(" in line, line.strip()
-    # The pre-fix sink — raw text straight into innerHTML — must stay gone.
-    assert "innerHTML = text.replace(" not in " ".join(src.split())
 
 
 # ---------------------------------------------------------------------------

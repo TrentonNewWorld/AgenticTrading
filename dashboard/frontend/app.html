@@ -1436,79 +1436,6 @@
         </div>
     </div>
 
-    <!-- My Trading Algo View -->
-    <div id="myTradingAlgoView" class="my-trading-algo-view" style="display: none;">
-        <div class="algo-page-layout">
-            <aside class="algo-chat-panel section-card">
-                <div class="algo-panel-header">
-                    <h2>Strategy Assistant</h2>
-                    <p>Chat with Claude; backtests use Alpaca historical data (about 3–10 minutes)</p>
-                </div>
-                <div id="algoChatMessages" class="algo-chat-messages">
-                    <div class="algo-chat-msg bot">
-                        <div class="algo-chat-bubble">
-                            Welcome to <strong>My Trading Algo</strong>.<br><br>
-                            <strong>Leaderboard</strong> is mock competition data. After you edit and <strong>Execute</strong>, your strategy appears on <strong>Backtest</strong> (gold curve vs DJIA / Buy-and-Hold).
-                        </div>
-                    </div>
-                </div>
-                <div class="algo-chat-input-row">
-                    <input id="algoChatInput" type="text" class="algo-chat-input" placeholder="e.g. Monitor Elon Musk on Twitter, stop loss at 3%…" autocomplete="off">
-                    <button id="algoChatSendBtn" class="algo-chat-send-btn" type="button">Send</button>
-                </div>
-            </aside>
-
-            <main class="algo-blocks-panel">
-                <div class="algo-blocks-toolbar">
-                    <div>
-                        <h2>Trading Algo</h2>
-                        <p class="algo-blocks-subtitle">Four-module pipeline: Retrieval → Signal → Execution → Risk</p>
-                    </div>
-                    <div class="algo-toolbar-actions">
-                        <input id="algoTeamName" type="text" class="algo-team-name-input" placeholder="Team name (optional)" value="Trump Twitter Algo">
-                        <button id="executeAlgoBtn" class="execute-algo-btn" type="button">▶ Execute Algo</button>
-                    </div>
-                </div>
-
-                <div class="algo-blocks-grid">
-                    <section class="algo-block-card" data-block="info_retrieval">
-                        <div class="algo-block-head">
-                            <span class="algo-block-num">1</span>
-                            <h3>Info Retrieval</h3>
-                        </div>
-                        <textarea id="blockInfoRetrieval" class="algo-block-textarea" rows="3"></textarea>
-                    </section>
-
-                    <section class="algo-block-card" data-block="signal_transfer">
-                        <div class="algo-block-head">
-                            <span class="algo-block-num">2</span>
-                            <h3>Signal Transfer</h3>
-                        </div>
-                        <textarea id="blockSignalTransfer" class="algo-block-textarea" rows="3"></textarea>
-                    </section>
-
-                    <section class="algo-block-card" data-block="trading_algorithm">
-                        <div class="algo-block-head">
-                            <span class="algo-block-num">3</span>
-                            <h3>Trading Algorithm</h3>
-                        </div>
-                        <textarea id="blockTradingAlgorithm" class="algo-block-textarea" rows="3"></textarea>
-                    </section>
-
-                    <section class="algo-block-card" data-block="stop_loss_take_profit">
-                        <div class="algo-block-head">
-                            <span class="algo-block-num">4</span>
-                            <h3>Stop Loss / Take Profit</h3>
-                        </div>
-                        <textarea id="blockStopLoss" class="algo-block-textarea" rows="3"></textarea>
-                    </section>
-                </div>
-
-                <div id="algoExecuteStatus" class="algo-execute-status" hidden></div>
-            </main>
-        </div>
-    </div>
-
     <!-- Competition -->
     <div id="competitionView" class="page-view competition-view" style="display: none;">
         <div class="subtab-bar competition-subtabs">
@@ -2364,7 +2291,7 @@
     <script src="market-events/marketEventRelativeTime.js" defer></script>
     <script src="js/portfolio.js?v=17" defer></script>
     <script src="js/agent-editor.js?v=28" defer></script>
-    <script src="app.js?v=137" defer></script>
+    <script src="app.js?v=138" defer></script>
     <script src="js/connections.js?v=5" defer></script>
     <script src="js/strategy-testing.js?v=3" defer></script>
     <script src="js/prediction.js?v=1" defer></script>

@@ -8502,7 +8502,6 @@ function navigateToPage(page, options = {}) {
     const backtestPanel = document.querySelector('.playground-backtest-panel')
       || document.querySelector('.main-container');
     const paperView = document.getElementById('paperTradingView');
-    const myAlgoView = document.getElementById('myTradingAlgoView');
     const leaderboardView = document.getElementById('leaderboardView');
 
     const hide = (el) => {
@@ -8521,7 +8520,6 @@ function navigateToPage(page, options = {}) {
     hide(strategyCatalogView);
     hide(backtestPanel);
     hide(paperView);
-    hide(myAlgoView);
     hide(leaderboardView);
     // liveTradingView is shown with an inline display:flex by
     // showCompetitionPanel('live'); leaving it out of this list let its
@@ -8880,10 +8878,6 @@ function switchMode(mode) {
     });
 }
 
-function isMyAlgoRun(run) {
-    return run && run.run_id && String(run.run_id).startsWith('algo_');
-}
-
 function isExternalAgentRun(run) {
     return run && run.run_id && String(run.run_id).startsWith('ext_');
 }
@@ -9095,7 +9089,6 @@ async function loadData() {
             const selectedRun = resolveSelectedRun(sessionRuns);
 
             window.SELECTED_RUN = selectedRun;
-            window.MY_ALGO_RUN_ID = isMyAlgoRun(selectedRun) ? selectedRun.run_id : null;
             window.EXTERNAL_AGENT_RUN_ID = isExternalAgentRun(selectedRun) ? selectedRun.run_id : null;
             renderBacktestDataSourceBadge(selectedRun);
 
@@ -9708,313 +9701,6 @@ function displayPaperError(message) {
     const positionsList = document.getElementById('positionsList');
     if (positionsList) {
         positionsList.innerHTML = `<div class="loading" style="color: var(--danger-color);">Error: ${escapeHtml(message)}</div>`;
-    }
-}
-
-// ============================================================================
-// My Trading Algo
-// ============================================================================
-
-const ALGO_BLOCK_FIELDS = {
-    info_retrieval: 'blockInfoRetrieval',
-    signal_transfer: 'blockSignalTransfer',
-    trading_algorithm: 'blockTradingAlgorithm',
-    stop_loss_take_profit: 'blockStopLoss',
-};
-
-const DEFAULT_ALGO_BLOCKS = {
-    info_retrieval: "Monitor Trump's Twitter / X feed; capture tweets and sentiment signals",
-    signal_transfer: 'AI auto-selects target stocks (single name or basket); map tickers from tweet semantics',
-    trading_algorithm: 'No execution algo: buy whatever Trump mentions (immediate market follow)',
-    stop_loss_take_profit: 'Stop loss: exit if position down 5%; take profit: hold after +20%; daily stop: exit if down 5% intraday',
-};
-
-function getAlgoBlocksFromUI() {
-    return {
-        info_retrieval: document.getElementById('blockInfoRetrieval')?.value?.trim() || '',
-        signal_transfer: document.getElementById('blockSignalTransfer')?.value?.trim() || '',
-        trading_algorithm: document.getElementById('blockTradingAlgorithm')?.value?.trim() || '',
-        stop_loss_take_profit: document.getElementById('blockStopLoss')?.value?.trim() || '',
-    };
-}
-
-function setAlgoBlocksToUI(blocks) {
-    for (const [key, fieldId] of Object.entries(ALGO_BLOCK_FIELDS)) {
-        const el = document.getElementById(fieldId);
-        if (el && blocks[key] !== undefined) {
-            el.value = blocks[key];
-        }
-    }
-}
-
-function highlightAlgoBlocks(updatedKeys) {
-    document.querySelectorAll('.algo-block-card').forEach(card => card.classList.remove('highlight'));
-    if (!updatedKeys?.length) return;
-    for (const key of updatedKeys) {
-        const card = document.querySelector(`.algo-block-card[data-block="${key}"]`);
-        if (card) card.classList.add('highlight');
-    }
-    setTimeout(() => {
-        document.querySelectorAll('.algo-block-card').forEach(card => card.classList.remove('highlight'));
-    }, 2500);
-}
-
-/**
- * Render a chat bubble's text as HTML, supporting only `**bold**`.
- *
- * Escape first, then add the markup: every caller passes text the server
- * controls (an `err.message` carrying a backend `detail` or a backtest job's
- * stderr tail, the LLM's `reply`, the echoed `team_name`), so the raw string
- * must never reach `innerHTML`. Escaping leaves `*` alone, so the bold markers
- * still survive; the only live tags are the ones we generate here.
- */
-function renderAlgoChatHtml(text) {
-    return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-}
-
-function appendAlgoChatMessage(text, role = 'bot') {
-    const container = document.getElementById('algoChatMessages');
-    if (!container) return;
-    const row = document.createElement('div');
-    row.className = `algo-chat-msg ${role}`;
-    const bubble = document.createElement('div');
-    bubble.className = 'algo-chat-bubble';
-    bubble.innerHTML = renderAlgoChatHtml(text);
-    row.appendChild(bubble);
-    container.appendChild(row);
-    container.scrollTop = container.scrollHeight;
-}
-
-async function loadMyTradingAlgoPage() {
-    if (!myAlgoInitialized) {
-        initMyTradingAlgoUI();
-        myAlgoInitialized = true;
-    }
-    try {
-        const res = await API.get(`${API_BASE}/api/algo/defaults`);
-        if (res.blocks) {
-            setAlgoBlocksToUI(res.blocks);
-        }
-        if (res.backtest_window) {
-            window.ALGO_BACKTEST_WINDOW = res.backtest_window;
-            const statusEl = document.getElementById('algoExecuteStatus');
-        if (statusEl) {
-            statusEl.hidden = false;
-            statusEl.className = 'algo-execute-status';
-                statusEl.textContent =
-                `Example strategy (edit before Execute). Backtest window: ${res.backtest_window.start_date} → ${res.backtest_window.end_date}`;
-        }
-
-        try {
-            const setup = await API.get(`${API_BASE}/api/algo/setup`);
-            renderAlgoSetupStatus(setup);
-        } catch (setupErr) {
-            renderAlgoSetupStatus(null, setupErr.message);
-        }
-        }
-    } catch {
-        setAlgoBlocksToUI(DEFAULT_ALGO_BLOCKS);
-    }
-}
-
-function initMyTradingAlgoUI() {
-    setAlgoBlocksToUI(DEFAULT_ALGO_BLOCKS);
-
-    const sendBtn = document.getElementById('algoChatSendBtn');
-    const input = document.getElementById('algoChatInput');
-    const executeBtn = document.getElementById('executeAlgoBtn');
-
-    const sendChat = async () => {
-        const message = input?.value?.trim();
-        if (!message) return;
-        appendAlgoChatMessage(message, 'user');
-        input.value = '';
-        sendBtn.disabled = true;
-        appendAlgoChatMessage('Thinking…', 'bot');
-
-        try {
-            const data = await API.post(`${API_BASE}/api/algo/chat`, {
-                message,
-                blocks: getAlgoBlocksFromUI(),
-            });
-            const msgs = document.getElementById('algoChatMessages');
-            if (msgs && msgs.lastElementChild?.textContent === 'Thinking…') {
-                msgs.removeChild(msgs.lastElementChild);
-            }
-            setAlgoBlocksToUI(data.blocks);
-            syncAlgoTeamNameFromBlocks(data.blocks);
-            highlightAlgoBlocks(data.updated_blocks);
-            appendAlgoChatMessage(data.reply, 'bot');
-        } catch (err) {
-            appendAlgoChatMessage(`Error: ${err.message}`, 'bot');
-        } finally {
-            sendBtn.disabled = false;
-            input.focus();
-        }
-    };
-
-    sendBtn?.addEventListener('click', sendChat);
-    input?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            sendChat();
-        }
-    });
-
-    executeBtn?.addEventListener('click', executeMyTradingAlgo);
-}
-
-function syncAlgoTeamNameFromBlocks(blocks) {
-    const nameInput = document.getElementById('algoTeamName');
-    if (!nameInput) return;
-    const info = (blocks.info_retrieval || '').toLowerCase();
-    if (info.includes('musk') || (blocks.info_retrieval || '').toLowerCase().includes('musk')) {
-        nameInput.value = 'Elon Musk Twitter Algo';
-    } else if (info.includes('trump')) {
-        nameInput.value = 'Trump Twitter Algo';
-    }
-}
-
-function renderAlgoSetupStatus(setup, errorMsg) {
-    let el = document.getElementById('algoSetupStatus');
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'algoSetupStatus';
-        el.className = 'algo-setup-status';
-        const panel = document.querySelector('.algo-blocks-panel');
-        if (panel) panel.appendChild(el);
-    }
-    el.hidden = false;
-
-    if (errorMsg || !setup) {
-        el.className = 'algo-setup-status error';
-        el.innerHTML =
-            '⚠️ Cannot reach My Trading Algo API (HTTP 404). <strong>Restart the backend</strong>: ' +
-            '<code>python backend/app.py</code>, then open <code>http://localhost:8000</code>';
-        return;
-    }
-
-    if (setup.ready) {
-        el.className = 'algo-setup-status success';
-        el.textContent = '✅ API keys configured. Edit your strategy, then Execute for a real backtest.';
-        return;
-    }
-
-    const missing = [];
-    if (!setup.anthropic_configured) missing.push('ANTHROPIC_API_KEY');
-    if (!setup.alpaca_configured) missing.push('Alpaca (credentials/alpaca.json or env vars)');
-    el.className = 'algo-setup-status error';
-    el.textContent = `⚠️ Missing: ${missing.join(', ')}. Configure .env and restart the backend.`;
-}
-
-async function pollAlgoBacktestStatus() {
-    const maxAttempts = 360;
-    for (let i = 0; i < maxAttempts; i++) {
-        let status;
-        try {
-            status = await API.get(`${API_BASE}/api/algo/status`);
-        } catch (err) {
-            if (String(err.message).includes('404')) {
-                throw new Error(
-                    'Backend missing /api/algo/status (old version). Stop with Ctrl+C and run: python backend/app.py'
-                );
-            }
-            throw err;
-        }
-        const statusEl = document.getElementById('algoExecuteStatus');
-        const btn = document.getElementById('executeAlgoBtn');
-
-        if (status.running) {
-            if (statusEl) {
-                statusEl.textContent = status.progress || `Backtest running… (${i + 1}/${maxAttempts})`;
-            }
-            if (btn) btn.textContent = `⏳ Running… ${Math.floor(i * 5 / 60)}m`;
-            await new Promise(r => setTimeout(r, 5000));
-            continue;
-        }
-
-        if (status.error) {
-            throw new Error(status.error);
-        }
-
-        if (status.result) {
-            return status.result;
-        }
-
-        await new Promise(r => setTimeout(r, 3000));
-    }
-    throw new Error('Backtest timed out. Check the Backtest tab later.');
-}
-
-async function executeMyTradingAlgo() {
-    const btn = document.getElementById('executeAlgoBtn');
-    const statusEl = document.getElementById('algoExecuteStatus');
-    const teamName = document.getElementById('algoTeamName')?.value?.trim();
-    const blocks = getAlgoBlocksFromUI();
-
-    const isDefault = Object.keys(DEFAULT_ALGO_BLOCKS).every(
-        k => (blocks[k] || '').trim() === (DEFAULT_ALGO_BLOCKS[k] || '').trim()
-    );
-    if (isDefault) {
-        if (statusEl) {
-            statusEl.hidden = false;
-            statusEl.className = 'algo-execute-status error';
-            statusEl.textContent = 'Edit the strategy (chat or blocks) before Execute. The example config does not run a real backtest.';
-        }
-        appendAlgoChatMessage(
-            'Edit all four modules before Execute. Leaderboard teams are mock; only your customized strategy uses real data on Backtest.',
-            'bot'
-        );
-        return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = '⏳ Starting…';
-    if (statusEl) {
-        statusEl.hidden = false;
-        statusEl.className = 'algo-execute-status';
-        statusEl.textContent = 'Submitting backtest — real market data + AI…';
-    }
-
-    try {
-        const job = await API.post(`${API_BASE}/api/algo/execute`, {
-            blocks,
-            team_name: teamName || undefined,
-        });
-
-        if (statusEl) {
-            statusEl.textContent = job.message || 'Backtest started. Please wait…';
-        }
-
-        const result = await pollAlgoBacktestStatus();
-        const m = result.metrics;
-
-        if (statusEl) {
-            statusEl.className = 'algo-execute-status success';
-            statusEl.textContent = `✅ ${result.message} Opening Backtest…`;
-        }
-
-        const retPct = (m.cumulative_return * 100).toFixed(2);
-        appendAlgoChatMessage(
-            `Backtest complete: "${result.team_name}" (${result.start_date} → ${result.end_date}).\n` +
-            `Return ${retPct}%, Sharpe ${m.sharpe_ratio}, ${result.num_trades} trades.\n` +
-            `Switched to Backtest to view your MY ALGO curve (vs DJIA / Buy-and-Hold).`,
-            'bot'
-        );
-
-        if (result.run_id) {
-            window.MY_ALGO_RUN_ID = result.run_id;
-        }
-        switchMode('backtest');
-    } catch (err) {
-        if (statusEl) {
-            statusEl.className = 'algo-execute-status error';
-            statusEl.textContent = `Execution failed: ${err.message}`;
-        }
-        appendAlgoChatMessage(`Backtest failed: ${err.message}`, 'bot');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = '▶ Execute Algo';
     }
 }
 
