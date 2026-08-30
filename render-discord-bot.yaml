@@ -8,7 +8,7 @@
 
 services:
   - type: worker
-    name: agentic-trading-discord-bot
+    name: newworldtrading-discord-bot
     env: python
     region: oregon
     plan: starter
@@ -25,12 +25,24 @@ services:
         value: https://agentictrading.onrender.com
       # Discord deep links must open the Vercel SPA, not the Render API host.
       - key: PUBLIC_APP_URL
-        value: https://agentic-trading-lab.vercel.app
+        value: http://localhost:8000
       - key: DISCORD_BOT_TOKEN
         sync: false
       - key: DISCORD_GUILD_ID
         sync: false
       - key: DISCORD_CHANNEL_ID
+        sync: false
+      - key: DISCORD_SUPPORT_CHANNEL_ID
+        sync: false
+      - key: DISCORD_SUPPORT_ROLE_ID
+        sync: false
+      # /support runs on OpenRouter FREE models only (ids ending ":free").
+      # Use a dedicated key with a $0 credit limit set at openrouter.ai.
+      - key: OPENROUTER_SUPPORT_API_KEY
+        sync: false
+      - key: OPENROUTER_SUPPORT_MODEL
+        sync: false
+      - key: DISCORD_SNARK_CHANNEL_ID
         sync: false
       - key: DISCORD_BOT_API_SECRET
         sync: false

@@ -84,6 +84,7 @@ def _public_agent(row: sqlite3.Row | Dict[str, Any]) -> Dict[str, Any]:
         "backtest_allocation": data.get("backtest_allocation"),
         "live_trading_enabled": bool(data.get("live_trading_enabled")),
         "category": data.get("category"),
+        "asset_class": data.get("asset_class") or "stocks",
         "api_key_prefix": data.get("api_key_prefix") or "",
         "owner_user_id": data.get("owner_user_id"),
         "scopes": [s for s in str(raw_scopes).split(",") if s],
@@ -125,6 +126,7 @@ class AgentStore:
                 runtime_type TEXT NOT NULL DEFAULT 'pipeline',
                 runtime_config TEXT NOT NULL DEFAULT '{}',
                 category TEXT,
+                asset_class TEXT NOT NULL DEFAULT 'stocks',
                 FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL
             )
             """
@@ -190,6 +192,10 @@ class AgentStore:
             cursor.execute(
                 "ALTER TABLE external_agents ADD COLUMN category TEXT"
             )
+        if "asset_class" not in existing_columns:
+            cursor.execute(
+                "ALTER TABLE external_agents ADD COLUMN asset_class TEXT NOT NULL DEFAULT 'stocks'"
+            )
         cursor.execute(
             """
             CREATE INDEX IF NOT EXISTS idx_external_agents_type
@@ -215,6 +221,7 @@ class AgentStore:
         cash_allocation: Optional[float] = None,
         backtest_allocation: Optional[float] = None,
         category: Optional[str] = None,
+        asset_class: str = "stocks",
     ) -> Dict[str, Any]:
         agent_id = f"agent_{uuid.uuid4().hex[:12]}"
         session_id = session_id or str(uuid.uuid4())
@@ -231,8 +238,8 @@ class AgentStore:
                 agent_id, name, session_id, api_key_hash, api_key_prefix,
                 model_name, agent_type, description, cash_allocation,
                 backtest_allocation, runtime_type, runtime_config, category,
-                owner_user_id, owner_browser_session, created_at, last_used_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                asset_class, owner_user_id, owner_browser_session, created_at, last_used_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 agent_id,
@@ -248,6 +255,7 @@ class AgentStore:
                 (runtime_type or DEFAULT_RUNTIME_TYPE).strip() or DEFAULT_RUNTIME_TYPE,
                 json.dumps(runtime_config or {}),
                 category,
+                asset_class or "stocks",
                 owner_user_id,
                 owner_browser_session,
                 now,

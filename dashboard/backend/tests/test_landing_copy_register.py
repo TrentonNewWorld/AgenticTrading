@@ -127,13 +127,12 @@ def test_no_real_money_sentence_is_present_verbatim():
 
 
 def test_footer_names_the_operating_entity():
-    """The footer previously read only "© 2026 Agentic Trading Lab. All rights
-    reserved." with no indication of who runs the platform -- all three personas
-    ranked "who runs this?" the #1 trust-killer. Pins the operating entity and
-    the open-source framing in the shipped bundle."""
+    """The 2026-08-29 de-branding made NewWorldTrading the named operating
+    entity; the old upstream-lab credit must stay gone from the shipped
+    bundle."""
     text = _shipped_text()
-    assert "© 2026 SecureFinAI Lab" in text
-    assert "open-source research platform" in text
+    assert "© 2026 NewWorldTrading" in text
+    assert "SecureFinAI Lab" not in text
 
 
 _BANNED_FRAGMENTS = (

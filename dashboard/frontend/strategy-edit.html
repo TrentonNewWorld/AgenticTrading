@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edit Strategy</title>
+<link rel="stylesheet" href="/styles.css">
+<style>
+  body { background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-base); margin: 0; }
+  .se-wrap { max-width: 640px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .se-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 0.5rem; }
+  .se-title { font-size: 22px; font-weight: 600; margin: 0; }
+  .se-source { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+  .se-back { color: var(--text-secondary); text-decoration: none; font-size: 13px; }
+  .se-back:hover { color: var(--text-primary); }
+  .se-desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; margin: 0.5rem 0 1.75rem; }
+  .se-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem 1.5rem; }
+  .se-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 1.1rem; }
+  .se-field label { font-size: 12.5px; font-weight: 600; }
+  .se-field .se-range { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+  .se-field input { background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-family: var(--font-mono); font-size: 13px; padding: 8px 10px; }
+  .se-empty { color: var(--text-muted); font-size: 13px; padding: 2rem 0; text-align: center; }
+  .se-actions { display: flex; align-items: center; gap: 12px; margin-top: 0.5rem; }
+  .se-save { border: 1px solid var(--info-color); color: var(--info-color); background: none; font-size: 13px; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+  .se-save:hover { background: var(--bg-hover); }
+  .se-save:disabled { opacity: 0.5; cursor: default; }
+  .se-status { font-size: 12.5px; }
+  .se-status.ok { color: var(--success-color); }
+  .se-status.err { color: var(--danger-color); }
+</style>
+</head>
+<body>
+<div class="se-wrap">
+  <div class="se-header">
+    <div>
+      <h1 class="se-title" id="seTitle">Edit Strategy</h1>
+      <span class="se-source" id="seSource"></span>
+    </div>
+    <a class="se-back" href="/strategy-catalog.html">&larr; Back to catalog</a>
+  </div>
+  <p class="se-desc" id="seDesc"></p>
+  <div class="se-card" id="seCard"><p class="se-empty">Loading…</p></div>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const strategyKey = params.get('key');
+
+function csrfHeaders() {
+  const match = (document.cookie || '').match(/(?:^|; )(?:atl_csrf|__Host-atl_csrf)=([^;]*)/);
+  return match ? { 'X-CSRF-Token': decodeURIComponent(match[1]) } : {};
+}
+
+function fieldId(name) { return 'param-' + name; }
+
+async function loadEditPage() {
+  const card = document.getElementById('seCard');
+  if (!strategyKey) {
+    card.innerHTML = '<p class="se-empty">No strategy key given.</p>';
+    return;
+  }
+
+  const [catalogRes, paramsRes] = await Promise.all([
+    fetch('/api/v1/strategy-catalog').then(r => r.json()).catch(() => ({ entries: [] })),
+    fetch(`/api/v1/strategy-catalog/${strategyKey}/params`).then(r => r.json()),
+  ]);
+
+  const entry = (catalogRes.entries || []).find(e => e.key === strategyKey);
+  document.getElementById('seTitle').textContent = entry ? entry.name : strategyKey;
+  document.getElementById('seSource').textContent = entry ? entry.source : '';
+  document.getElementById('seDesc').textContent = entry ? entry.description : '';
+
+  const schema = paramsRes.schema || {};
+  const values = paramsRes.values || {};
+  const keys = Object.keys(schema);
+
+  if (!keys.length) {
+    card.innerHTML = '<p class="se-empty">This strategy has no tunable parameters yet -- only its name and description are fixed.</p>';
+    return;
+  }
+
+  card.innerHTML = keys.map(name => {
+    const spec = schema[name];
+    const step = spec.type === 'float' ? 'any' : '1';
+    const range = (spec.min !== null && spec.min !== undefined) || (spec.max !== null && spec.max !== undefined)
+      ? `<span class="se-range">range ${spec.min ?? '—'} to ${spec.max ?? '—'}</span>` : '';
+    return `
+      <div class="se-field">
+        <label for="${fieldId(name)}">${spec.label || name} ${range}</label>
+        <input type="number" step="${step}" id="${fieldId(name)}"
+               min="${spec.min ?? ''}" max="${spec.max ?? ''}"
+               value="${values[name] ?? spec.default}">
+      </div>
+    `;
+  }).join('') + `
+    <div class="se-actions">
+      <button class="se-save" id="seSaveBtn">Save changes</button>
+      <span class="se-status" id="seStatus"></span>
+    </div>
+  `;
+
+  document.getElementById('seSaveBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('seSaveBtn');
+    const status = document.getElementById('seStatus');
+    const body = { values: {} };
+    keys.forEach(name => { body.values[name] = Number(document.getElementById(fieldId(name)).value); });
+
+    btn.disabled = true;
+    status.className = 'se-status';
+    status.textContent = 'Saving…';
+    try {
+      const res = await fetch(`/api/v1/strategy-catalog/${strategyKey}/params`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || res.statusText);
+      status.className = 'se-status ok';
+      status.textContent = 'Saved -- takes effect on this strategy\'s next scheduled run (if activated) and the catalog\'s next recompute.';
+    } catch (e) {
+      status.className = 'se-status err';
+      status.textContent = 'Failed to save: ' + e.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+loadEditPage();
+</script>
+</body>
+</html>

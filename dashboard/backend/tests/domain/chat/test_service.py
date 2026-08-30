@@ -470,7 +470,7 @@ def test_get_claude_client_is_cached(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_system_prompt_exact():
-    assert SYSTEM_PROMPT.startswith("You are the conversational assistant for Agentic Trading Lab.")
+    assert SYSTEM_PROMPT.startswith("You are the conversational assistant for NewWorldTrading.")
     assert SYSTEM_PROMPT.endswith(
         "general information from personalized financial advice."
     )

@@ -1,4 +1,4 @@
-"""Path resolution for the Agentic Trading Lab dashboard application."""
+"""Path resolution for the NewWorldTrading dashboard application."""
 
 from pathlib import Path
 

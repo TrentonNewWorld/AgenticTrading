@@ -13,6 +13,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from dashboard.backend.api.rate_limit import FixedWindowRateLimiter, client_key
+from dashboard.backend.domain.leaderboard.live_results import get_live_results
 from dashboard.backend.domain.leaderboard.service import (
     enqueue_daily_leaderboard_refresh,
     get_leaderboard,
@@ -20,6 +21,19 @@ from dashboard.backend.domain.leaderboard.service import (
 )
 
 router = APIRouter(prefix="/v1/leaderboard", tags=["leaderboard"])
+
+
+@router.get("/real-trading")
+def real_trading_leaderboard():
+    """Actual live-account trading results per strategy -- orders really
+    placed (from the live audit trail), valued by the broker's own numbers,
+    plus the account's own equity history. Replaced the notional
+    allocated-capital ledger (domain/leaderboard/real_trading.py's
+    get_real_trading_leaderboard) by operator decision 2026-08-26: this board
+    must show what actually happened to real money, and the notional ledger
+    also showed rows for dry runs that never traded. See
+    domain/leaderboard/live_results.py."""
+    return get_live_results()
 
 # The refresh hook is unauthenticated apart from one shared secret, and a hit
 # schedules real LLM spend. Best-effort budget (see api/rate_limit): it bounds

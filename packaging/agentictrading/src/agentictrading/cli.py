@@ -37,7 +37,7 @@ def _print_info() -> int:
 def main(argv: list | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="agentictrading",
-        description="Lightweight client for the Agentic Trading Lab REST API.",
+        description="Lightweight client for the NewWorldTrading REST API.",
     )
     parser.add_argument("--version", action="version", version=f"agentictrading {__version__}")
 

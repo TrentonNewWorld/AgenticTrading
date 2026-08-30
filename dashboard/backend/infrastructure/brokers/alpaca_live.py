@@ -21,6 +21,7 @@ from alpaca.trading.requests import MarketOrderRequest
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockLatestQuoteRequest
 
+from dashboard.backend.infrastructure.brokers.credentials import resolve_alpaca_credentials
 from dashboard.backend.paths import CREDENTIALS_DIR
 
 
@@ -48,9 +49,14 @@ class AlpacaLiveTradingClient:
     env vars.
     """
 
-    def __init__(self, api_key: Optional[str] = None, secret_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, secret_key: Optional[str] = None,
+                 user_id: Optional[int] = None):
         self.api_key = api_key
         self.secret_key = secret_key
+        if not self.api_key or not self.secret_key:
+            resolved = resolve_alpaca_credentials(user_id, "alpaca_live")
+            if resolved:
+                self.api_key, self.secret_key = resolved
         if not self.api_key or not self.secret_key:
             self._load_from_credentials()
         if not self.api_key or not self.secret_key:
@@ -127,6 +133,31 @@ class AlpacaLiveTradingClient:
         except Exception as e:
             print(f"Exception in AlpacaLiveTradingClient.get_positions_detailed: {e}")
             return []
+
+    def get_portfolio_history(self, period: str = "1M", timeframe: str = "1D") -> Dict[str, List]:
+        """Account equity history as Alpaca itself records it -- the broker's
+        own end-of-bar equity marks, not anything this codebase computes.
+        Display-only, same convention as :meth:`get_positions_detailed`:
+        nothing on the trading path may depend on it. Returns
+        ``{"timestamps": [iso, ...], "equity": [float, ...]}`` (empty lists on
+        any API failure rather than raising -- a chart is never worth aborting
+        a page for)."""
+        try:
+            from alpaca.trading.requests import GetPortfolioHistoryRequest
+            from datetime import datetime, timezone
+
+            history = self._trading.get_portfolio_history(
+                GetPortfolioHistoryRequest(period=period, timeframe=timeframe)
+            )
+            timestamps = [
+                datetime.fromtimestamp(int(ts), tz=timezone.utc).isoformat()
+                for ts in (history.timestamp or [])
+            ]
+            equity = [float(e) if e is not None else None for e in (history.equity or [])]
+            return {"timestamps": timestamps, "equity": equity}
+        except Exception as e:
+            print(f"Exception in AlpacaLiveTradingClient.get_portfolio_history: {e}")
+            return {"timestamps": [], "equity": []}
 
     def get_quotes(self, symbols: List[str]) -> Dict[str, float]:
         """Return ``{symbol: last_trade_price}`` for the given symbols. Missing or

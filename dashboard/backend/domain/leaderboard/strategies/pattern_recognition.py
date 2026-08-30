@@ -40,8 +40,15 @@ _HOLD_DAYS = 10
 class PatternRecognitionStrategy(BaselineStrategy):
     key = "pattern_recognition"
 
+    PARAM_SCHEMA = {
+        "max_positions": {"label": "Max positions held", "type": "int", "default": _MAX_POSITIONS, "min": 1, "max": 30},
+        "hold_days": {"label": "Fixed hold (trading days)", "type": "int", "default": _HOLD_DAYS, "min": 1, "max": 60},
+    }
+
     def __init__(self, config):
         super().__init__(config)
+        self._max_positions = self.config.get("max_positions", _MAX_POSITIONS)
+        self._hold_days = self.config.get("hold_days", _HOLD_DAYS)
         #: {symbol: ISO date string of the entry day}. Keyed by calendar date
         #: rather than a row-count index so it round-trips correctly through
         #: `decide()`'s persisted state across separate process runs -- a
@@ -79,7 +86,7 @@ class PatternRecognitionStrategy(BaselineStrategy):
         if held_since is None:
             return False
         days_held = int((close.index > pd.Timestamp(held_since)).sum())
-        return days_held >= _HOLD_DAYS
+        return days_held >= self._hold_days
 
     def run(
         self,
@@ -94,7 +101,7 @@ class PatternRecognitionStrategy(BaselineStrategy):
             return []
 
         self._entry_day = {}
-        weight_fn = make_entry_exit_weight_fn(self._entry, self._exit, symbols, _MAX_POSITIONS, _MIN_HISTORY)
+        weight_fn = make_entry_exit_weight_fn(self._entry, self._exit, symbols, self._max_positions, _MIN_HISTORY)
         curve, n_trades = run_daily_signal_strategy(
             bars_subset, start_date, end_date, initial_capital, weight_fn,
             rebalance_every_days=1,
@@ -112,7 +119,7 @@ class PatternRecognitionStrategy(BaselineStrategy):
         state = load_strategy_state(self.key)
         self._entry_day = dict(state.get("entry_day") or {})
         weight_fn = make_entry_exit_weight_fn(
-            self._entry, self._exit, symbols, _MAX_POSITIONS, _MIN_HISTORY,
+            self._entry, self._exit, symbols, self._max_positions, _MIN_HISTORY,
             initial_held=state.get("held"),
         )
         weights = decide_live(weight_fn, history)

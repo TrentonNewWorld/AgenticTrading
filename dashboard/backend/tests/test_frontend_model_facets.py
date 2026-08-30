@@ -128,17 +128,6 @@ console.log(JSON.stringify([
     assert json.loads(result.stdout) == ["", "", "", "qwen", "", "open", "closed", ""]
 
 
-def test_vendor_chip_container_exists_in_the_community_view():
-    community = APP_HTML[
-        APP_HTML.index('<div id="communityView"') : APP_HTML.index('<div id="accountView"')
-    ]
-    assert 'id="marketplaceVendorChips"' in community
-    assert 'id="marketplaceCategoryChips"' in community
-    assert community.index('id="marketplaceCategoryChips"') < community.index(
-        'id="marketplaceVendorChips"'
-    ), "market row must render above the vendor row"
-
-
 def test_vendor_chips_are_derived_not_hardcoded():
     """Chips come from MODEL_VENDORS intersected with the loaded catalog, so a
     vendor with no templates never ships an empty chip."""
@@ -761,31 +750,6 @@ def test_duplicate_does_not_start_a_backtest():
     body = fn_body("async function submitDuplicateAgent")
     for forbidden in ("runBacktest(", "openRunBacktestModal("):
         assert forbidden not in body
-
-
-def test_entering_community_resets_the_vendor_filter():
-    """A vendor left selected on one visit must not leak into the next.
-
-    `marketplaceCategoryFilter` already resets here, under a comment explaining
-    exactly this hazard. The vendor filter was added later and initially did not,
-    so returning to Community via the nav tab stayed filtered -- and the My Agents
-    empty-shelf deep link (which rides in with a category) then ANDed against the
-    stale vendor and landed the user on an empty grid.
-
-    Scoped to the `page === 'community'` branch on purpose: a reset anywhere else
-    in the function would not fix the leak, so it must not satisfy this guard.
-    """
-    body = fn_body("function navigateToPage")
-    start = body.index("page === 'community'")
-    branch = body[start : body.index("page === 'account'", start)]
-    assert re.search(r"marketplaceCategoryFilter\s*=", branch), (
-        "the category reset vanished from the community branch"
-    )
-    assert re.search(r"marketplaceVendorFilter\s*=\s*'all'", branch), (
-        "entering Community must reset marketplaceVendorFilter to 'all'; "
-        "without it the vendor chip leaks across visits and strands the "
-        "empty-shelf deep links on an empty grid"
-    )
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")

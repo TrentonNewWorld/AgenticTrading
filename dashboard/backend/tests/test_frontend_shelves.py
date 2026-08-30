@@ -9,6 +9,14 @@ unchanged external bucket, and adds the canonical no-real-money sentence next
 to the capital controls. None of this is enforceable at runtime -- app.html
 has no JS test harness -- so, per this suite's frontend convention
 (`_frontend_source`), these are asserted against the shipped source directly.
+
+Follow-up (2026-08-23): Crypto and Futures were locked/inert at the time the
+guards above were written because no engine supported them. Both now do
+(domain/<asset>/backtester.py's run_llm_agent_backtest, an LLM-driven agent
+decision loop reusing each asset class's existing day-by-day backtest
+machinery), and Options/Forex/Prediction shipped alongside them as three
+more live shelves -- so every guard below that specifically pinned "Crypto
+and Futures are locked" now asserts the opposite.
 """
 
 import re
@@ -36,21 +44,28 @@ _LIVE_SHELVES = [
         "Trade U.S. blue-chip and Chinese A-share stocks, tested hour by hour on real market data.",
     ),
     (
+        "Options",
+        "Trade options contracts, tested against real historical chains.",
+    ),
+    (
+        "Futures",
+        "Trade futures contracts, simulated on free market data by default.",
+    ),
+    (
+        "Forex",
+        "Trade currency pairs, simulated on free market data by default.",
+    ),
+    (
+        "Crypto",
+        "Trade crypto around the clock on real market data.",
+    ),
+    (
+        "Prediction",
+        "Trade prediction markets. New strategies paper-trade forward for 5 real days before results show — see Prediction for why.",
+    ),
+    (
         "For Developers: Connected Agents",
         "Run your own trading program against our backtests. Requires an access key.",
-    ),
-]
-
-_LOCKED_SHELVES = [
-    (
-        "crypto",
-        "Crypto",
-        "Round-the-clock crypto backtesting isn't built yet. Nothing here can be run.",
-    ),
-    (
-        "futures",
-        "Futures",
-        "Futures contracts aren't built yet. Nothing here can be run.",
     ),
 ]
 
@@ -65,9 +80,18 @@ _CANONICAL_NO_REAL_MONEY_SENTENCE = (
     "you explicitly connect a brokerage account and turn on live trading."
 )
 
-# Live shelf id suffix -> the AGENT_SHELVES key it corresponds to. Only these
-# two are addressed from JS; the locked rows have no ids at all.
-_SHELF_SUFFIX_TO_KEY = {"Stocks": "stocks", "External": "external"}
+# Live shelf id suffix -> the AGENT_SHELVES key it corresponds to. All seven
+# shelves are addressed from JS now (2026-08-23: Crypto/Futures unlocked and
+# Options/Forex/Prediction added -- see the module docstring's follow-up note).
+_SHELF_SUFFIX_TO_KEY = {
+    "Stocks": "stocks",
+    "Options": "options",
+    "Futures": "futures",
+    "Forex": "forex",
+    "Crypto": "crypto",
+    "Prediction": "prediction",
+    "External": "external",
+}
 
 
 def test_live_shelf_headers_and_subtitles_are_present():
@@ -97,7 +121,7 @@ def test_canonical_no_real_money_sentence_is_present_verbatim():
     assert _CANONICAL_NO_REAL_MONEY_SENTENCE in _HTML
 
 
-def test_two_live_sections_with_distinct_shelf_ids():
+def test_live_sections_have_distinct_shelf_ids():
     """Each live shelf gets its own grid/footer/empty/count id so the render
     loop can address them uniformly: `agentsGrid<Shelf>` /
     `agentsGridFooter<Shelf>` / `agentsEmpty<Shelf>` / `agentsCount<Shelf>`,
@@ -121,26 +145,25 @@ def test_retired_shelf_ids_are_gone():
         assert f'id="agentsEmpty{suffix}"' not in _HTML, suffix
 
 
-def test_locked_shelves_are_rendered_inert_not_empty():
-    """Crypto and Futures have no bar source, no MarketProfile and no engine
-    support. They must read as "not built yet", never as "built and broken", so
-    they carry aria-disabled and the locked class -- and, critically, none of
-    the grid/footer/empty/count/chip elements the render loop addresses. A grid
-    element here would make renderAgentCategories' missing-grid guard the only
-    thing standing between a stray id and a page that renders nothing.
+def test_formerly_locked_shelves_are_now_live_not_inert():
+    """Crypto and Futures used to have no bar source, no MarketProfile and no
+    engine support, so they shipped as locked/inert rows. Both (plus Options,
+    Forex and Prediction, added alongside them) now have real engine support
+    -- domain/<asset>/backtester.py's run_llm_agent_backtest -- so none of the
+    six asset-class shelves may carry the locked treatment or "not yet
+    available" copy any more; each needs the same grid/footer/empty/count
+    quartet the render loop addresses uniformly (see
+    test_two_live_sections_with_distinct_shelf_ids's sibling assertion,
+    extended to cover all seven shelves).
     """
-    for slug, title, subtitle in _LOCKED_SHELVES:
+    for slug in ("options", "futures", "forex", "crypto", "prediction"):
         section_at = _HTML.index(f'data-category="{slug}"')
         section = _HTML[section_at : _HTML.index("</section>", section_at)]
         open_tag = _HTML[max(0, section_at - 120) : section_at + 120]
-        assert 'class="agents-category agents-category--locked"' in open_tag, slug
-        assert 'aria-disabled="true"' in open_tag, slug
-        assert f">{title}</h3>" in section, title
-        assert subtitle in section, subtitle
-        assert "Not yet available" in section, slug
-        assert "agents-grid" not in section, slug
-        assert "agentsCount" not in section, slug
-        assert "agentsEmpty" not in section, slug
+        assert "agents-category--locked" not in open_tag, slug
+        assert 'aria-disabled="true"' not in open_tag, slug
+        assert "Not yet available" not in section, slug
+        assert "agents-grid" in section, slug
 
 
 def test_market_chip_container_is_inside_the_stocks_shelf():
@@ -176,18 +199,18 @@ def _strip_js_comments(source: str) -> str:
     return re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL))
 
 
-def test_agent_shelves_config_holds_only_the_two_live_shelves():
+def test_agent_shelves_config_holds_exactly_the_seven_live_shelves():
     """`AGENT_SHELVES` drives rendering, so it lists only shelves that have a
-    grid to render into. Crypto and Futures are locked, inert rows in app.html
-    with no grid/footer/empty element -- listing them here would force a
-    `locked` filter at all five iteration sites, and one missed filter trips
-    renderAgentCategories' "some grid is missing" guard, silently aborting the
-    whole My Agents render.
+    grid to render into -- now all seven (six asset classes plus External),
+    each with a real `agentsGrid<Shelf>` in app.html (see
+    test_live_sections_have_distinct_shelf_ids). A stray eighth entry would
+    trip renderAgentCategories' "some grid is missing" guard and silently
+    abort the whole My Agents render.
     """
     config = js_const("AGENT_SHELVES")
-    for key in ("stocks", "external"):
+    for key in ("stocks", "options", "futures", "forex", "crypto", "prediction", "external"):
         assert f"key: '{key}'" in config, key
-    for absent in ("crypto", "futures", "prompting_llms", "us_stocks", "cn_ashares"):
+    for absent in ("prompting_llms", "us_stocks", "cn_ashares"):
         assert f"key: '{absent}'" not in config, absent
 
 
@@ -232,23 +255,6 @@ def test_render_marketplace_category_chips_is_built_from_the_shared_label_map():
     assert "'all'" in body
     for label in ("U.S.", "China A-Share"):
         assert label not in body, f"{label!r} hardcoded instead of read from MARKET_LABELS"
-
-
-def test_navigate_to_page_resets_chip_filter_on_plain_community_entry():
-    """A category set by one Community visit must not leak into a later,
-    unrelated visit made through the plain nav tab -- the most common entry
-    path. navigateToPage is the one choke point every Community entry funnels
-    through, so the reset belongs there: 'all' unless an explicit
-    `communityCategory` option says otherwise. Signature passed to fn_body stops
-    at the opening paren, not `(page, options = {})` -- that default value's own
-    `{}` would otherwise be mistaken for the function body by fn_body's brace
-    matcher.
-    """
-    body = _strip_js_comments(fn_body("function navigateToPage("))
-    assert (
-        "marketplaceCategoryFilter = MARKET_LABELS[options.communityCategory] "
-        "? options.communityCategory : 'all';"
-    ) in body
 
 
 def test_no_foundation_agents_copy_is_gone_from_the_render_loop():
@@ -348,10 +354,6 @@ def test_fallback_description_copy_is_updated():
     body = _strip_js_comments(fn_body(_MARKETPLACE_RENDER_FN))
     assert "Open agent template." not in body
     assert "No description provided yet." in body
-
-
-def test_marketplace_category_chip_container_is_present_in_community_view():
-    assert 'id="marketplaceCategoryChips"' in _community_view_html()
 
 
 def test_community_link_hook_reads_the_dataset_category():

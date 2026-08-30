@@ -3,9 +3,8 @@
 Marketing landing page shown at `/` before the main dashboard at `/app`. React +
 Vite + Tailwind v4.
 
-Originally exported from a Replit **pnpm monorepo**; it has since been made a
-self-contained standalone app so it builds with plain `npm` (no workspace, no
-`pnpm-workspace.yaml` catalog). See "History" below for what that entailed.
+A self-contained standalone app that builds with plain `npm` (no workspace, no
+`pnpm-workspace.yaml` catalog).
 
 ## Structure
 
@@ -80,19 +79,3 @@ shipping. Note the **Sign in** control is `lg:`-gated — widen the viewport pas
 1024px or it legitimately will not be in the DOM's layout. Longer term, folding the auth modal + gate into the React source would
 remove even this remnant, making the build output *exactly* the shipped page.
 
-## History — why this failed to build from a clean clone
-
-The Replit export was severed from its monorepo, leaving it unbuildable:
-
-- `package.json` used pnpm-only `catalog:` / `workspace:*` version specifiers with
-  no `pnpm-workspace.yaml` to resolve them → replaced with concrete versions.
-- `@workspace/api-client-react` (`workspace:*`) pointed at a sibling package that
-  isn't in this repo and nothing in `src/` imported → dropped.
-- `tsconfig.json` extended a missing `../../tsconfig.base.json` and referenced a
-  missing `../../lib/api-client-react` → made self-contained.
-- `vite.config.ts` threw unless `PORT`/`BASE_PATH` were set and imported Replit-only
-  plugins → env made optional, Replit plugins dropped.
-- `src/lib/utils.ts` (the `cn` helper every `ui/` component imports) was absent →
-  restored. The repo-root `.gitignore` also had a blanket `lib/` (Python) rule that
-  silently un-tracked it → negated for this path.
-- `typescript` wasn't a declared dependency → added.

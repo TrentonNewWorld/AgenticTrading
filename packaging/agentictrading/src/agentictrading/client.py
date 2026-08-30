@@ -1,4 +1,4 @@
-"""A small, dependency-free client for the Agentic Trading Lab REST API.
+"""A small, dependency-free client for the NewWorldTrading REST API.
 
 The client uses only the Python standard library (``urllib``) so that
 ``pip install agentictrading`` stays lightweight and has no transitive
@@ -53,7 +53,7 @@ Strategy = Callable[[dict], list]
 
 
 class AgenticTradingClient:
-    """Thin HTTP client for an Agentic Trading Lab API server.
+    """Thin HTTP client for an NewWorldTrading API server.
 
     Parameters
     ----------

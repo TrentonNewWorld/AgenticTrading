@@ -18,6 +18,8 @@ EXEMPT_PATHS = {
     '/app.html',
     '/mission-control.html',
     '/strategy-catalog.html',
+    '/strategy-edit.html',
+    '/manual.html',
     '/favicon.ico',
     '/favicon.svg',
     '/health',

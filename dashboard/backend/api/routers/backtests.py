@@ -846,12 +846,18 @@ def run_backtest_background(
     runtime_config: Optional[Dict[str, Any]] = None,
     financial_datasets_api_key: Optional[str] = None,
     charged_credit_user_id: Optional[int] = None,
+    user_id: Optional[int] = None,
 ):
     """Run backtest in background thread.
 
     ``charged_credit_user_id`` is set only when the endpoint actually took a
     credit for this run (see ``domain/entitlements/credits.py``); the finally
     block gives it back if the run turns out to have made no LLM call.
+
+    ``user_id`` is the signed-in caller (independent of credit metering,
+    which may be disarmed) -- when set, the LLM subprocess uses that user's
+    own Connections-saved key instead of the platform's env-var key. See
+    ``infrastructure/llm/providers/connections_env_override``.
     """
     global backtest_status, backtest_session_id
 
@@ -933,6 +939,13 @@ def run_backtest_background(
             env.pop("FINANCIAL_DATASETS_API_KEY", None)
             if financial_datasets_api_key:
                 env["FINANCIAL_DATASETS_API_KEY"] = financial_datasets_api_key
+        if uses_llm and user_id:
+            # Same isolate-then-override idea as the Financial Datasets key
+            # above, for whichever LLM key this subprocess will read: prefer
+            # the signed-in caller's own Connections-saved key over the
+            # platform's env var, without touching the real process env.
+            from dashboard.backend.infrastructure.llm.providers import connections_env_override
+            env.update(connections_env_override(user_id))
         if uses_llm:
             print(f"{data_source} selected; LLM decision source enabled", flush=True)
         else:
@@ -1107,6 +1120,121 @@ def run_backtest_background(
                 # the backtest's own outcome.
                 pass
         print("✋ Backtest background thread finished", flush=True)
+
+
+_NON_STOCKS_AGENT_BACKTESTERS = {
+    "crypto": (
+        "dashboard.backend.domain.crypto.backtester",
+        "dashboard.backend.infrastructure.market_data.alpaca_crypto",
+        "CRYPTO_UNIVERSE",
+    ),
+    "futures": (
+        "dashboard.backend.domain.futures.backtester",
+        "dashboard.backend.infrastructure.market_data.yahoo_futures",
+        "FUTURES_UNIVERSE",
+    ),
+    "forex": (
+        "dashboard.backend.domain.forex.backtester",
+        "dashboard.backend.infrastructure.market_data.yahoo_forex",
+        "FOREX_UNIVERSE",
+    ),
+    "options": (
+        "dashboard.backend.domain.options.backtester",
+        "dashboard.backend.infrastructure.market_data.alpaca_options",
+        "OPTIONS_UNDERLYING_UNIVERSE",
+    ),
+    # "prediction" is not registered yet: no backtester module exists at all
+    # (Group C of this phase). Raises the "unsupported asset_class" error
+    # below rather than being silently miscounted as stocks.
+}
+
+
+def run_non_stocks_agent_backtest_background(
+    *,
+    asset_class: str,
+    live_run_id: str,
+    session_id: str,
+    agent_name: str,
+    prompt: str,
+    model: Optional[str],
+    start_date: str,
+    end_date: str,
+    initial_capital: float,
+    user_id: Optional[int],
+    charged_credit_user_id: Optional[int],
+) -> None:
+    """Background counterpart to ``run_backtest_background`` for a My Agents
+    pipeline whose asset class isn't stocks (see the branch in
+    ``run_backtest_endpoint`` that dispatches here). Runs in-process (no
+    subprocess -- unlike the stocks path, this has no MarketProfile/data_source
+    contract to hand a CLI script) via that asset class's own day-by-day
+    ``run_llm_agent_backtest``, then writes the result through the same
+    ``agent_runs``/``equity_timeseries`` tables the stocks path uses, so
+    existing agent-card/run-history rendering picks it up with no frontend
+    change.
+
+    Reuses this file's slot/credit machinery (``_finalize_slot``,
+    ``credits.refund_llm_run``) rather than duplicating it, since neither is
+    specific to how the run itself was produced.
+    """
+    error: Optional[str] = None
+    curve: List[Dict[str, Any]] = []
+    llm_calls = 0
+    try:
+        import importlib
+        from datetime import date as date_cls
+
+        from dashboard.backend.domain.leaderboard.baselines import calc_metrics
+
+        entry = _NON_STOCKS_AGENT_BACKTESTERS.get(asset_class)
+        if entry is None:
+            raise ValueError(f"unsupported asset_class for agent backtest: {asset_class!r}")
+        backtester_module, market_data_module, universe_attr = entry
+        backtester = importlib.import_module(backtester_module)
+        universe = getattr(importlib.import_module(market_data_module), universe_attr)
+
+        start = date_cls.fromisoformat(start_date)
+        end = date_cls.fromisoformat(end_date)
+        curve = backtester.run_llm_agent_backtest(
+            prompt, model, list(universe), start, end, initial_capital, user_id=user_id,
+        )
+        # One decide() call happens per day _run_daybyday appends -- see that
+        # function's loop -- so this is exactly the LLM call count, and 0 when
+        # no LLM client was available (the no-key fallback returns [] early).
+        llm_calls = len(curve)
+
+        metrics = calc_metrics(
+            [{"equity": pt["equity"]} for pt in curve], initial_capital,
+        )
+        db.insert_run(
+            run_id=live_run_id, session_id=session_id, agent_name=agent_name, mode="backtest",
+            start_date=start_date, end_date=end_date,
+            initial_equity=metrics["initial_equity"], final_equity=metrics["final_equity"],
+            total_return=metrics["total_return"], sharpe_ratio=metrics["sharpe_ratio"],
+            max_drawdown=metrics["max_drawdown"], num_trades=0,
+            llm_model=model or "unknown", llm_calls=llm_calls,
+            asset_class=asset_class,
+        )
+        if curve:
+            # cash/positions_value aren't tracked as a separate split in this
+            # curve (only combined equity) -- mirroring cash=equity here is a
+            # deliberate simplification for the chart, which only reads equity.
+            db.insert_equity_points(live_run_id, [
+                {
+                    "timestamp": f"{pt['date']}T00:00:00",
+                    "equity": pt["equity"],
+                    "cash": pt["equity"],
+                    "positions_value": 0.0,
+                }
+                for pt in curve
+            ])
+    except Exception as exc:  # noqa: BLE001 -- must reach _finalize_slot regardless
+        error = str(exc)
+        print(f"❌ Non-stocks agent backtest failed ({asset_class}): {exc}", flush=True)
+    finally:
+        _finalize_slot(live_run_id, error=error, runs_count=1 if curve else 0)
+        if charged_credit_user_id:
+            credits.refund_llm_run(charged_credit_user_id, llm_calls=llm_calls)
 
 
 # The backtest subprocess budget. 30 minutes is right for a pipeline run, whose
@@ -1825,6 +1953,82 @@ def run_backtest_endpoint(
         if outcome.charged:
             charged_credit_user_id = int(owner_user_id)
 
+    # A My Agents pipeline whose asset class isn't stocks never goes through
+    # HourlyBacktester -- that engine (and the MarketProfile system data_source/
+    # profile above resolved into, which this branch simply leaves unused) is
+    # equities-only (hourly bars, share counts, US/CN markets). See
+    # domain/<asset>/backtester.py's run_llm_agent_backtest for the parallel
+    # day-by-day engine each asset class already has for its own Manual/Testing
+    # strategies, reused here for the LLM-driven path instead of sandboxed code.
+    agent_asset_class = "stocks"
+    if agent_id and runtime_type == PIPELINE_RUNTIME_TYPE:
+        agent_row = agent_service.get_agent(agent_id)
+        agent_asset_class = (agent_row or {}).get("asset_class") or "stocks"
+    if agent_asset_class != "stocks":
+        if resolved_decision_source != LLM_DECISION_SOURCE:
+            _release_slot(live_run_id)
+            raise HTTPException(
+                status_code=422,
+                detail=f"{agent_asset_class} agents only support decision_source='llm'.",
+            )
+        agent_prompt = next(
+            (
+                step.get("prompt", "").strip()
+                for step in (pipeline or [])
+                if step.get("prompt")
+            ),
+            None,
+        )
+        if not agent_prompt:
+            _release_slot(live_run_id)
+            raise HTTPException(status_code=400, detail="this agent has no trading instruction to run")
+
+        if agent_asset_class == "prediction":
+            # No instant backtest exists for Prediction at all (see
+            # domain/prediction/engine.py's module docstring) -- an agent's
+            # "Run Backtest" click enqueues into the same 5-real-day forward
+            # paper-test every other Prediction creation path uses, instead
+            # of starting a background thread there is nothing to poll for.
+            _release_slot(live_run_id)
+            from dashboard.backend.domain.prediction import repository as prediction_repo
+            from dashboard.backend.api.routers.prediction import FIVE_DAY_NOTICE
+
+            row = prediction_repo.create(
+                name=(agent_row or {}).get("name") or "Agent",
+                description=f"My Agents prediction agent, converted automatically.",
+                source_type="agent",
+                strategy_prompt=agent_prompt,
+                model=model,
+                agent_id=agent_id,
+                user_id=user_id,
+            )
+            return {"success": True, "status": "waiting", "notice": FIVE_DAY_NOTICE, "prediction_strategy": row}
+
+        thread = _BackgroundThread(
+            target=run_non_stocks_agent_backtest_background,
+            kwargs={
+                "asset_class": agent_asset_class,
+                "live_run_id": live_run_id,
+                "session_id": session_id,
+                "agent_name": (agent_row or {}).get("name") or "Agent",
+                "prompt": agent_prompt,
+                "model": model,
+                "start_date": start_date,
+                "end_date": end_date,
+                "initial_capital": resolve_initial_capital(initial_capital),
+                "user_id": user_id,
+                "charged_credit_user_id": charged_credit_user_id,
+            },
+            daemon=True,
+        )
+        thread.start()
+        return {
+            "success": True,
+            "live_run_id": live_run_id,
+            "session_id": session_id,
+            "status": "started",
+        }
+
     # Start backtest in background thread
     print(f"🧵 Starting background thread for backtest", flush=True)
     # Keyword args, not positional: this call passes 14 of them and universe /
@@ -1851,6 +2055,7 @@ def run_backtest_endpoint(
             "assets": selected_assets,
             "decision_source": resolved_decision_source,
             "charged_credit_user_id": charged_credit_user_id,
+            "user_id": user_id,
         },
         daemon=True
     )

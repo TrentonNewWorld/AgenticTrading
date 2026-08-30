@@ -3,7 +3,7 @@
 `protocol_version: "1.0"`
 
 This document specifies the versioned protocol an external agent uses to run
-against an Agentic Trading Lab environment. Today only the **hourly US-equity
+against an NewWorldTrading environment. Today only the **hourly US-equity
 backtest** environment is implemented; the protocol is designed so paper
 trading, live trading, and competitions can be added later without breaking
 clients.

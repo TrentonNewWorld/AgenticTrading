@@ -1,0 +1,21 @@
+# One-command run that behaves identically on Windows, Linux, and macOS:
+#   docker compose up --build
+# then open http://127.0.0.1:8000
+#
+# The bind is published on 127.0.0.1 only, matching ops/keep-bot-online.*:
+# this deployment runs with LOCAL_AUTO_LOGIN_ENABLED, so a LAN-reachable bind
+# would hand any visitor an admin session on a live-armed app.
+#
+# The storage volume keeps backtest.db (runs, activations, settings) across
+# container rebuilds. dashboard/.env carries the credentials, exactly as a
+# native run does.
+services:
+  newworldtrading:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - dashboard/.env
+    volumes:
+      - ./dashboard/storage:/app/dashboard/storage
+    restart: unless-stopped

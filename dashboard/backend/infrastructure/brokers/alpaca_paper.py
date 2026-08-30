@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockLatestQuoteRequest
 
+from dashboard.backend.infrastructure.brokers.credentials import resolve_alpaca_credentials
 from dashboard.backend.paths import CREDENTIALS_DIR
 
 
@@ -49,19 +50,30 @@ class Trade:
 class AlpacaPaperTradingClient:
     """Interface to Alpaca paper trading API."""
     
-    def __init__(self, api_key: Optional[str] = None, 
-                 secret_key: Optional[str] = None):
-        """Initialize with Alpaca credentials."""
+    def __init__(self, api_key: Optional[str] = None,
+                 secret_key: Optional[str] = None,
+                 user_id: Optional[int] = None):
+        """Initialize with Alpaca credentials.
+
+        ``user_id``, when given, is a signed-in user's saved Connections
+        entry taking priority over env vars/credentials file -- only wired
+        for request-scoped callers (e.g. Strategy Catalog's Run in Paper
+        button); leave unset for unattended/background contexts, which keep
+        using env/file credentials exactly as before."""
         # Always initialize these first
         self.api_key = None
         self.secret_key = None
-        
+
         if api_key is None:
-            self._load_from_credentials()
+            resolved = resolve_alpaca_credentials(user_id, "alpaca_paper")
+            if resolved:
+                self.api_key, self.secret_key = resolved
+            else:
+                self._load_from_credentials()
         else:
             self.api_key = api_key
             self.secret_key = secret_key
-        
+
         self.base_url = "https://paper-api.alpaca.markets"
         self.headers = {
             "APCA-API-KEY-ID": self.api_key,

@@ -1,116 +1,93 @@
-"""H7 — the Discord bot must not forward a sentinel model id.
+"""Source-level wiring checks for the NewWorldSupport Discord bot.
 
 ``discord`` is an undeclared optional dep, so importing ``discord_bot`` isn't
-possible in the base test env. These checks read the source directly (no import)
-so the wiring is locked even where discord is absent — the behavioral test lives
-in tests/domain/chat/test_discord_bot.py under ``importorskip('discord')``.
+possible in the base test env. These checks read the source directly (no
+import) so the wiring is locked even where discord is absent — the behavioral
+tests live in tests/domain/chat/test_discord_bot.py under
+``importorskip('discord')``.
+
+The bot was reduced to a single ``/support`` command; the checks that pinned
+/ask, /agent, /strategy and /backtest wiring were removed along with those
+features.
 """
 
 import re
 from pathlib import Path
 
-_DISCORD_BOT = (
-    Path(__file__).resolve().parents[2] / "integrations" / "discord_bot.py"
-)
+_BACKEND = Path(__file__).resolve().parents[2]
+_DISCORD_BOT = _BACKEND / "integrations" / "discord_bot.py"
+_CHAT_SERVICE = _BACKEND / "domain" / "chat" / "service.py"
+_REPO_ROOT = _BACKEND.parents[1]
 
 
 def _source() -> str:
     return _DISCORD_BOT.read_text(encoding="utf-8")
 
 
-def test_bot_uses_model_override_helper():
-    src = _source()
-    assert "from dashboard.backend.infrastructure.llm.token_cost import is_free_model" in src
-    assert "def _model_override(" in src
-    # Used at BOTH forwarding sites (/ask model= and /backtest payload["model"]).
-    assert src.count("_model_override(") >= 3  # 1 definition + 2 call sites
-
-
-def test_bot_no_longer_forwards_raw_sentinel_model():
-    src = _source()
-    # The old raw forwards that leaked the 'local-model' sentinel are gone.
-    assert 'payload["model"] = selected["model_name"]' not in src
-    assert "model = selected.get(\"model_name\") if selected else None" not in src
-
-
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+def _chat_source() -> str:
+    return _CHAT_SERVICE.read_text(encoding="utf-8")
 
 
 def test_discord_dependency_is_declared():
-    """MEDIUM #11 — discord_bot.py imports ``discord`` (discord.py 2.x), but the
-    dep was undeclared, so the bot was unrunnable from any declared requirements
-    file. Declare it in an optional ``requirements-discord.txt`` (mirroring
-    ``requirements-sphinx.txt`` for docs) rather than core ``requirements.txt``,
-    so web/API/backtest installs stay lean, and point contributors at it in
-    CLAUDE.md.
-    """
-    req = _REPO_ROOT / "requirements-discord.txt"
-    assert req.exists(), "requirements-discord.txt is missing"
-    lines = [ln.strip() for ln in req.read_text(encoding="utf-8").splitlines()]
-    # A real requirement line pinning discord.py (not merely a comment mention).
-    assert any(re.match(r"^discord\.py\s*[<>=~!]", ln) for ln in lines), \
-        "requirements-discord.txt must pin discord.py as a requirement"
-    # Self-contained: pulls core deps so the bot is runnable from this file alone.
-    assert "-r requirements.txt" in lines
-    # Keep discord.py OUT of core requirements.txt (optional integration, not core).
-    core = (_REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
-    assert "discord.py" not in core
-    # CLAUDE.md must point contributors at the optional file.
-    claude_md = (_REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    assert "requirements-discord.txt" in claude_md
+    """discord.py is an optional dep pinned in its own requirements file."""
+    req = (_REPO_ROOT / "requirements-discord.txt").read_text(encoding="utf-8")
+    assert re.search(r"^discord\.py>=", req, re.M)
 
 
-def test_bot_backtest_sends_agent_id_for_builtin_card():
+def test_support_is_the_only_slash_command_in_source():
     src = _source()
-    assert 'payload["agent_id"] = selected["agent_id"]' in src
-    assert 'selected.get("agent_type") or "builtin") == "builtin"' in src
+    names = re.findall(r'@bot\.tree\.command\(\s*\n\s*name="([^"]+)"', src)
+    assert names == ["support"], f"expected only /support, found {names}"
 
 
-def test_bot_agent_uses_owned_discord_agents_endpoint():
-    """Discord /agent must list the linked website user's agents, not the
-    public /agents/builtin catalog."""
+def test_removed_machinery_is_gone_from_source():
+    """The agent-selection / backtest-watcher / free-chat code existed only to
+    serve the removed commands. Leaving it behind would be ~900 lines of dead
+    code that still imports and still looks live to a reader."""
     src = _source()
-    assert "/api/v1/discord/agents" in src
-    assert "fetch_owned_agents" in src
-    assert "discord_not_linked" in src
-    # Public catalog must not be the /agent source of truth anymore.
-    assert "fetch_builtin_agents" not in src
-    assert 'api_get("/api/v1/agents/builtin")' not in src
+    for gone in (
+        "async def deliver_agent_chat",
+        "async def watch_and_deliver_backtest",
+        "async def execute_backtest",
+        "class AgentSelectView",
+        "def should_handle_free_chat",
+        "async def on_message",
+    ):
+        assert gone not in src, f"dead machinery still present: {gone}"
 
 
-def test_bot_builds_dashboard_backtest_deep_link():
+def test_support_tries_faq_before_the_model():
+    """Ordering is cost control: the curated FAQ answers the common questions
+    for free, keeping OpenRouter's daily free quota for the ones that need it.
+    A regression that calls the model first silently burns the quota."""
     src = _source()
-    assert "def dashboard_backtest_url(" in src
-    assert '"view": "backtest"' in src
-    assert "agent_id" in src and "run_id" in src
-    assert "Dashboard:" in src
-    assert "agentic-trading-lab.vercel.app" in src
-    assert "onrender.com" in src  # prod API detection / never deep-link that host
-    assert "dashboard_backtest_url(agent_id=agent_id, run_id=run_id)" in src
+    faq_call = src.index("_support_answer(question)")
+    model_call = src.index("await support_answer(question)")
+    assert faq_call < model_call, "the keyword FAQ must be consulted before the model"
 
 
-def test_bot_decouples_backtest_wait_from_interaction():
-    """Discord must ACK immediately and deliver results via a background job.
-
-    Long LLM backtests exceed Discord's ~15m interaction token; polling inside
-    the slash handler used to drop the chart. Results post in-channel instead.
-    """
-    src = _source()
-    assert "schedule_backtest_watch" in src
-    assert "watch_and_deliver_backtest" in src
-    assert "get_job_store().create_job" in src
-    assert "_post_channel_result" in src
-    assert "resume_open_backtest_jobs" in src
-    # Old blocking poll budget must not live inside execute_backtest anymore.
-    assert "max_polls = 130" not in src
-    assert "I'll post the results" in src
+def test_support_model_is_restricted_to_openrouter_free_tier():
+    """Two-layer cost control, layer 1: any model id not ending ':free' is
+    refused in code rather than called. Layer 2 (a $0 credit limit on the
+    OpenRouter key) lives outside the repo and cannot be asserted here."""
+    src = _chat_source()
+    assert '_SUPPORT_FREE_SUFFIX = ":free"' in src
+    assert "endswith(_SUPPORT_FREE_SUFFIX)" in src
+    # Every shipped default must itself be a free id.
+    block = re.search(r"DEFAULT_SUPPORT_MODELS:.*?\)", src, re.S)
+    assert block, "DEFAULT_SUPPORT_MODELS not found"
+    for model in re.findall(r'"([^"]+)"', block.group(0)):
+        assert model.endswith(":free"), f"default model {model!r} is not a free id"
 
 
-def test_bot_sends_per_user_id_on_strategy_post():
-    """MEDIUM #4 — the bot must send a per-Discord-user X-Browser-Id when creating
-    a strategy, else all Discord users share the bot process's single (IP) bucket
-    on the server's write rate limiter."""
-    src = _source()
-    assert '"X-Browser-Id": f"discord:{discord_user_id}"' in src
-    assert "X-Discord-Bot-Secret" in src
-    assert "DISCORD_BOT_API_SECRET" in src
+def test_support_never_falls_back_to_a_paid_model():
+    """On a per-model failure the loop tries the NEXT FREE candidate. It must
+    not reach for the trading/leaderboard client, which holds paid credits."""
+    src = _chat_source()
+    start = src.index("async def support_answer")
+    # Bound the slice to this function only. Slicing to end-of-file would also
+    # sweep in chat_with_agent, which uses the paid client entirely legitimately.
+    nxt = re.search(r"\n(?:async )?def ", src[start + 1:])
+    support_block = src[start:start + 1 + nxt.start()] if nxt else src[start:]
+    assert "get_support_client()" in support_block
+    assert "get_claude_client()" not in support_block

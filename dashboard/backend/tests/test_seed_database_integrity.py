@@ -50,13 +50,35 @@ _ACCOUNT_TABLES = (
 
 @pytest.fixture(scope="module")
 def seed_db() -> Iterator[sqlite3.Connection]:
-    if not DEFAULT_DB_PATH.exists():
+    """Opens the COMMITTED database (the index/HEAD blob), not the working tree.
+
+    On this fork the working-tree copy at DEFAULT_DB_PATH *is* the live local
+    database — running the app writes real accounts, activations and sessions
+    into it, so asserting on the working tree failed whenever the app had
+    simply been used. What this guard protects against is those rows being
+    *committed*, so read what a commit would actually publish: `git show
+    :path` (the staged blob, which equals HEAD when unstaged)."""
+    import subprocess
+    import tempfile
+    from pathlib import Path as _P
+
+    repo_root = _P(DEFAULT_DB_PATH).parents[3]
+    rel = "dashboard/storage/data/backtest.db"
+    try:
+        blob = subprocess.run(
+            ["git", "show", f":{rel}"], cwd=repo_root,
+            capture_output=True, check=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError):
         pytest.fail(
-            f"the committed seed database is missing at {DEFAULT_DB_PATH}.\n"
+            f"the committed seed database is missing from git at {rel}.\n"
             "It is prod's database, not a local artifact — restore it with\n"
             "  git checkout -- dashboard/storage/data/backtest.db"
         )
-    conn = sqlite3.connect(f"file:{DEFAULT_DB_PATH}?immutable=1", uri=True)
+    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    tmp.write(blob)
+    tmp.close()
+    conn = sqlite3.connect(f"file:{_P(tmp.name).as_posix()}?immutable=1", uri=True)
     conn.row_factory = sqlite3.Row
     try:
         yield conn

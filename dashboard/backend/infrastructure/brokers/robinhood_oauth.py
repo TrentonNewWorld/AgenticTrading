@@ -151,7 +151,7 @@ def register_client(*, force: bool = False) -> str:
     registration_endpoint = meta["registration_endpoint"]
     payload = {
         "redirect_uris": [uri],
-        "client_name": "Agentic Trading Lab",
+        "client_name": "NewWorldTrading",
         "grant_types": ["authorization_code", "refresh_token"],
         "response_types": ["code"],
         "token_endpoint_auth_method": "none",

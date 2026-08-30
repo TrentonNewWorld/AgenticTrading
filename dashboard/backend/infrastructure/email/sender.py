@@ -19,7 +19,7 @@ import httpx
 
 BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email"
 SEND_TIMEOUT_SECONDS = 10.0
-DEFAULT_FROM_NAME = "Agentic Trading Lab"
+DEFAULT_FROM_NAME = "NewWorldTrading"
 _PROVIDER_ERROR_SNIPPET_CHARS = 200
 
 

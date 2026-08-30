@@ -531,7 +531,7 @@
       if (disconnectBtn) disconnectBtn.hidden = true;
       if (metaEl) metaEl.hidden = true;
       setRunLiveProminence(false);
-      setBrokerMessage('Log in to your ATL account, then click Connect Robinhood.', true);
+      setBrokerMessage('Log in to your NewWorldTrading account, then click Connect Robinhood.', true);
       return;
     }
 
@@ -617,7 +617,7 @@
     if (!isEditorSignedIn()) {
       setBrokerMessage('Please sign in first.', true);
       if (typeof window.openAuthModal === 'function') window.openAuthModal('login');
-      else alert('Please sign in to your ATL account first.');
+      else alert('Please sign in to your NewWorldTrading account first.');
       return;
     }
     if (!currentAgent?.agent_id) {
@@ -681,7 +681,7 @@
   }
 
   async function disconnectRobinhood() {
-    if (!window.confirm('Disconnect Robinhood from your ATL account?')) return;
+    if (!window.confirm('Disconnect Robinhood from your NewWorldTrading account?')) return;
     try {
       const response = await fetch(`${API_BASE}/api/v1/robinhood/disconnect`, {
         method: 'DELETE',

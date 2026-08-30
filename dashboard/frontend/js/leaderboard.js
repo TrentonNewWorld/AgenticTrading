@@ -50,6 +50,13 @@ const HOVER_HIT_RADIUS_PX = 16;
 //   strategy  -> colored, long-dashed, secondary
 //   team      -> solid, prominent (colors assigned stably, never by rank)
 const LEADERBOARD_STYLES = {
+  // Current roster labels (renamed 2026-08 "describe their mechanics" pass) --
+  // keyed on the label the entry actually reports, or every baseline silently
+  // falls through to solid team styling (found by the 2026-08-29 audit).
+  'S&P 500 Buy & Hold': { color: '#CBD5E1', kind: 'benchmark', dash: [2, 4] },
+  'Dow 30 Buy & Hold': { color: '#94A3B8', kind: 'benchmark', dash: [8, 4, 2, 4] },
+  'Daily Equal-Weight': { color: '#4ADE80', kind: 'strategy', dash: [10, 6] },
+  // Legacy labels kept so cached payloads and older runs still style right.
   SPY: { color: '#CBD5E1', kind: 'benchmark', dash: [2, 4] },
   DJIA: { color: '#94A3B8', kind: 'benchmark', dash: [8, 4, 2, 4] },
   'Buy & Hold': { color: '#38BDF8', kind: 'strategy', dash: [10, 6] },
@@ -647,7 +654,7 @@ function updateLeaderboardHeader(payload, board = renderedBoardPeriod) {
     // the moment a season is running.
     titleEl.textContent = liveBoard
       ? 'Live Trading Leaderboard'
-      : 'SecureFinAI Contest 2026';
+      : 'Competition Leaderboard';
   }
   if (badgeEl) {
     const state = liveBoard
@@ -663,7 +670,7 @@ function updateLeaderboardHeader(payload, board = renderedBoardPeriod) {
   }
 
   // Competition-only chrome, hidden rather than left standing. Both name the
-  // SecureFinAI contest specifically — an organizing body, and a rules document
+  // the old contest specifically — an organizing body, and a rules document
   // written around a fixed window and a registration deadline — so on a season
   // board they caption the wrong event, and the Rules button opens a modal that
   // describes rules this board does not run under.
@@ -906,6 +913,16 @@ function normalizeBoardPeriod(period) {
     : 'contest';
 }
 
+// Options and Futures catalog leaderboards are each sibling routers -- same
+// contest/live period shape, own roster, own year-auto-roll window. Reads
+// the module-level `assetClass` app.js declares -- classic scripts sharing
+// one global scope, same pattern as strategy-catalog.js's scBasePath()/
+// manual.js's m10Path().
+const LB_ASSET_PATHS = { options: '/api/v1/options/leaderboard', futures: '/api/v1/futures/leaderboard', forex: '/api/v1/forex/leaderboard', crypto: '/api/v1/crypto/leaderboard' };
+function lbBasePath() {
+  return (typeof assetClass !== 'undefined' && LB_ASSET_PATHS[assetClass]) || '/api/v1/leaderboard';
+}
+
 async function loadLeaderboardData(period = 'contest') {
   console.log('Loading leaderboard from API...', period);
   const boardPeriod = normalizeBoardPeriod(period);
@@ -929,7 +946,7 @@ async function loadLeaderboardData(period = 'contest') {
   }
 
   try {
-    const url = `${API_BASE}/api/v1/leaderboard?period=${encodeURIComponent(boardPeriod)}&t=${Date.now()}`;
+    const url = `${API_BASE}${lbBasePath()}?period=${encodeURIComponent(boardPeriod)}&t=${Date.now()}`;
     const payload = await API.get(url);
     if (seq !== boardRequestSeq) return;
     leaderboardPayload = payload;
@@ -968,6 +985,150 @@ async function loadLeaderboardData(period = 'contest') {
     renderCurvePicker();
     displayLeaderboardError(error.message);
   }
+}
+
+let liveTradingChartInstance = null;
+
+/** Live Trading Leaderboard: ACTUAL live-account results. Per-strategy rows
+ * come from orders really placed (the live audit trail); values and P/L come
+ * from the broker's own numbers; the chart is the account's own equity
+ * history as Alpaca records it. Deliberately its own fetch, its own chart
+ * instance and its own tables -- never repaints the Competition
+ * Leaderboard's chart with a different dataset, and vice versa. See
+ * domain/leaderboard/live_results.py for what this data actually is. */
+const lvMoney = (v) => (v == null ? '—' : '$' + Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const lvSigned = (v) => {
+  if (v == null) return '—';
+  const n = Number(v);
+  const abs = Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (n >= 0 ? '+$' : '-$') + abs;
+};
+
+async function loadLiveTradingData() {
+  const tableBody = document.getElementById('liveTradingTableBody');
+  const posBody = document.getElementById('livePositionsTableBody');
+  const strip = document.getElementById('liveTradingAccountStrip');
+  const subtitle = document.getElementById('liveTradingSubtitle');
+  const canvas = document.getElementById('liveTradingChart');
+  if (tableBody) tableBody.innerHTML = '<tr><td colspan="6" class="no-selection">Loading…</td></tr>';
+  if (posBody) posBody.innerHTML = '<tr><td colspan="6" class="no-selection">Loading…</td></tr>';
+
+  let payload;
+  try {
+    payload = await API.get(`${API_BASE}/api/v1/leaderboard/real-trading?t=${Date.now()}`);
+  } catch (error) {
+    console.error('Error loading real trading leaderboard:', error);
+    if (tableBody) tableBody.innerHTML = `<tr><td colspan="6" class="no-selection">Failed to load: ${error.message}</td></tr>`;
+    if (posBody) posBody.innerHTML = '<tr><td colspan="6" class="no-selection">—</td></tr>';
+    return;
+  }
+
+  const entries = payload.entries || [];
+  const account = payload.account;
+  const positions = payload.account_positions || [];
+  const history = payload.account_history || { timestamps: [], equity: [] };
+
+  // --- Account summary strip -------------------------------------------
+  if (strip) {
+    if (account) {
+      const stat = (label, value, cls = '') =>
+        `<div class="live-account-stat"><div class="control-helper" style="margin:0">${label}</div>` +
+        `<div class="${cls}" style="font-size:1.15rem; font-weight:600">${value}</div></div>`;
+      const totalUpl = positions.reduce((s, p) => s + (p.unrealized_pl || 0), 0);
+      strip.innerHTML =
+        stat('Account', '#' + (account.account_number || '—')) +
+        stat('Equity', lvMoney(account.equity)) +
+        stat('Cash', lvMoney(account.cash)) +
+        stat('Unrealized P/L', lvSigned(totalUpl), totalUpl >= 0 ? 'positive' : 'negative');
+      strip.style.display = 'flex';
+    } else {
+      strip.innerHTML = `<div class="control-helper">Live account unreachable${payload.broker_error ? ': ' + payload.broker_error : ''} — showing order history only.</div>`;
+      strip.style.display = 'flex';
+    }
+  }
+  if (subtitle && payload.as_of) {
+    subtitle.textContent = `Real orders on the live Alpaca account — as of ${new Date(payload.as_of).toLocaleString()}`;
+  }
+
+  // --- Per-strategy standings (orders really placed) --------------------
+  if (tableBody) {
+    if (!entries.length) {
+      tableBody.innerHTML = '<tr><td colspan="6" class="no-selection">No real orders placed yet. Activate a strategy for Live on the Strategy page; its actual orders will show up here.</td></tr>';
+    } else {
+      tableBody.innerHTML = entries.map((e) => {
+        const profitClass = e.profit >= 0 ? 'positive' : 'negative';
+        const pending = (e.positions || []).some((p) => p.pending_fill);
+        return `<tr>
+          <td>${e.key}${pending ? ' <span class="control-helper" title="Some orders are queued at the broker and fill at the next market open">(orders pending fill)</span>' : ''}</td>
+          <td>${lvMoney(e.invested)}</td>
+          <td>${lvMoney(e.current_value)}</td>
+          <td class="${profitClass}">${lvSigned(e.profit)}</td>
+          <td class="${profitClass}">${e.return_pct >= 0 ? '+' : ''}${e.return_pct.toFixed(2)}%</td>
+          <td>${e.n_orders}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  // --- Broker positions table -------------------------------------------
+  if (posBody) {
+    const real = positions.filter((p) => (p.market_value || 0) >= 0.01);
+    if (!real.length) {
+      posBody.innerHTML = '<tr><td colspan="6" class="no-selection">No open positions at the broker yet' +
+        (entries.length ? ' — queued orders fill at the next market open.' : '.') + '</td></tr>';
+    } else {
+      posBody.innerHTML = real.map((p) => {
+        const plClass = (p.unrealized_pl || 0) >= 0 ? 'positive' : 'negative';
+        return `<tr>
+          <td>${p.symbol}</td>
+          <td>${Number(p.qty).toLocaleString(undefined, { maximumFractionDigits: 6 })}</td>
+          <td>${lvMoney(p.avg_entry_price)}</td>
+          <td>${lvMoney(p.current_price)}</td>
+          <td>${lvMoney(p.market_value)}</td>
+          <td class="${plClass}">${lvSigned(p.unrealized_pl)}${p.unrealized_plpc != null ? ` (${(p.unrealized_plpc * 100).toFixed(2)}%)` : ''}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  // --- Account equity chart (Alpaca's own history) ----------------------
+  if (liveTradingChartInstance) {
+    liveTradingChartInstance.destroy();
+    liveTradingChartInstance = null;
+  }
+  if (!canvas) return;
+  const points = (history.timestamps || [])
+    .map((t, i) => ({ t, equity: history.equity[i] }))
+    .filter((p) => p.equity != null && p.equity > 0);
+  if (!points.length) return;
+
+  liveTradingChartInstance = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: points.map((p) => new Date(p.t).toLocaleDateString()),
+      datasets: [{
+        label: 'Account equity',
+        data: points.map((p) => p.equity),
+        borderColor: MODEL_COLOR_PALETTE[0],
+        backgroundColor: 'transparent',
+        pointRadius: 2,
+        tension: 0.15,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (item) => `Equity: $${Number(item.parsed.y).toFixed(2)}` } },
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 8 } },
+        y: { ticks: { callback: (v) => '$' + v } },
+      },
+    },
+  });
 }
 
 function initLeaderboardListeners() {
@@ -1164,24 +1325,6 @@ function buildEquityCurvesFromEntries(entries) {
   return { times, days: times, curves, trajectories, initials };
 }
 
-// Default chart visibility: top 5 teams + benchmarks. Strategy baselines are
-// hidden by default (selectable via legend) — unless there are no teams yet,
-// in which case we show them so the chart isn't just two gray lines.
-function computeDefaultHidden(entries) {
-  const hidden = new Set();
-  const teams = entries.filter((e) => getEntryKind(e) === 'team');
-  const hasTeams = teams.length > 0;
-  const visibleTeamIds = new Set(teams.slice(0, 5).map((e) => e.entry_id));
-
-  entries.forEach((entry) => {
-    const label = entry.model || entry.team_name;
-    const kind = getEntryKind(entry);
-    if (kind === 'team' && !visibleTeamIds.has(entry.entry_id)) hidden.add(label);
-    if (kind === 'strategy' && hasTeams) hidden.add(label);
-  });
-  return hidden;
-}
-
 function updateLeaderboardSortHeaders() {
   document.querySelectorAll('.leaderboard-table th.sortable').forEach((th) => {
     const active = th.dataset.sort === currentLeaderboardSort;
@@ -1290,7 +1433,7 @@ function renderLeaderboardDetailHtml(entry, totalEntries) {
   return `
       <div class="team-detail-row">
         <span class="team-detail-label">Entry</span>
-        <span class="team-detail-value">${entryLabel}</span>
+        <span class="team-detail-value team-detail-value-shrunk">${entryLabel}</span>
       </div>
       <div class="team-detail-row">
         <span class="team-detail-label">Type</span>
@@ -1298,7 +1441,7 @@ function renderLeaderboardDetailHtml(entry, totalEntries) {
       </div>
       <div class="team-detail-row">
         <span class="team-detail-label">Value</span>
-        <span class="team-detail-value">$${formatLeaderboardNumber(entry.portfolio_value)}</span>
+        <span class="team-detail-value team-detail-value-shrunk">$${formatLeaderboardNumber(entry.portfolio_value)}</span>
       </div>
       <div class="team-detail-row">
         <span class="team-detail-label">Return</span>

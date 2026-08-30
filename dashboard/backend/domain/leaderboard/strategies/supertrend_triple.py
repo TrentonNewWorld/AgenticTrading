@@ -46,6 +46,17 @@ def _all_trends(history: DailyHistory, sym: str) -> List[str]:
 class SupertrendTripleStrategy(BaselineStrategy):
     key = "supertrend_triple"
 
+    #: The three ATR period/multiplier variants aren't exposed here -- they're
+    #: a matched triple-confirmation set, not independent scalars a form
+    #: field can safely vary one at a time.
+    PARAM_SCHEMA = {
+        "max_positions": {"label": "Max positions held", "type": "int", "default": _MAX_POSITIONS, "min": 1, "max": 30},
+    }
+
+    def __init__(self, config):
+        super().__init__(config)
+        self._max_positions = self.config.get("max_positions", _MAX_POSITIONS)
+
     def required_symbols(self) -> List[str]:
         symbols = self.config.get("symbols")
         return list(symbols) if symbols else list(DJIA_30)
@@ -72,7 +83,7 @@ class SupertrendTripleStrategy(BaselineStrategy):
         if not bars_subset:
             return []
 
-        weight_fn = make_entry_exit_weight_fn(self._entry, self._exit, symbols, _MAX_POSITIONS, _MIN_HISTORY)
+        weight_fn = make_entry_exit_weight_fn(self._entry, self._exit, symbols, self._max_positions, _MIN_HISTORY)
         curve, n_trades = run_daily_signal_strategy(
             bars_subset, start_date, end_date, initial_capital, weight_fn,
             rebalance_every_days=1,
@@ -88,7 +99,7 @@ class SupertrendTripleStrategy(BaselineStrategy):
         symbols = self.required_symbols()
         state = load_strategy_state(self.key)
         weight_fn = make_entry_exit_weight_fn(
-            self._entry, self._exit, symbols, _MAX_POSITIONS, _MIN_HISTORY,
+            self._entry, self._exit, symbols, self._max_positions, _MIN_HISTORY,
             initial_held=state.get("held"),
         )
         weights = decide_live(weight_fn, history)

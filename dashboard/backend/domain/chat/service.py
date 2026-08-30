@@ -143,9 +143,9 @@ conversation_history: dict[
 
 
 SYSTEM_PROMPT = """
-You are the conversational assistant for Agentic Trading Lab.
+You are the conversational assistant for NewWorldTrading.
 
-Agentic Trading Lab helps users experiment with LLM-based trading agents,
+NewWorldTrading helps users experiment with LLM-based trading agents,
 including backtesting, paper trading, strategy configuration, performance
 evaluation, and decision analysis.
 
@@ -175,6 +175,271 @@ def extract_text(response: Any) -> str:
     return "\n".join(parts).strip()
 
 
+# ---------------------------------------------------------------------------
+# NewWorldSupport: the Discord /support command's answerer.
+#
+# The knowledge base below is the ONLY source the support model may answer
+# from -- the system prompt pins it there. This channel is where people ask
+# real questions about software that can place real-money orders, so an
+# answer improvised from a model's general training (plausible, confident,
+# wrong) is strictly worse than "I don't know, here's where to ask." Keep
+# this text in sync with the product; it is the support bot's entire world.
+# ---------------------------------------------------------------------------
+
+#: Update this to the real Whop listing URL before launch.
+SUPPORT_WHOP_URL = "https://whop.com/YOUR-STORE-HERE"
+
+SUPPORT_KNOWLEDGE_BASE = f"""
+# What NewWorldTrading is
+An open-source platform for building, testing, and running trading strategies —
+backtests, simulated (paper) trading, and optional real-money (live) trading
+through connected broker accounts. It runs as a local web dashboard.
+
+# Getting the bot
+The bot is FREE. Get it here: {SUPPORT_WHOP_URL}
+After download, it runs locally: install Python dependencies
+(`pip install -r requirements.txt`), then start it with
+`uvicorn dashboard.backend.app:app` from the project root and open
+http://localhost:8000 in a browser. Configuration (broker API keys etc.)
+goes in `dashboard/.env`.
+
+# Dashboard pages
+- **Home**: market overview, dashboard switcher (Stocks / Options / Futures /
+  Forex / Crypto / Prediction — each has its own independent paper wallet,
+  but Stocks/Options/Crypto share one Alpaca account), news and signals.
+- **Overview**: two leaderboards. The **Competition Leaderboard** ranks AI
+  models on one fixed backtest window. The **Live Trading Leaderboard** shows
+  REAL results — only strategies that actually placed orders appear, values
+  come from the broker's own numbers, and the chart is the account's own
+  equity history.
+- **Manual**: the "Manual 10" feature — scans the first minutes after market
+  open for the biggest $1–$99 gainers, buys the top picks in paper, and can
+  promote winners to real money (only when explicitly enabled server-side).
+  Activation is per-trading-day: it must be activated each day it should run.
+- **My Agents / Playground**: create LLM-driven trading agents, run backtests,
+  inspect decision logs. Each agent gets an access key for the SDK/API.
+- **Testing**: upload your own strategy code. It is scanned for safety, then
+  backtested over the most recent completed year with a $1,000 starting
+  wallet. Strategies that pass can be added to the Strategy catalog.
+- **Strategy** (catalog): every registered strategy with description, equity
+  curve, and metrics. Each has "Activate Paper" and "Activate Live" buttons.
+
+# Making your own strategy
+1. Go to **Testing** in the dashboard.
+2. Paste or upload your strategy code.
+3. It is automatically scanned for safety and backtested (most recent
+   completed year, $1,000 wallet, $10-per-trade lot sizing).
+4. Review the results; if you like them, add it to the Strategy catalog.
+5. From the catalog you can then activate it for Paper or Live.
+You can also chat with an agent (`/ask` in Discord, or the Playground) to
+turn a plain-English idea into a strategy prompt with `/strategy`.
+
+# Paper vs. Live — how execution actually works
+- **Paper** = simulated money. **Live** = real money, real orders.
+- Activating a strategy in the catalog makes it run once per trading day,
+  every trading day, until deactivated. Activation alone never places a real
+  order: live execution ALSO requires the account-level "Live Trading"
+  switch (account menu) to be on. Both must be on for real orders.
+- Live orders pass a risk gate: a per-order USD cap (default $25), no
+  shorting ever, sells capped to shares actually held, and buys sized
+  against the strategy's own Allocated capital (set on the Strategy page),
+  never the whole account.
+- Each strategy's "Allocated" dollar amount and optional "$ per stock"
+  override are set on its catalog card.
+
+# Broker connections
+Set up on the **Connections** page: Alpaca (paper + live, stocks/options/
+crypto), OANDA practice (forex), Tradovate demo (futures), Kalshi and
+Polymarket (prediction markets). Keys are stored encrypted. Alpaca paper and
+live use separate key pairs — they can never be silently crossed.
+
+# Discord commands
+- `/support <question>` — this bot; answers questions about the platform.
+- `/ask <prompt>` — chat with your selected trading agent (hosted model).
+- `/agent` — pick which of your built-in agents Discord uses.
+- `/strategy` — turn an idea or chat into a backtestable strategy prompt.
+You can also DM the bot or @mention it for free-form chat.
+
+# Common issues
+- "My strategy isn't trading": check (1) it is Activated (Paper or Live) on
+  the Strategy page, (2) for live: the Live Trading switch is on, (3) the
+  market is open — catalog strategies run once per trading day, (4) broker
+  keys are connected and valid.
+- "Login screen loops / can't sign in": local installs can enable
+  auto-login; check LOCAL_AUTO_LOGIN_ENABLED in dashboard/.env.
+- "Backtest fails with market data errors": Alpaca keys in dashboard/.env
+  may be missing or expired — regenerate them in the Alpaca dashboard and
+  update the file.
+- Announcements about new strategies, versions, and server updates are
+  posted in the #announcements channel.
+
+# Risk
+Trading involves risk of loss. Past performance does not guarantee future
+results. Simulated and backtested results do not represent actual trading
+and often differ from live results. Nothing the bot says is personalized
+financial advice.
+""".strip()
+
+SUPPORT_SYSTEM_PROMPT = f"""
+You are NewWorldSupport, the official support assistant for the
+NewWorldTrading Discord server.
+
+Answer the user's question using ONLY the knowledge base below. Rules:
+- Be accurate, direct, and friendly. Short answers over long ones.
+- If the knowledge base does not cover the question, say so plainly and
+  point the user to ask a moderator — NEVER guess or improvise an answer
+  about how the platform works, and never invent features, URLs, commands,
+  or settings that are not in the knowledge base.
+- Never give personalized financial or investment advice ("should I buy X",
+  "is this strategy good for me"). Explain how the platform works instead,
+  and include the risk note when the question touches real money.
+- When relevant, mention where to get the bot ({SUPPORT_WHOP_URL}) and which
+  dashboard page or Discord command does what the user is asking about.
+- Do not claim to have performed any action (running a backtest, changing a
+  setting, placing a trade). You answer questions; you do not operate the
+  platform.
+
+KNOWLEDGE BASE:
+{SUPPORT_KNOWLEDGE_BASE}
+""".strip()
+
+
+# --- /support runs on OpenRouter FREE models only ---------------------------
+#
+# Unlike chat_with_agent (which routes through the hosted CommonStack gateway
+# on the operator's paid credits), support is a public, unauthenticated-ish
+# surface: anyone in the Discord can invoke it. Pinning it to OpenRouter's
+# free tier means a busy day costs nothing and cannot be turned into a bill by
+# volume alone.
+#
+# Cost control is two-layered, because one layer is not enough:
+#
+#   1. Here: any model id not ending in ``:free`` is refused (and logged)
+#      rather than called, so a typo'd or "helpfully upgraded" model id fails
+#      closed instead of silently billing.
+#   2. At OpenRouter: set a **$0 credit limit** on the key in
+#      ``OPENROUTER_SUPPORT_API_KEY`` (openrouter.ai → Keys → Edit → Credit
+#      limit). Free models cost $0 so they keep working; a paid model becomes
+#      impossible rather than merely discouraged. Layer 1 is a guard; layer 2
+#      is the guarantee. Do not rely on layer 1 alone.
+#
+# A dedicated key matters: OPENROUTER_API_KEY may legitimately hold paid
+# credits for leaderboard models, so it cannot carry the $0 limit.
+#
+# OpenRouter rate-limits free models per day. Exhausting the quota raises
+# (429) and the Discord layer falls back to its keyword FAQ / human
+# escalation — it must never retry onto a paid model.
+_SUPPORT_FREE_SUFFIX = ":free"
+
+#: Tried in order; first one that answers wins. A LIST rather than a single id
+#: because OpenRouter's free tier is genuinely flaky per-model: measured
+#: 2026-08-26, four of six candidates returned a provider-side 429 within
+#: seconds while this list's first entry answered in 5s. A single hardcoded
+#: model means one upstream hiccup takes /support down entirely.
+#:
+#: The roster also churns — the previous default
+#: (meta-llama/llama-3.3-70b-instruct:free) stopped being free and started
+#: 404ing with "use the paid slug instead", which the free-only guard below
+#: correctly refused. Re-check ids at https://openrouter.ai/models?q=free
+#: (or GET /api/v1/models and filter on the ":free" suffix) when support goes
+#: quiet. Override with OPENROUTER_SUPPORT_MODEL (comma-separated for a list).
+DEFAULT_SUPPORT_MODELS: tuple[str, ...] = (
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "z-ai/glm-5.2:free",
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-3.5-lightning:free",
+)
+
+
+def support_models() -> tuple[str, ...]:
+    """Free support models to try, in order. Every id must end in ``:free`` —
+    a non-free id is dropped (and logged) rather than called, so the caller
+    degrades to the offline FAQ instead of spending credits. Raises when that
+    leaves nothing to try."""
+    raw = (os.getenv("OPENROUTER_SUPPORT_MODEL") or "").strip()
+    configured = (
+        tuple(part.strip() for part in raw.split(",") if part.strip())
+        if raw
+        else DEFAULT_SUPPORT_MODELS
+    )
+    allowed = []
+    for model in configured:
+        if model.endswith(_SUPPORT_FREE_SUFFIX):
+            allowed.append(model)
+        else:
+            print(
+                f"support: refusing model {model!r} — only OpenRouter free "
+                f"models (ending {_SUPPORT_FREE_SUFFIX!r}) are allowed."
+            )
+    if not allowed:
+        raise RuntimeError(
+            "support: no free model configured — every candidate was refused "
+            f"for not ending in {_SUPPORT_FREE_SUFFIX!r}."
+        )
+    return tuple(allowed)
+
+
+def get_support_client() -> AsyncAnthropic:
+    """OpenRouter client for /support, on the free tier. Separate from
+    ``get_claude_client`` on purpose — different provider, different key,
+    different budget."""
+    key = (
+        os.getenv("OPENROUTER_SUPPORT_API_KEY")
+        or os.getenv("OPENROUTER_API_KEY")
+        or ""
+    ).strip()
+    if not key:
+        raise RuntimeError(
+            "support: set OPENROUTER_SUPPORT_API_KEY (a dedicated key with a "
+            "$0 credit limit) or OPENROUTER_API_KEY."
+        )
+    base = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api")
+    return AsyncAnthropic(api_key=key, base_url=base)
+
+
+async def support_answer(question: str) -> str:
+    """One-shot NewWorldSupport answer, grounded in the support knowledge
+    base, served by an OpenRouter **free** model. No conversation memory: each
+    /support question stands alone, which keeps answers deterministic-ish and
+    prevents one user's thread from steering another's. Raises on provider
+    failure (including a 429 once the daily free quota is spent) — the Discord
+    layer owns the fallback copy."""
+    cleaned = question.strip()
+    if not cleaned:
+        raise ValueError("Question cannot be empty.")
+
+    models = support_models()
+    client = get_support_client()
+    last_error: Exception | None = None
+    for model in models:
+        try:
+            response = await client.messages.create(
+                model=model,
+                max_tokens=700,
+                system=SUPPORT_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": cleaned}],
+                # Free models often don't support extended thinking, and a
+                # support reply doesn't need it — it also keeps the answer
+                # inside the free tier's smaller token ceilings.
+                extra_body={"reasoning": {"enabled": False, "exclude": True}},
+            )
+        except APIError as exc:
+            # Per-model 429 / 404 / 403 are routine on the free tier: the id
+            # stopped being free, or that provider is saturated right now.
+            # Try the next free candidate — never fall back to a paid model.
+            last_error = exc
+            print(f"support: model={model!r} unavailable ({type(exc).__name__}); trying next free model")
+            continue
+        reply = extract_text(response)
+        if reply:
+            return reply
+        last_error = RuntimeError(f"support: model={model!r} returned an empty reply")
+        print(last_error)
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("support: no free model produced a reply")
+
+
 async def chat_with_agent(
     *,
     user_id: str,
@@ -183,7 +448,7 @@ async def chat_with_agent(
     model: str | None = None,
 ) -> str:
     """
-    Send a message to an Agentic Trading Lab agent.
+    Send a message to an NewWorldTrading agent.
 
     This function is the main integration boundary. The Discord bot should
     not call Anthropic directly.
@@ -300,7 +565,7 @@ def reset_agent_conversation(
 # free-form strategy prompt. The output is fed to the backtest agent each hour;
 # the backtest engine appends the market snapshot + JSON output contract, so this
 # must NOT specify any output format.
-STRATEGY_SYNTH_SYSTEM = """You are a trading-strategy compiler for Agentic Trading Lab.
+STRATEGY_SYNTH_SYSTEM = """You are a trading-strategy compiler for NewWorldTrading.
 
 Read the conversation and/or idea, then output a SINGLE, self-contained trading
 strategy prompt that an LLM trading agent will follow each market hour to trade

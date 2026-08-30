@@ -11,7 +11,7 @@ Configure it once on PyPI:
 1. Go to https://pypi.org/manage/project/agentictrading/settings/publishing/
    (Project → Settings → Publishing).
 2. Add a new **GitHub** trusted publisher with:
-   - **Owner:** `Allan-Feng`
+   - **Owner:** `TrentonNewWorld`
    - **Repository:** `AgenticTrading`
    - **Workflow name:** `publish-pypi.yml`
    - **Environment:** `pypi`

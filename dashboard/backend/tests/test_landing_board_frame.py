@@ -16,6 +16,7 @@ either copy.
 """
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -26,7 +27,7 @@ import pytest
 _ROOT = Path(__file__).resolve().parents[2]
 _LEADERBOARD_JS = (_ROOT / "frontend" / "js" / "leaderboard.js").read_text(encoding="utf-8")
 _BOARD_FRAME_TS_PATH = _ROOT / "landing" / "src" / "lib" / "boardFrame.ts"
-_ESBUILD = _ROOT / "landing" / "node_modules" / ".bin" / "esbuild"
+_ESBUILD = _ROOT / "landing" / "node_modules" / ".bin" / ("esbuild.cmd" if os.name == "nt" else "esbuild")
 
 _JS_CONST = re.compile(r"^const (BOARD_[A-Z_]+) = (.+);$", re.M)
 _TS_CONST = re.compile(r"^export const (BOARD_[A-Z_]+) = (.+);$", re.M)

@@ -62,6 +62,8 @@ EXPECTED_AGENT_ROUTES = {
     ("POST", "/v1/agents/{agent_id}/rotate-api-key", "rotate_agent_api_key"),
     ("POST", "/v1/agents/{agent_id}/duplicate", "duplicate_agent"),
     ("POST", "/v1/agents/{agent_id}/activate", "activate_agent"),
+    ("POST", "/v1/agents/{agent_id}/convert-to-strategy", "convert_agent_to_strategy"),
+    ("POST", "/v1/agents/upload", "upload_agent"),
 }
 
 EXPECTED_VERSION_ROUTES = {
@@ -113,6 +115,7 @@ EXPECTED_ALGO_ROUTES = {
 EXPECTED_LEADERBOARD_ROUTES = {
     ("GET", "/v1/leaderboard", "api_get_leaderboard"),
     ("POST", "/v1/leaderboard/daily/refresh", "api_refresh_daily_leaderboard"),
+    ("GET", "/v1/leaderboard/real-trading", "real_trading_leaderboard"),
 }
 
 EXPECTED_NEWS_ROUTES = {

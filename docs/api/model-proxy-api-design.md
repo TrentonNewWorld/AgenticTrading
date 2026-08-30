@@ -1,7 +1,7 @@
 # Metered Model Proxy API — Design Doc
 
 Status: Draft / proposal (no implementation yet)
-Owner: Agentic Trading Lab
+Owner: NewWorldTrading
 Last updated: 2026-06-24
 
 ## 1. Goal

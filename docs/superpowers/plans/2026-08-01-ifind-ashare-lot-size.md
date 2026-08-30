@@ -52,7 +52,7 @@ No product-code changes.
 Checks:
 
 ```bash
-gh pr view 272 --repo Open-Finance-Lab/AgenticTrading \
+gh pr view 272 --repo TrentonNewWorld/AgenticTrading \
   --json state,mergedAt,mergeCommit,statusCheckRollup
 git log --oneline --decorate -8
 git status --short --branch

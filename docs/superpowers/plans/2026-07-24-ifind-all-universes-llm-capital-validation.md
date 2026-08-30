@@ -93,7 +93,7 @@ node --check dashboard/frontend/app.js
 
 ## 提交策略
 
-计划文档单独提交。实现完成后，将相关代码和测试作为一个聚焦提交，避免再次拆分已经非常小的 Profile/UI 对齐改动。全部验证通过后再推送功能分支并创建指向 `Open-Finance-Lab/AgenticTrading:main` 的 PR。
+计划文档单独提交。实现完成后，将相关代码和测试作为一个聚焦提交，避免再次拆分已经非常小的 Profile/UI 对齐改动。全部验证通过后再推送功能分支并创建指向 `TrentonNewWorld/AgenticTrading:main` 的 PR。
 
 ## 完成标准
 

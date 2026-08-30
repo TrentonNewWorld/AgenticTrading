@@ -67,9 +67,10 @@ def test_harness_imports_without_api_key():
 def test_harness_forwards_reasoning_effort_to_provider_factory(monkeypatch):
     captured = {}
 
-    def _fake_factory(integration=None, *, reasoning_effort=None):
+    def _fake_factory(integration=None, *, reasoning_effort=None, user_id=None):
         captured["integration"] = integration
         captured["reasoning_effort"] = reasoning_effort
+        captured["user_id"] = user_id
         return "client"
 
     monkeypatch.setattr(harness, "_providers_make_llm_client", _fake_factory)
@@ -78,6 +79,7 @@ def test_harness_forwards_reasoning_effort_to_provider_factory(monkeypatch):
     assert captured == {
         "integration": "openrouter",
         "reasoning_effort": "none",
+        "user_id": None,
     }
 
 

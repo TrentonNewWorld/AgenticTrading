@@ -1,0 +1,19 @@
+{
+  "session_id": "options-leaderboard-contest",
+  "live_session_id": "options-leaderboard-live",
+  "initial_capital": 1000,
+  "description": "Options dashboard's own Strategy Catalog roster -- separate from the stocks leaderboard.json (strategies do not carry over between dashboards). Contest window is computed dynamically (most recently completed full year) -- see domain/leaderboard/baselines.py's contest_window_for_year(). live_season_start is a FIXED anchor, not recomputed: the Live Trading Leaderboard tracks profit from this date forward (up to 1 year), and must not itself roll with 'today' or the window could never accumulate any elapsed days -- see domain/options/leaderboard_service.py's module docstring.",
+  "live_season_start": "2026-08-22",
+  "strategies": [
+    {
+      "id": "opt_cash_secured_put",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Cash-Secured Put",
+      "strategy": "opt_cash_secured_put",
+      "underlyings": [
+        "SPY"
+      ]
+    }
+  ]
+}

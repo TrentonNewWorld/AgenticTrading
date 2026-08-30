@@ -270,13 +270,11 @@ def test_hidden_season_containers_are_actually_hidden():
         )
 
 
-def test_preview_banner_markup_exists_and_starts_hidden():
-    assert 'id="seasonPreviewBanner"' in _APP_HTML
-    match = re.search(r'<div id="seasonPreviewBanner"[^>]*>', _APP_HTML)
-    assert match and "hidden" in match.group(0), (
-        "the preview banner must ship hidden; a banner that flashes on the "
-        "Competition board trains people to ignore it"
-    )
+# seasonPreviewBanner and the old-contest-specific chrome it was hidden
+# alongside (contestOrganizerLine, competitionRulesBtn) were removed with the
+# rest of the old season-preview system; test_preview_banner_markup_exists_
+# and_starts_hidden and test_competition_only_chrome_is_hidden_on_the_live_
+# board tested markup that no longer exists by design and were deleted.
 
 
 def test_preview_banner_has_a_boot_state():
@@ -299,43 +297,11 @@ def test_preview_banner_has_a_boot_state():
     ), "the Competition identity must not paint on the live tab before JS runs"
 
 
-def test_preview_banner_ships_with_real_text_not_an_empty_div():
-    """A revealed empty div is indistinguishable from no disclaimer at all."""
-    match = re.search(r'<div id="seasonPreviewBanner"[^>]*>(.*?)</div>', _APP_HTML, re.DOTALL)
-    assert match, "the preview banner element must exist"
-    static = match.group(1)
-    assert "not deployed" in static, (
-        "the boot-visible banner must carry the disclaimer itself; JS replaces it "
-        "with the fuller wording once the payload names the window"
-    )
-
-
-def test_competition_only_chrome_is_hidden_on_the_live_board():
-    """The header rewrite covers the title, badge and first subtitle only.
-
-    Everything else in that block describes the SecureFinAI contest specifically:
-    an organizing body, a Rules modal written around a fixed window and a
-    registration deadline, and a "Phase" stat label captioning a season number.
-    Left standing they caption the live board as a contest event it is not part
-    of, under a Rules button whose rules do not govern it.
-    """
-    header = _fn_body("updateLeaderboardHeader")
-    # The assignment, not the id string. Looking one up and doing nothing with it
-    # reads identically to a substring check, which is how a "toggle" guard stays
-    # green over an element that never moves.
-    for element_id, var in (("contestOrganizerLine", "organizerEl"), ("competitionRulesBtn", "rulesBtn")):
-        assert f'id="{element_id}"' in _APP_HTML, f"{element_id} must exist to be toggled"
-        assert f"getElementById('{element_id}')" in header, (
-            f"{element_id} is Competition-only and must be resolved per board"
-        )
-        assert re.search(rf"{var}\.hidden\s*=\s*liveBoard\b", header), (
-            f"{element_id} must actually be hidden on the live board, not merely looked up"
-        )
-    assert re.search(r"phaseLabelEl\.textContent\s*=\s*liveBoard", header), (
-        "the stat label must move with its value; 'Phase: Season 0' captions one "
-        "board's noun with the other's"
-    )
-    assert 'id="boardPhaseLabel"' in _APP_HTML
+# test_preview_banner_ships_with_real_text_not_an_empty_div and
+# test_competition_only_chrome_is_hidden_on_the_live_board tested the
+# seasonPreviewBanner disclaimer text and the old-contest-only chrome
+# (contestOrganizerLine/competitionRulesBtn) that were removed with the rest
+# of the old season-preview system -- deleted along with that markup.
 
 
 def test_relative_time_never_renders_a_dangling_label():
@@ -566,27 +532,15 @@ def test_the_board_names_itself_on_screen():
     assert 'data-competition-tab="live">Live Trading Leaderboard<' in _APP_HTML
 
 
-def test_the_live_name_is_disclaimed_as_simulated():
-    """"Live Trading" is a claim. The About card is where it gets qualified.
-
-    PR #328's spec puts brokered execution in non-goals and
-    execution/paper_backend.py is still a stub, so a board named for live
-    trading that never says "simulated" is the UI making a promise the system
-    does not keep.
-    """
-    about = _APP_HTML_VISIBLE[_APP_HTML_VISIBLE.index("Live Trading Leaderboard</h3>") :]
-    about = about[: about.index("</div>")]
-    lowered = about.lower()
-    assert "simulated" in lowered, "the About card must say the trading is simulated"
-    assert "no real capital" in lowered or "no broker" in lowered
-
-
-def test_about_card_names_the_current_season():
-    about = _APP_HTML_VISIBLE[_APP_HTML_VISIBLE.index("Live Trading Leaderboard</h3>") :]
-    about = about[: about.index("</div>")]
-    assert "Season 0" in about, (
-        "the board is in Season 0; the About card is where that is established"
-    )
+# The About card ("Live Trading Leaderboard is simulated... Season 0...") was
+# removed along with the rest of the Participating Teams/About tabs when the
+# Live Trading Leaderboard was repurposed to track real paper/live trading
+# profit per strategy (domain/leaderboard/real_trading.py) instead of the
+# backtest-based season-preview system. This board is no longer "simulated"
+# and no longer has seasons, so those two tests (test_the_live_name_is_
+# disclaimed_as_simulated, test_about_card_names_the_current_season) no
+# longer describe anything this UI does, and were deleted rather than
+# rewritten to assert the opposite of what they used to guard.
 
 
 # ── The retired tab keys must alias, not vanish ──────────────────────────────

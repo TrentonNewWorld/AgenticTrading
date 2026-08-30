@@ -125,7 +125,7 @@ const MESSAGES: Msg[] = [
 
 type ChannelGroup = { label: string; channels: { name: string; active?: boolean }[] };
 
-/** Condensed from the live Agentic Trading Discord server. */
+/** Condensed from the live NewWorldTrading Discord server. */
 const CHANNEL_GROUPS: ChannelGroup[] = [
   {
     label: "Start Here",
@@ -192,7 +192,7 @@ export function DiscordMock() {
 
         {/* Channel list — mirrors live server categories */}
         <aside className="discord-channels" aria-hidden="true">
-          <div className="discord-channels-header">Agentic Trading</div>
+          <div className="discord-channels-header">NewWorldTrading</div>
           {CHANNEL_GROUPS.map((group) => (
             <div key={group.label}>
               <div className="discord-channel-group">{group.label}</div>

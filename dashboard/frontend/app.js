@@ -1,5 +1,5 @@
 /**
- * Agentic Trading Lab - Frontend Application
+ * NewWorldTrading - Frontend Application
  * Connects to backend API for real data
  */
 
@@ -109,13 +109,6 @@ async function activateAgent(agent) {
   } catch (error) {
     console.warn('Agent activate ping failed:', error.message);
   }
-}
-
-function formatAgentReturn(value) {
-  if (value == null || Number.isNaN(Number(value))) return '—';
-  const pct = Number(value) * 100;
-  const sign = pct >= 0 ? '+' : '';
-  return `${sign}${pct.toFixed(1)}%`;
 }
 
 function formatUsd(value) {
@@ -550,6 +543,16 @@ function populateSupportedModelSelects() {
 const AGENT_SHELVES = [
   { key: 'stocks', title: 'Stocks',
     match: (a) => agentShelfKey(a) === 'stocks' },
+  { key: 'options', title: 'Options',
+    match: (a) => agentShelfKey(a) === 'options' },
+  { key: 'futures', title: 'Futures',
+    match: (a) => agentShelfKey(a) === 'futures' },
+  { key: 'forex', title: 'Forex',
+    match: (a) => agentShelfKey(a) === 'forex' },
+  { key: 'crypto', title: 'Crypto',
+    match: (a) => agentShelfKey(a) === 'crypto' },
+  { key: 'prediction', title: 'Prediction',
+    match: (a) => agentShelfKey(a) === 'prediction' },
   { key: 'external', title: 'For Developers: Connected Agents',
     match: (a) => agentShelfKey(a) === 'external' },
 ];
@@ -557,12 +560,15 @@ const AGENT_SHELVES = [
 /** The single shelf an agent renders under. Exactly one value per agent, so no
  * agent can be double-counted or dropped off every shelf.
  *
- * Stocks is the only asset class the backtest engine supports (every entry in
- * the backend's _MARKET_PROFILES is equities), so every built-in lands there
- * regardless of category, and connected agents split off by `agent_type`. The
- * market an agent trades is a separate axis -- see agentMarketKey. */
+ * A built-in agent's own `asset_class` (set once at creation, see the
+ * Configure "what does this agent trade" picker) decides its shelf --
+ * connected agents still split off by `agent_type` first, since they are
+ * never asset-class-scoped the same way. The market an agent trades *within*
+ * Stocks (US vs CN A-shares) is a separate axis -- see agentMarketKey. */
 function agentShelfKey(agent) {
   if (!agent || agent.agent_type !== 'builtin') return 'external';
+  const assetClass = String(agent.asset_class || '').trim().toLowerCase();
+  if (AGENT_SHELVES.some((shelf) => shelf.key === assetClass)) return assetClass;
   return 'stocks';
 }
 
@@ -1099,6 +1105,15 @@ function renderAgentCardActions(agent, statusKey) {
     (statusKey === 'backtested' || statusKey === 'paper')
       ? `<button class="agent-menu-item agent-duplicate-model-btn" type="button" data-agent-id="${id}">Run on another model</button>`
       : '';
+  // Same eligibility as duplicate (builtin + pipeline runtime): ai_hedge_fund
+  // has no prompt to carry over, and an external agent's LLM runs on the
+  // caller's own machine, so there's nothing here for the dashboard to record
+  // as a strategy. Available any time (not gated on statusKey) -- converting
+  // is about the stored instruction, not about run history.
+  const convertToStrategy =
+    agent.agent_type === 'builtin' && agent.runtime_type === 'pipeline'
+      ? `<button class="agent-menu-item agent-convert-strategy-btn" type="button" data-agent-id="${id}">Convert to Strategy…</button>`
+      : '';
   return `
     <div class="agent-card-actions agent-card-actions--status">
       ${configure}
@@ -1111,6 +1126,7 @@ function renderAgentCardActions(agent, statusKey) {
           <button class="agent-menu-item agent-set-default-btn" type="button" data-agent-id="${id}">Set as default</button>
           ${rotate}
           ${duplicate}
+          ${convertToStrategy}
           <button class="agent-menu-item agent-menu-item--danger agent-delete-btn" type="button" data-agent-id="${id}">Delete</button>
         </div>
       </div>
@@ -1515,6 +1531,36 @@ function renderAgentCards(grid, agents, categoryKey) {
     });
   });
 
+  grid.querySelectorAll('.agent-convert-strategy-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const agent = visibleAgents.find((a) => a.agent_id === btn.dataset.agentId);
+      if (!agent) return;
+      if (!confirm(
+        `Convert "${agent.name}" into a permanent Strategy entry? `
+        + `This agent will be deleted — it will no longer exist, but the dashboard will trade like it via the new catalog entry. This cannot be undone.`,
+      )) {
+        return;
+      }
+      btn.disabled = true;
+      try {
+        const data = await API.post(
+          `${API_BASE}/api/v1/agents/${encodeURIComponent(agent.agent_id)}/convert-to-strategy`,
+          {},
+        );
+        if (localStorage.getItem(ACTIVE_AGENT_KEY) === agent.agent_id) {
+          localStorage.removeItem(ACTIVE_AGENT_KEY);
+          localStorage.removeItem(ACTIVE_AGENT_NAME_KEY);
+        }
+        await loadAgents();
+        showAppToast(`"${agent.name}" is now a Strategy entry. Its backtest is computing in the background.`);
+      } catch (error) {
+        alert(error.message || `Couldn't convert this agent. Please try again.`);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+
   grid.querySelectorAll('.agent-delete-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const agentId = btn.dataset.agentId;
@@ -1710,30 +1756,6 @@ function escapeHtml(value) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function renderAgentTokenCost(agent) {
-  const totalTokens =
-    Number(agent.total_input_tokens || 0) + Number(agent.total_output_tokens || 0);
-  if (!totalTokens) return '';
-  const cost = formatUsd(agent.total_est_cost_usd);
-  const costLabel = cost ? `${cost} est. AI cost` : '';
-  return `<span title="Estimated from market context served and decisions returned">${formatTokenCount(totalTokens)} tokens${costLabel ? ` · ${costLabel}` : ''}</span>`;
-}
-
-function renderAgentRunList(agent) {
-  const runs = (agent.runs || []).slice(0, 3);
-  if (!runs.length) return '';
-  const items = runs
-    .map(
-      (run) => `
-        <button type="button" class="agent-run-link" data-agent-id="${escapeHtml(agent.agent_id)}" data-run-id="${escapeHtml(run.run_id)}">
-          <span class="agent-run-primary">${escapeHtml(formatBacktestRunPrimary(run))}</span>
-          <span class="agent-run-secondary">${escapeHtml(formatBacktestRunSecondary(run))}</span>
-        </button>`,
-    )
-    .join('');
-  return `<div class="agent-run-list">${items}</div>`;
 }
 
 function listBacktestableAgents() {
@@ -2427,39 +2449,6 @@ function renderMarketplaceError() {
   if (errorEl) errorEl.hidden = false;
 }
 
-/**
- * Fetch the template catalog, at most once per page load.
- *
- * Community is a top-level page now, so this runs on every nav click, every
- * Back/Forward and the initial boot -- where it used to run once, when the
- * Playground marketplace subtab was opened. The catalog is static config the
- * server already caches in-process, so repeat visits repaint from memory and
- * skip the network entirely. A failure clears the cache, so the next visit
- * retries rather than showing the error forever.
- */
-async function loadMarketplace() {
-  if (marketplaceTemplates.length) {
-    renderMarketplaceGrid();
-    return;
-  }
-  // Concurrent callers share one request (boot + a fast nav click can overlap).
-  if (marketplaceLoadInFlight) return marketplaceLoadInFlight;
-  marketplaceLoadInFlight = (async () => {
-    try {
-      const data = await API.get(`${API_BASE}/api/v1/agents/marketplace`);
-      marketplaceTemplates = data.templates || [];
-      renderMarketplaceGrid();
-    } catch (error) {
-      console.warn('Failed to load marketplace:', error.message);
-      marketplaceTemplates = [];
-      renderMarketplaceError();
-    } finally {
-      marketplaceLoadInFlight = null;
-    }
-  })();
-  return marketplaceLoadInFlight;
-}
-
 /** `modelName` omitted means the template's own model -- the primary CTA's
  * path, whose behaviour is deliberately unchanged. */
 async function cloneMarketplaceTemplate(template, modelName) {
@@ -2537,12 +2526,14 @@ async function submitCreateBuiltinAgent(event) {
   const nameInput = document.getElementById('builtinAgentName');
   const modelInput = document.getElementById('builtinAgentModel');
   const descInput = document.getElementById('builtinAgentDescription');
+  const assetClassInput = document.getElementById('builtinAgentAssetClass');
   const errorEl = document.getElementById('createBuiltinAgentError');
   const submitBtn = document.getElementById('createBuiltinAgentSubmit');
 
   const name = nameInput?.value?.trim();
   const model_name = modelInput?.value?.trim() || 'anthropic/claude-haiku-4-5';
   const description = descInput?.value?.trim() || null;
+  const asset_class = assetClassInput?.value?.trim() || 'stocks';
   const cashInput = document.getElementById('builtinAgentCashAllocation');
   if (!name) return;
 
@@ -2567,6 +2558,7 @@ async function submitCreateBuiltinAgent(event) {
       agent_type: 'builtin',
       description,
       cash_allocation,
+      asset_class,
     });
     // Confirm on the POST result, not after loadAgents(): that is a second
     // round trip, and gating the toast on it reinstates most of the delay.
@@ -2599,7 +2591,7 @@ function showAgentCredentials(apiKey, options = {}) {
   if (subtitleEl) {
     subtitleEl.textContent =
       options.subtitle ||
-      'Your agent is ready. Use the access key below to connect your own program to Agentic Trading Lab. (This is the API key in the SDK and docs.)';
+      'Your agent is ready. Use the access key below to connect your own program to NewWorldTrading. (This is the API key in the SDK and docs.)';
   }
   if (apiInput) apiInput.value = apiKey;
   if (copyBtn) {
@@ -2906,12 +2898,6 @@ function loadConfigFromURL() {
     slippage: parseFloat(params.get('slippage') || '0.001'),
     txCost: parseFloat(params.get('txCost') || '10'),
   };
-}
-
-// Generate shareable URL with current config
-function generateShareURL(config) {
-  const params = new URLSearchParams(config);
-  return `${window.location.origin}${window.location.pathname}?${params.toString()}`;
 }
 
 // ============================================================================
@@ -3983,10 +3969,10 @@ function syncHeaderBrand(signedIn) {
   if (!brand) return;
   if (signedIn) {
     brand.setAttribute('href', '/app?view=home');
-    brand.setAttribute('aria-label', 'Agentic Trading Lab dashboard');
+    brand.setAttribute('aria-label', 'NewWorldTrading dashboard');
   } else {
     brand.setAttribute('href', '/');
-    brand.setAttribute('aria-label', 'Agentic Trading Lab home');
+    brand.setAttribute('aria-label', 'NewWorldTrading home');
   }
 }
 
@@ -3996,6 +3982,7 @@ function updateAuthUI() {
   const signInBtn = document.getElementById('authSignInBtn');
   const menuWrap = document.getElementById('accountMenuWrap');
   const adminMenuBtn = document.getElementById('accountMenuAdminBtn');
+  const liveExecuteRow = document.getElementById('accountMenuLiveExecuteRow');
   if (!signInBtn || !menuWrap) {
     return;
   }
@@ -4012,6 +3999,13 @@ function updateAuthUI() {
   }
   if (!isAdmin && currentPage === 'admin') {
     navigateToPage('home');
+  }
+  // Same admin gate as the Admin link above -- this arms real, unattended
+  // order placement server-wide (execute_enabled() has no per-user scope),
+  // so a non-admin must never even see the control, let alone flip it.
+  if (liveExecuteRow) {
+    liveExecuteRow.hidden = !isAdmin;
+    if (isAdmin) loadLiveExecuteStatus();
   }
 
   if (user) {
@@ -4034,12 +4028,64 @@ function updateAuthUI() {
 
   updateAccountPage();
 
-  if (window.CreditsPage) {
-    window.CreditsPage.syncAuth(user);
+  if (window.ConnectionsPage) {
+    window.ConnectionsPage.syncAuth(user);
   }
 
   if (typeof window.refreshHomeModules === 'function') {
     window.refreshHomeModules();
+  }
+}
+
+function renderLiveExecuteStatus(effective) {
+  const sub = document.getElementById('accountMenuLiveExecuteSub');
+  if (sub) {
+    sub.textContent = effective
+      ? 'ARMED — placing real orders automatically'
+      : 'Off — activated strategies only review, never place a real order';
+  }
+}
+
+async function loadLiveExecuteStatus() {
+  const toggle = document.getElementById('liveExecuteToggle');
+  if (!toggle) return;
+  try {
+    const data = await API.get(`${API_BASE}/api/admin/execution-settings`);
+    const effective = Boolean(data?.alpaca_live_execute?.effective);
+    toggle.checked = effective;
+    renderLiveExecuteStatus(effective);
+  } catch (error) {
+    console.warn('Live execute status unavailable:', error.message);
+  }
+}
+
+async function handleLiveExecuteToggle(event) {
+  const toggle = event.target;
+  const turningOn = toggle.checked;
+  if (turningOn) {
+    const confirmed = confirm(
+      'Arm live trading?\n\nEvery activated live strategy will start placing real orders automatically, ' +
+      'every trading day, with no further confirmation from you. You can turn this off again at any time.'
+    );
+    if (!confirmed) {
+      toggle.checked = false;
+      return;
+    }
+  }
+  toggle.disabled = true;
+  try {
+    const data = await API.request(`${API_BASE}/api/admin/execution-settings/alpaca-live-execute`, {
+      method: 'PUT',
+      body: JSON.stringify({ enabled: turningOn }),
+    });
+    const effective = Boolean(data?.alpaca_live_execute?.effective);
+    toggle.checked = effective;
+    renderLiveExecuteStatus(effective);
+  } catch (error) {
+    alert('Could not update live trading: ' + error.message);
+    toggle.checked = !turningOn;
+  } finally {
+    toggle.disabled = false;
   }
 }
 
@@ -4389,9 +4435,9 @@ function initAuthUI(options = {}) {
     closeAccountMenu();
     navigateToPage('account');
   });
-  document.getElementById('accountMenuCreditsBtn')?.addEventListener('click', () => {
+  document.getElementById('accountMenuConnectionsBtn')?.addEventListener('click', () => {
     closeAccountMenu();
-    navigateToPage('credits');
+    navigateToPage('connections');
   });
   document.getElementById('accountMenuAdminBtn')?.addEventListener('click', () => {
     closeAccountMenu();
@@ -4419,10 +4465,7 @@ function initAuthUI(options = {}) {
     if (!select) return;
     saveAdminUserRole(select.closest('tr'), select.value);
   });
-  document.getElementById('accountMenuLogoutBtn')?.addEventListener('click', () => {
-    closeAccountMenu();
-    logoutUser();
-  });
+  document.getElementById('liveExecuteToggle')?.addEventListener('change', handleLiveExecuteToggle);
   document.querySelector('.header-brand')?.addEventListener('click', (event) => {
     if (!getStoredAuthUser()) return;
     event.preventDefault();
@@ -4901,6 +4944,12 @@ let currentMode = "home";
 let currentPage = "home";
 let playgroundTab = "agents";
 let competitionTab = "leaderboard";
+// Which trading dashboard is active ("stocks" | "options"), set by the home
+// page's Dashboard Switch buttons. Orthogonal to currentPage, exactly like
+// playgroundTab/competitionTab: manual.js/strategy-catalog.js/leaderboard.js
+// read this bare identifier (classic scripts, one shared global scope) to
+// pick which API base path to call.
+let assetClass = "stocks";
 // True once the user explicitly navigates (any history:'push' navigation).
 // Nav is wired before boot's auth awaits, so applyInitialNavigation may run
 // AFTER a real click — restoring the saved page then would yank the page out
@@ -7640,7 +7689,7 @@ function openRunBacktestModal(agent) {
     const marketDataSourceSelect = document.getElementById('marketDataSourceSelect');
     if (marketDataSourceSelect) {
         // The hosted adapter consumes the upstream project's US-equity data
-        // contract. Keep the modal on the one ATL market profile it supports.
+        // contract. Keep the modal on the one market profile it supports.
         if (isHostedRuntime) marketDataSourceSelect.value = 'alpaca';
         marketDataSourceSelect.disabled = isHostedRuntime;
         marketDataSourceSelect.setAttribute(
@@ -7942,18 +7991,6 @@ async function pollBacktestStatus(btn) {
 }
 
 /**
- * Get selected symbols from checkboxes
- */
-function getSelectedSymbols() {
-    const symbols = [];
-    document.querySelectorAll('.checkbox-item input:checked').forEach(cb => {
-        const symbol = cb.nextElementSibling.textContent.trim();
-        symbols.push(symbol);
-    });
-    return symbols;
-}
-
-/**
  * Resolve page from URL for legacy deep links + sync History API so browser
  * Back/Forward undo in-app navigation (see #178).
  */
@@ -7984,6 +8021,7 @@ function getNavigationState() {
         page: currentPage,
         playgroundTab,
         competitionTab,
+        assetClass,
     };
 }
 
@@ -7991,7 +8029,8 @@ function navigationStatesEqual(a, b) {
     if (!a || !b) return false;
     return a.page === b.page
         && (a.playgroundTab || 'agents') === (b.playgroundTab || 'agents')
-        && (a.competitionTab || 'leaderboard') === (b.competitionTab || 'leaderboard');
+        && (a.competitionTab || 'leaderboard') === (b.competitionTab || 'leaderboard')
+        && (a.assetClass || 'stocks') === (b.assetClass || 'stocks');
 }
 
 /**
@@ -8013,7 +8052,7 @@ function viewParamForNavState(state) {
     if (state.page === 'home') return 'home';
     if (state.page === 'community') return 'community';
     if (state.page === 'account') return 'account';
-    if (state.page === 'credits') return 'credits';
+    if (state.page === 'connections') return 'connections';
     if (state.page === 'admin') return 'admin';
     if (state.page === 'playground') {
         if (state.playgroundTab === 'backtest') return 'backtest';
@@ -8033,6 +8072,16 @@ function buildNavigationUrl(state) {
     const params = new URLSearchParams(window.location.search);
     params.set('view', viewParamForNavState(state));
     params.delete('mode');
+    // A second, orthogonal param rather than doubling every view slug
+    // ('backtest' / 'options-backtest' / ...) -- assetClass is independent of
+    // which page/subtab is showing, exactly like playgroundTab/competitionTab
+    // already are. Omitted for the default so every existing stocks URL is
+    // unchanged.
+    if ((state.assetClass || 'stocks') === 'stocks') {
+        params.delete('asset');
+    } else {
+        params.set('asset', state.assetClass);
+    }
     const clean = params.toString();
     return `${window.location.pathname}${clean ? `?${clean}` : ''}${window.location.hash}`;
 }
@@ -8077,6 +8126,7 @@ function applyInitialNavigation() {
         navigateToPage(initial.page, {
             playgroundTab: initial.playgroundTab || 'agents',
             competitionTab: initial.competitionTab || 'leaderboard',
+            assetClass: initial.assetClass || 'stocks',
             history: 'replace',
         });
     }
@@ -8090,6 +8140,17 @@ function resolveInitialNavigation() {
     const view = params.get('view') || params.get('mode');
     const hash = window.location.hash.replace('#', '');
     const legacy = view || hash;
+    // Independent of the view/hash/saved-state branch below, same reasoning
+    // as buildNavigationUrl's own 'asset' param: assetClass isn't a NAV_VIEW_MAP
+    // slug, it's applied on top of whichever page that map resolves.
+    const assetParam = params.get('asset');
+    // Must match every value buildNavigationUrl can write, or a refresh /
+    // restored tab on that dashboard silently snaps back to stocks while
+    // keeping the view — 'prediction' was missing here, which is how the
+    // Prediction dashboard's Strategy page kept showing stock strategies
+    // after a reload (reported twice, 2026-08-29).
+    const validAssetParams = ['options', 'futures', 'forex', 'crypto', 'prediction'];
+    const assetOverride = validAssetParams.includes(assetParam) ? assetParam : null;
 
     // Discord / share deep links land on the backtest playground.
     if (params.get('agent_id') || params.get('run_id')) {
@@ -8098,7 +8159,7 @@ function resolveInitialNavigation() {
 
     // An explicit URL view/hash always wins.
     if (legacy && NAV_VIEW_MAP[legacy]) {
-        return { ...NAV_VIEW_MAP[legacy] };
+        return { ...NAV_VIEW_MAP[legacy], ...(assetOverride ? { assetClass: assetOverride } : {}) };
     }
 
     // Otherwise restore the last visited tab across refreshes.
@@ -8111,15 +8172,15 @@ function resolveInitialNavigation() {
         const saved = migrateSavedNavState(
             JSON.parse(localStorage.getItem(NAV_STATE_KEY) || 'null'),
         );
-        const validPages = ['home', 'playground', 'competition', 'community', 'account', 'credits'];
+        const validPages = ['home', 'playground', 'competition', 'community', 'account', 'connections', 'manual', 'strategycatalog'];
         if (saved && validPages.includes(saved.page)) {
-            return saved;
+            return assetOverride ? { ...saved, assetClass: assetOverride } : saved;
         }
     } catch (error) {
         /* corrupt/unavailable state — fall through to home */
     }
 
-    return { page: 'home' };
+    return { page: 'home', ...(assetOverride ? { assetClass: assetOverride } : {}) };
 }
 
 function onNavigationPopState(event) {
@@ -8130,6 +8191,7 @@ function onNavigationPopState(event) {
     navigateToPage(target.page, {
         playgroundTab: target.playgroundTab || 'agents',
         competitionTab: target.competitionTab || 'leaderboard',
+        assetClass: target.assetClass || 'stocks',
         history: 'none',
     });
 }
@@ -8322,29 +8384,37 @@ function showPlaygroundPanel(tab) {
 }
 
 function showCompetitionPanel(tab) {
-    // The Daily Leaderboard was replaced by the Live Trading board. A saved
-    // nav state or a cached boot script can still hand us either retired key
-    // ('daily', or 'season' from an earlier build of this branch), and an
-    // unrecognised tab here shows no panel at all — a blank Competition page.
-    if (tab === 'daily' || tab === 'season') tab = 'live';
+    // Participating Teams / About were removed, and Daily/Season are retired
+    // aliases from an earlier build -- a saved nav state or cached boot script
+    // can still hand us any of these, and an unrecognised tab here shows no
+    // panel at all (a blank Overview page), so all of them fold to a real tab.
+    if (tab === 'daily' || tab === 'season' || tab === 'participants' || tab === 'about') tab = 'leaderboard';
 
     competitionTab = tab;
     updateCompetitionSubtabs();
 
     const leaderboard = document.getElementById('leaderboardView');
-    const participants = document.getElementById('competitionParticipantsPanel');
-    const about = document.getElementById('competitionAboutPanel');
-    const showBoard = tab === 'leaderboard' || tab === 'live';
+    const liveTrading = document.getElementById('liveTradingView');
+    const showLive = tab === 'live';
+    // Stocks' "Live" tab shows real paper/live trading profit tracked against
+    // Strategy Catalog allocations (/api/v1/leaderboard/real-trading) -- a
+    // feature Options/Futures don't have yet (no allocation, no Run in
+    // Paper/Live for either dashboard this phase). Options/Futures' "Live"
+    // tab instead reuses leaderboardView itself with period=live: the
+    // catalog-based Live Trading Leaderboard each backend already computes,
+    // which the stocks frontend has never had a control wired to before now.
+    const showRealTrading = showLive && assetClass === 'stocks';
 
-    if (leaderboard) leaderboard.style.display = showBoard ? 'flex' : 'none';
-    if (participants) participants.style.display = tab === 'participants' ? 'block' : 'none';
-    if (about) about.style.display = tab === 'about' ? 'block' : 'none';
+    if (leaderboard) leaderboard.style.display = showRealTrading ? 'none' : 'flex';
+    if (liveTrading) liveTrading.style.display = showRealTrading ? 'flex' : 'none';
 
-    if (showBoard) {
-        currentMode = 'contest';
-        loadLeaderboardData(tab === 'live' ? 'live' : 'contest');
+    currentMode = 'contest';
+    if (showRealTrading) {
+        loadLiveTradingData();
+    } else if (showLive) {
+        loadLeaderboardData('live');
     } else {
-        currentMode = tab;
+        loadLeaderboardData('contest');
     }
 
     persistNavigation();
@@ -8393,6 +8463,7 @@ function navigateToPage(page, options = {}) {
 
     if (options.playgroundTab) playgroundTab = options.playgroundTab;
     if (options.competitionTab) competitionTab = options.competitionTab;
+    if (options.assetClass) assetClass = options.assetClass;
     // Normalise the retired Daily keys here rather than only in
     // showCompetitionPanel: the boot stylesheet keys off
     // data-nav-competition-tab, so a 'daily' written to the attribute below
@@ -8409,9 +8480,13 @@ function navigateToPage(page, options = {}) {
     html.setAttribute('data-nav-page', page);
     html.setAttribute('data-nav-playground-tab', playgroundTab);
     html.setAttribute('data-nav-competition-tab', competitionTab);
+    html.setAttribute('data-nav-asset-class', assetClass);
 
     document.querySelectorAll('.primary-nav .mode-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.mode === page);
+    });
+    document.querySelectorAll('[data-asset-class]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.assetClass === assetClass);
     });
 
     const homeView = document.getElementById('homeView');
@@ -8419,8 +8494,11 @@ function navigateToPage(page, options = {}) {
     const competitionView = document.getElementById('competitionView');
     const communityView = document.getElementById('communityView');
     const accountView = document.getElementById('accountView');
-    const creditsView = document.getElementById('creditsView');
+    const connectionsView = document.getElementById('connectionsView');
     const adminView = document.getElementById('adminView');
+    const manualView = document.getElementById('manualView');
+    const predictionView = document.getElementById('predictionView');
+    const strategyCatalogView = document.getElementById('strategyCatalogView');
     const backtestPanel = document.querySelector('.playground-backtest-panel')
       || document.querySelector('.main-container');
     const paperView = document.getElementById('paperTradingView');
@@ -8436,12 +8514,19 @@ function navigateToPage(page, options = {}) {
     hide(competitionView);
     hide(communityView);
     hide(accountView);
-    hide(creditsView);
+    hide(connectionsView);
     hide(adminView);
+    hide(manualView);
+    hide(predictionView);
+    hide(strategyCatalogView);
     hide(backtestPanel);
     hide(paperView);
     hide(myAlgoView);
     hide(leaderboardView);
+    // liveTradingView is shown with an inline display:flex by
+    // showCompetitionPanel('live'); leaving it out of this list let its
+    // line chart persist on top of every other page (2026-08-29 bug report).
+    hide(document.getElementById('liveTradingView'));
     hide(document.getElementById('playgroundAgentsPanel'));
     hide(document.getElementById('competitionParticipantsPanel'));
     hide(document.getElementById('competitionAboutPanel'));
@@ -8460,27 +8545,26 @@ function navigateToPage(page, options = {}) {
             showCompetitionPanel(competitionTab);
         } else if (page === 'community') {
             currentMode = 'community';
-            // Every entry to Community resets the chip filter to 'all' unless
-            // an explicit category rides in via options.communityCategory (the
-            // My Agents empty-shelf "Community" links) -- otherwise a category
-            // set on one visit would leak into the next, unrelated visit made
-            // through the plain nav tab, the most common entry path.
-            marketplaceCategoryFilter = MARKET_LABELS[options.communityCategory] ? options.communityCategory : 'all';
-            // The vendor chip resets for the same reason, and nothing rides in
-            // via options: a vendor left selected on one visit would AND with an
-            // incoming category and strand the empty-shelf deep links on an
-            // empty grid.
-            marketplaceVendorFilter = 'all';
-            if (communityView) communityView.style.display = 'block';
-            loadMarketplace();
+            // Prediction has no separate Manual-vs-Testing split (one
+            // unified waiting-list queue -- see predictionView's HTML
+            // comment), so both the Manual and Testing/Community nav
+            // destinations render the same view while assetClass is
+            // 'prediction'.
+            if (assetClass === 'prediction') {
+                if (predictionView) predictionView.style.display = 'block';
+                if (window.PredictionPage) window.PredictionPage.onEnter();
+            } else {
+                if (communityView) communityView.style.display = 'block';
+                if (window.StrategyTestingPage) window.StrategyTestingPage.onEnter();
+            }
         } else if (page === 'account') {
             currentMode = 'account';
             if (accountView) accountView.style.display = 'block';
             updateAccountPage();
-        } else if (page === 'credits') {
-            currentMode = 'credits';
-            if (creditsView) creditsView.style.display = 'block';
-            if (window.CreditsPage) window.CreditsPage.onEnter();
+        } else if (page === 'connections') {
+            currentMode = 'connections';
+            if (connectionsView) connectionsView.style.display = 'block';
+            if (window.ConnectionsPage) window.ConnectionsPage.onEnter();
         } else if (page === 'admin') {
             currentMode = 'admin';
             if (adminView) adminView.style.display = 'block';
@@ -8488,6 +8572,28 @@ function navigateToPage(page, options = {}) {
             // pager click, which only changes the user page.
             loadAdminStats();
             loadAdminUsers();
+        } else if (page === 'manual') {
+            currentMode = 'manual';
+            if (assetClass === 'prediction') {
+                if (predictionView) predictionView.style.display = 'block';
+                if (window.PredictionPage) window.PredictionPage.onEnter();
+            } else {
+                if (manualView) manualView.style.display = 'block';
+                if (window.ManualPage) window.ManualPage.onEnter();
+            }
+        } else if (page === 'strategycatalog') {
+            currentMode = 'strategycatalog';
+            if (assetClass === 'prediction') {
+                // Prediction has no backtested catalog by design (strategies
+                // forward paper-trade for 5 real days instead) -- falling
+                // through to strategyCatalogView here showed the STOCKS
+                // catalog on the Prediction dashboard (2026-08-29 bug).
+                if (predictionView) predictionView.style.display = 'block';
+                if (window.PredictionPage) window.PredictionPage.onEnter();
+            } else {
+                if (strategyCatalogView) strategyCatalogView.style.display = 'block';
+                if (window.StrategyCatalogPage) window.StrategyCatalogPage.onEnter();
+            }
         }
     }
 
@@ -8528,6 +8634,22 @@ function switchCompetitionTab(tab) {
     syncNavigationHistory({ replace: false });
 }
 
+// Home page's Dashboard Switch buttons. Always stays on whatever page you're
+// already on -- clicking from Home stays on Home, clicking from Manual/
+// Strategy/Competition re-fetches that same page under the new dashboard.
+// Previously this jumped non-asset-aware pages (Home included) to Manual,
+// which meant clicking a dashboard button from Home always navigated away
+// from Home -- not what the button is for.
+function switchAssetClass(cls) {
+    if (cls === assetClass) return;
+    navigateToPage(currentPage, {
+        assetClass: cls,
+        playgroundTab,
+        competitionTab,
+        history: 'push',
+    });
+}
+
 function openAddAgentModal() {
     const modal = document.getElementById('addAgentModal');
     if (modal) modal.hidden = false;
@@ -8536,6 +8658,69 @@ function openAddAgentModal() {
 function closeAddAgentModal() {
     const modal = document.getElementById('addAgentModal');
     if (modal) modal.hidden = true;
+}
+
+function openUploadAgentModal() {
+    const modal = document.getElementById('uploadAgentModal');
+    if (modal) modal.hidden = false;
+}
+
+function closeUploadAgentModal() {
+    const modal = document.getElementById('uploadAgentModal');
+    if (modal) modal.hidden = true;
+    const errorEl = document.getElementById('uploadAgentError');
+    if (errorEl) errorEl.hidden = true;
+}
+
+async function submitUploadAgent(event) {
+    event.preventDefault();
+    const fileInput = document.getElementById('uploadAgentFile');
+    const nameInput = document.getElementById('uploadAgentName');
+    const assetClassInput = document.getElementById('uploadAgentAssetClass');
+    const errorEl = document.getElementById('uploadAgentError');
+    const submitBtn = document.getElementById('uploadAgentSubmit');
+
+    const file = fileInput?.files?.[0];
+    if (!file) {
+        if (errorEl) { errorEl.textContent = 'Choose a file first.'; errorEl.hidden = false; }
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    if (nameInput?.value.trim()) formData.append('name', nameInput.value.trim());
+    formData.append('asset_class', assetClassInput?.value || 'stocks');
+
+    if (errorEl) errorEl.hidden = true;
+    setButtonPending(submitBtn, 'Reading file…');
+    try {
+        // Deliberately not API.request(): it always sets Content-Type:
+        // application/json, which would break FormData's multipart
+        // boundary. Same reasoning as strategy-testing.js's raw-fetch
+        // upload -- CSRF/session headers still travel, Content-Type is left
+        // for the browser to set from the FormData body.
+        const response = await fetch(`${API_BASE}/api/v1/agents/upload`, {
+            method: 'POST',
+            headers: { 'x-session-id': window.SESSION_ID, 'x-browser-id': window.BROWSER_OWNER_ID, ...csrfHeaders() },
+            credentials: 'include',
+            body: formData,
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.detail || data.error || `HTTP ${response.status}`);
+        }
+        closeUploadAgentModal();
+        showAppToast(`"${data.agent.name}" created -- ${data.extraction_summary || 'ready to review in Configure'}`);
+        if (data.agent) applyActiveAgent(data.agent);
+        await loadAgents();
+        if (data.agent) highlightAgentCard(data.agent.agent_id);
+        if (fileInput) fileInput.value = '';
+        if (nameInput) nameInput.value = '';
+    } catch (error) {
+        if (errorEl) { errorEl.textContent = error.message || 'Upload failed.'; errorEl.hidden = false; }
+    } finally {
+        restoreButton(submitBtn);
+    }
 }
 
 function initNavigation() {
@@ -8559,6 +8744,12 @@ function initNavigation() {
     document.querySelectorAll('[data-competition-tab]').forEach(btn => {
         btn.addEventListener('click', (e) => {
             switchCompetitionTab(e.currentTarget.dataset.competitionTab);
+        });
+    });
+
+    document.querySelectorAll('[data-asset-class]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            switchAssetClass(e.currentTarget.dataset.assetClass);
         });
     });
 
@@ -8635,6 +8826,10 @@ function initNavigation() {
     document.getElementById('addAgentBtnToolbar')?.addEventListener('click', openAddAgentModal);
     document.getElementById('addAgentModalClose')?.addEventListener('click', closeAddAgentModal);
     document.getElementById('addAgentModalBackdrop')?.addEventListener('click', closeAddAgentModal);
+    document.getElementById('uploadAgentBtnToolbar')?.addEventListener('click', openUploadAgentModal);
+    document.getElementById('uploadAgentModalClose')?.addEventListener('click', closeUploadAgentModal);
+    document.getElementById('uploadAgentModalBackdrop')?.addEventListener('click', closeUploadAgentModal);
+    document.getElementById('uploadAgentForm')?.addEventListener('submit', submitUploadAgent);
     document.getElementById('connectExternalAgentBtn')?.addEventListener('click', openCreateExternalAgentModal);
     document.getElementById('createExternalAgentModalClose')?.addEventListener('click', closeCreateExternalAgentModal);
     document.getElementById('createExternalAgentModalBackdrop')?.addEventListener('click', closeCreateExternalAgentModal);
@@ -8698,13 +8893,6 @@ function latestRun(runs) {
     return runs.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))[0];
 }
 
-function scopedExternalRuns(sessionRuns, activeName) {
-    const externalRuns = sessionRuns.filter(isExternalAgentRun);
-    if (!activeName) return externalRuns;
-    const scoped = externalRuns.filter((r) => r.agent_name === activeName);
-    return scoped.length ? scoped : externalRuns;
-}
-
 function formatBacktestRunReturn(run) {
     if (run.total_return == null) return '—';
     const pct = Math.abs(run.total_return) <= 1 ? run.total_return * 100 : run.total_return;
@@ -8754,15 +8942,6 @@ window.formatBacktestRunPrimary = formatBacktestRunPrimary;
 window.formatBacktestRunSecondary = formatBacktestRunSecondary;
 window.formatBacktestRunLabel = formatBacktestRunLabel;
 
-function resolveSelectedExternalRun(externalRuns) {
-    const selectedId = localStorage.getItem(SELECTED_BACKTEST_RUN_KEY);
-    if (selectedId) {
-        const match = externalRuns.find((r) => r.run_id === selectedId);
-        if (match) return match;
-    }
-    return latestRun([...externalRuns]);
-}
-
 function populateBacktestRunSelector(externalRuns, { runningId = null } = {}) {
     const select = document.getElementById('backtestRunSelect');
     if (!select) return;
@@ -8807,52 +8986,6 @@ function populateBacktestRunSelector(externalRuns, { runningId = null } = {}) {
                 : sorted[0].run_id);
     select.value = selectedId;
     localStorage.setItem(SELECTED_BACKTEST_RUN_KEY, selectedId);
-}
-
-function resolveBaselineRunIds(extRun, sessionRuns) {
-    if (!extRun) return { djia: null, buyhold: null };
-
-    let djia = extRun.baseline_djia_run_id || null;
-    let buyhold = extRun.baseline_buyhold_run_id || null;
-    if (djia && buyhold) {
-        return { djia, buyhold };
-    }
-
-    const extCreated = extRun.created_at || '';
-    const { start_date: startDate, end_date: endDate } = extRun;
-    const extRuns = sessionRuns
-        .filter(isExternalAgentRun)
-        .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
-    const extIdx = extRuns.findIndex((r) => r.run_id === extRun.run_id);
-    const nextExtCreated =
-        extIdx >= 0 && extIdx < extRuns.length - 1
-            ? extRuns[extIdx + 1].created_at
-            : null;
-
-    function pick(agentName) {
-        const candidates = sessionRuns
-            .filter(
-                (r) =>
-                    r.agent_name === agentName &&
-                    r.start_date === startDate &&
-                    r.end_date === endDate &&
-                    (r.created_at || '') >= extCreated &&
-                    (!nextExtCreated || (r.created_at || '') < nextExtCreated),
-            )
-            .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
-        return candidates[0]?.run_id || null;
-    }
-
-    return {
-        djia: djia || pick('DJIA'),
-        buyhold: buyhold || pick('buy-and-hold'),
-    };
-}
-
-function findLatestRunByAgent(runs, agentName) {
-    const matched = runs.filter(r => r.agent_name === agentName);
-    if (!matched.length) return null;
-    return matched.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))[0];
 }
 
 // Baseline comparison series. They appear on the plot but are never listed or
@@ -9159,19 +9292,6 @@ function initializeCharts() {
         liveBacktestChartActive = false;
         console.log('✅ Chart initialized -', series.map((s) => s.label).join(', '));
     }
-}
-
-/**
- * Format agent label for display
- */
-function formatAgentLabel(agentName) {
-    const labels = {
-        'Agent': 'Selected Agent (Claude)',
-        'buy-and-hold': 'Market Baseline (SPY)',
-        'equal-weight': 'Equal-Weight Baseline',
-        'deepseek': 'DeepSeek Agent'
-    };
-    return labels[agentName] || agentName;
 }
 
 /**

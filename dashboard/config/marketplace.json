@@ -7,7 +7,7 @@
       "description": "A simple starter agent that diversifies across strong stocks, buys dips, and takes profits after run-ups.",
       "category": "us_stocks",
       "tags": ["starter", "diversified"],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_balanced_starter",
@@ -25,7 +25,7 @@
       "description": "Focus on recent price strength and volume. Favor leaders with positive momentum and trim laggards quickly.",
       "category": "us_stocks",
       "tags": ["momentum", "trend"],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_momentum_instruction",
@@ -43,7 +43,7 @@
       "description": "A three-step strategy: gather market facts, convert them into signals, then produce executable orders.",
       "category": "us_stocks",
       "tags": ["multi-step strategy", "official template"],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_gather",
@@ -72,10 +72,10 @@
       "template_id": "ai-hedge-fund",
       "name": "AI Hedge Fund",
       "model_name": "nvidia/nemotron-3-nano-30b-a3b",
-      "description": "A hosted panel of AI analysts that weigh in on every trade, run through Agentic Trading Lab's long-only backtest engine. Based on the open-source AI Hedge Fund project by virattt.",
+      "description": "A hosted panel of AI analysts that weigh in on every trade, run through NewWorldTrading's long-only backtest engine. Based on the open-source AI Hedge Fund project by virattt.",
       "category": "us_stocks",
       "tags": ["analyst team", "fundamentals", "official template"],
-      "author": "virattt / Agentic Trading Lab",
+      "author": "virattt / NewWorldTrading",
       "repo_url": "https://github.com/virattt/ai-hedge-fund",
       "runtime_type": "ai_hedge_fund",
       "runtime_config": {
@@ -94,7 +94,7 @@
       "description": "Buy and hold a handful of the strongest Dow companies, selling only when a position deteriorates badly. Mirrors the buy-and-hold benchmark on our leaderboard.",
       "category": "us_stocks",
       "tags": ["buy and hold", "blue chips"],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_blue_chip_steady",
@@ -112,7 +112,7 @@
       "description": "Spread the money evenly across all available Dow stocks and keep the split even. Mirrors the equal-weight benchmark on our leaderboard.",
       "category": "us_stocks",
       "tags": ["equal weight", "diversified"],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_even_split_dow",
@@ -130,7 +130,7 @@
       "description": "A patient strategy for Chinese A-shares, built for that market's rule that shares bought today cannot be sold until the next trading day.",
       "category": "cn_ashares",
       "tags": ["a-shares", "patient"],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_ashare_steady",
@@ -151,7 +151,7 @@
         "contrarian",
         "mean reversion"
       ],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_contrarian_dip",
@@ -172,7 +172,7 @@
         "rotation",
         "trend"
       ],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_sector_rotator",
@@ -193,7 +193,7 @@
         "risk management",
         "defensive"
       ],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_volatility_guard",
@@ -214,7 +214,7 @@
         "a-shares",
         "momentum"
       ],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_ashare_momentum",

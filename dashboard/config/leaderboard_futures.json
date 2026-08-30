@@ -1,0 +1,114 @@
+{
+  "session_id": "futures-leaderboard-contest",
+  "live_session_id": "futures-leaderboard-live",
+  "initial_capital": 1000,
+  "description": "Futures dashboard's own Strategy Catalog roster -- separate from leaderboard.json and leaderboard_options.json (strategies do not carry over between dashboards). Contest window is computed dynamically (most recently completed full year) via domain/leaderboard/baselines.py's contest_window_for_year(). live_season_start is a FIXED anchor, mirroring leaderboard_options.json's own -- see domain/futures/leaderboard_service.py's module docstring for why it must not itself roll with 'today'.",
+  "live_season_start": "2026-08-23",
+  "strategies": [
+    {
+      "id": "fut_dip_reversion",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Dip Reversion",
+      "strategy": "fut_dip_reversion",
+      "symbols": [
+        "ES=F",
+        "MES=F",
+        "NQ=F",
+        "GC=F",
+        "CL=F",
+        "ZN=F"
+      ]
+    },
+    {
+      "id": "fut_donchian_breakout",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Donchian 20/10 Breakout",
+      "strategy": "fut_donchian_breakout",
+      "symbols": [
+        "ES=F",
+        "MES=F",
+        "NQ=F",
+        "GC=F",
+        "CL=F",
+        "ZN=F"
+      ]
+    },
+    {
+      "id": "fut_zscore_meanrev",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Z-Score Mean Reversion",
+      "strategy": "fut_zscore_meanrev",
+      "symbols": [
+        "ES=F",
+        "MES=F",
+        "NQ=F",
+        "GC=F",
+        "CL=F",
+        "ZN=F"
+      ]
+    },
+    {
+      "id": "fut_ema_ribbon",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "EMA Ribbon 8/21/50",
+      "strategy": "fut_ema_ribbon",
+      "symbols": [
+        "ES=F",
+        "MES=F",
+        "NQ=F",
+        "GC=F",
+        "CL=F",
+        "ZN=F"
+      ]
+    },
+    {
+      "id": "fut_vol_breakout",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Volatility Breakout",
+      "strategy": "fut_vol_breakout",
+      "symbols": [
+        "ES=F",
+        "MES=F",
+        "NQ=F",
+        "GC=F",
+        "CL=F",
+        "ZN=F"
+      ]
+    },
+    {
+      "id": "fut_trend_dip",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Trend-Filtered Dip Buyer",
+      "strategy": "fut_trend_dip",
+      "symbols": [
+        "ES=F",
+        "MES=F",
+        "NQ=F",
+        "GC=F",
+        "CL=F",
+        "ZN=F"
+      ]
+    },
+    {
+      "id": "fut_multiday_momentum",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "20-Day Momentum Rank",
+      "strategy": "fut_multiday_momentum",
+      "symbols": [
+        "ES=F",
+        "MES=F",
+        "NQ=F",
+        "GC=F",
+        "CL=F",
+        "ZN=F"
+      ]
+    }
+  ]
+}

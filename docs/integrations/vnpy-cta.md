@@ -1,7 +1,7 @@
 # Run a Local vn.py CTA Strategy on ATL
 
 This integration runs an existing vn.py `CtaTemplate` strategy against the
-standard Agentic Trading Lab (ATL) US equity backtest environment. ATL produces
+standard NewWorldTrading (ATL) US equity backtest environment. ATL produces
 the equity curve, trades, metrics, and execution results, while the integration
 writes a local audit artifact for vn.py-specific diagnostics.
 

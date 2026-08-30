@@ -1,6 +1,6 @@
-"""Agentic Trading Lab - lightweight Python client.
+"""NewWorldTrading - lightweight Python client.
 
-Agentic Trading Lab is an open-source experimental playground for LLM-powered
+NewWorldTrading is an open-source experimental playground for LLM-powered
 trading agents: prototype agents, run backtests and paper-trading simulations,
 inspect reasoning and decision logs, and benchmark against market baselines.
 
@@ -10,9 +10,9 @@ install is dependency-free on macOS and Linux; on Windows it also pulls the
 ``tzdata`` data wheel, because ``zoneinfo`` has no system IANA database there.
 
 Links:
-  - Live demo: https://agentic-trading-lab.vercel.app/
+  - Live demo: https://localhost:8000/
   - Docs:      https://finagent-orchestration.readthedocs.io/
-  - Source:    https://github.com/Allan-Feng/AgenticTrading
+  - Source:    https://github.com/TrentonNewWorld/AgenticTrading
 """
 
 from __future__ import annotations
@@ -71,9 +71,9 @@ __all__ = [
 
 __version__ = "0.2.0"
 
-LIVE_DEMO_URL = "https://agentic-trading-lab.vercel.app/"
+LIVE_DEMO_URL = "https://localhost:8000/"
 DOCS_URL = "https://finagent-orchestration.readthedocs.io/"
-SOURCE_URL = "https://github.com/Allan-Feng/AgenticTrading"
+SOURCE_URL = "https://github.com/TrentonNewWorld/AgenticTrading"
 
 
 def info() -> dict:
@@ -81,7 +81,7 @@ def info() -> dict:
     return {
         "name": "agentictrading",
         "version": __version__,
-        "summary": "Lightweight Python client for the Agentic Trading Lab REST API.",
+        "summary": "Lightweight Python client for the NewWorldTrading REST API.",
         "live_demo": LIVE_DEMO_URL,
         "docs": DOCS_URL,
         "source": SOURCE_URL,

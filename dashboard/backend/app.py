@@ -1,5 +1,5 @@
 """
-FastAPI backend for agentic trading dashboard.
+FastAPI backend for the NewWorldTrading dashboard.
 Serves equity curves, run metadata, and comparison data.
 
 This module is the application composition root: it creates the FastAPI app,
@@ -13,6 +13,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from pathlib import Path
+
+# On Windows, a cp1252 console kills the process at the first emoji print
+# (startup/migration logging is full of them). Reconfiguring the streams here
+# makes UTF-8 output work without the PYTHONUTF8=1 env var the launchers set;
+# on Linux/macOS this is a no-op. errors="replace" so an exotic console can
+# never crash the app over a log line.
+import sys as _sys
+if _sys.platform == "win32":
+    for _stream in (_sys.stdout, _sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError):
+            pass
 import os
 
 import dashboard.backend.database as _database
@@ -49,7 +62,7 @@ if _env_path.exists():
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Agentic Trading Dashboard API",
+    title="NewWorldTrading Dashboard API",
     description="Backend API for backtesting and paper trading equity curves",
     version="1.0.0"
 )
@@ -241,6 +254,60 @@ async def startup_event():
     except Exception as e:
         print(f"⚠️ Run reaper start error: {e}")
 
+    try:
+        from dashboard.backend.domain.manual10.scheduler import start_scheduler
+        if start_scheduler():
+            print("📈 Manual 10 scheduler started (MANUAL10_SCHEDULER_ENABLED)")
+        else:
+            print("📈 Manual 10 scheduler off (set MANUAL10_SCHEDULER_ENABLED to enable)")
+    except Exception as e:
+        print(f"⚠️ Manual 10 scheduler start error: {e}")
+
+    try:
+        from dashboard.backend.domain.strategy_testing.repository import init_schema as init_strategy_testing_schema
+        from dashboard.backend.domain.strategy_testing.worker import start_worker as start_strategy_testing_worker
+        init_strategy_testing_schema()
+        start_strategy_testing_worker()
+        print("🧪 Strategy Testing queue worker started")
+    except Exception as e:
+        print(f"⚠️ Strategy Testing worker start error: {e}")
+
+    try:
+        from dashboard.backend.domain.prediction.repository import init_schema as init_prediction_schema
+        from dashboard.backend.domain.prediction.scheduler import start_scheduler as start_prediction_scheduler
+        init_prediction_schema()
+        start_prediction_scheduler()
+        print("🔮 Prediction scheduler started (5-day forward paper-test tick)")
+    except Exception as e:
+        print(f"⚠️ Prediction scheduler start error: {e}")
+
+    try:
+        from dashboard.backend.domain.futures.scheduler import start_scheduler as start_futures_scheduler
+        if start_futures_scheduler():
+            print("📉 Futures scheduler started (FUTURES_SCHEDULER_ENABLED)")
+        else:
+            print("📉 Futures scheduler off (set FUTURES_SCHEDULER_ENABLED to enable)")
+    except Exception as e:
+        print(f"⚠️ Futures scheduler start error: {e}")
+
+    try:
+        from dashboard.backend.domain.forex.scheduler import start_scheduler as start_forex_scheduler
+        if start_forex_scheduler():
+            print("💱 Forex scheduler started (FOREX_SCHEDULER_ENABLED)")
+        else:
+            print("💱 Forex scheduler off (set FOREX_SCHEDULER_ENABLED to enable)")
+    except Exception as e:
+        print(f"⚠️ Forex scheduler start error: {e}")
+
+    try:
+        from dashboard.backend.domain.leaderboard.catalog_scheduler import start_scheduler as start_catalog_scheduler
+        if start_catalog_scheduler():
+            print("📊 Strategy Catalog scheduler started (STRATEGY_CATALOG_SCHEDULER_ENABLED)")
+        else:
+            print("📊 Strategy Catalog scheduler off (set STRATEGY_CATALOG_SCHEDULER_ENABLED to enable)")
+    except Exception as e:
+        print(f"⚠️ Strategy Catalog scheduler start error: {e}")
+
 
 # ============================================================================
 # Static Frontend Routes (must come AFTER API routes to not intercept them)
@@ -335,9 +402,23 @@ async def serve_mission_control():
 
 @app.get("/strategy-catalog.html", include_in_schema=False)
 async def serve_strategy_catalog():
-    """Serve the Strategy Catalog page (name/description/chart per 3%+
-    strategy, selectable for paper/live trading)."""
-    return FileResponse(frontend_path / "strategy-catalog.html")
+    """Strategy Catalog now lives inside the SPA as a real client-side route
+    (ticker/header state must survive navigating to/from it) -- redirect old
+    bookmarks/links rather than serving the retired standalone page."""
+    return RedirectResponse(url="/app?view=strategycatalog", status_code=308)
+
+@app.get("/strategy-edit.html", include_in_schema=False)
+async def serve_strategy_edit():
+    """Serve the Edit Strategy page (?key=...): a form for a strategy's own
+    real tunable trading parameters, from the catalog's Edit button."""
+    return FileResponse(frontend_path / "strategy-edit.html")
+
+@app.get("/manual.html", include_in_schema=False)
+async def serve_manual():
+    """Manual now lives inside the SPA as a real client-side route
+    (ticker/header state must survive navigating to/from it) -- redirect old
+    bookmarks/links rather than serving the retired standalone page."""
+    return RedirectResponse(url="/app?view=manual", status_code=308)
 
 @app.get("/styles.css", include_in_schema=False)
 async def serve_styles():
@@ -353,11 +434,6 @@ async def serve_app_js():
 async def serve_home_page_js():
     """Serve home-page.js for the Home tab mock live UI."""
     return FileResponse(frontend_path / "home-page.js", media_type="text/javascript")
-
-@app.get("/home-news-signals.js", include_in_schema=False)
-async def serve_home_news_signals_js():
-    """Serve home-news-signals.js for the Home tab news & signals panel."""
-    return FileResponse(frontend_path / "home-news-signals.js", media_type="text/javascript")
 
 @app.get("/js/{file_name}", include_in_schema=False)
 async def serve_js_module(file_name: str):

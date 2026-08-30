@@ -20,37 +20,27 @@ def _account_card() -> str:
     return html[start:end]
 
 
-def test_logout_button_is_last_in_the_account_card():
+def test_account_page_has_no_change_email_password_or_logout():
+    """Local-only deployment (auto-login, no real credentials to rotate): the
+    account PAGE's own change-email, change-password, and logout controls were
+    removed at the user's request. The header dropdown's logout is gone too
+    now -- see test_header_dropdown_has_no_logout_button -- this assertion is
+    scoped to the account-page card only."""
     card = _account_card()
-    logout_at = card.index('id="authLogoutBtn"')
-
-    for marker in ("id=\"avatarUploadBtn\"", "id=\"changePasswordForm\""):
-        assert card.index(marker) < logout_at, f"{marker} must come before Log out"
-
-    # "after those two" is not "last" -- a section appended later would keep the
-    # assertions above green. Nothing else in the card may carry an id.
-    tail = card[logout_at + len('id="authLogoutBtn"'):]
-    assert 'id="' not in tail, f"something with an id follows Log out: {tail!r}"
+    for marker in (
+        'id="authLogoutBtn"', 'id="accountEmailForm"', 'id="changePasswordForm"',
+        'id="newEmailInput"', 'id="currentPasswordInput"', 'id="newPasswordInput"',
+    ):
+        assert marker not in card, f"{marker} should have been removed from the account card"
 
 
-def test_logout_button_carries_the_danger_class():
-    card = _account_card()
-    match = re.search(r'<button[^>]*id="authLogoutBtn"[^>]*>', card)
-    assert match, "logout button not found in the account card"
-    tag = match.group(0)
-    # Assert on the button's OWN tag. A substring search over the whole card
-    # would pass if "auth-btn-danger" appeared anywhere else, and a fixed-width
-    # window before the id cannot see the class at all -- this file's markup
-    # puts id= before class=.
-    assert "auth-btn-danger" in tag
-    assert "auth-btn-secondary" not in tag
-
-
-def test_header_dropdown_logout_is_untouched():
-    # The brief targeted the account-page button only. Removing the dropdown
-    # item would also make docs/source/lab/accounts.rst factually wrong.
+def test_header_dropdown_has_no_logout_button():
+    """The account-page logout was removed first (see the test above); the
+    header dropdown's logout was deliberately kept at the time (single-device
+    session, not worth losing). A later, explicit ask removed this one too --
+    docs/source/lab/accounts.rst was updated in the same change."""
     html = _APP_HTML.read_text(encoding="utf-8")
-    assert 'id="accountMenuLogoutBtn"' in html
+    assert 'id="accountMenuLogoutBtn"' not in html
 
 
 def test_auth_btn_danger_is_declared_after_the_generic_hover():
@@ -71,10 +61,7 @@ def test_account_card_section_order():
         'id="accountDisplayName"',      # read-only summary row
         'id="accountEmail"',            # read-only summary row
         'id="accountDisplayNameForm"',  # editor
-        'id="accountEmailForm"',        # editor
         'id="avatarUploadBtn"',
-        'id="changePasswordForm"',
-        'id="authLogoutBtn"',
     ]
     positions = [card.index(marker) for marker in order]
     assert positions == sorted(positions), "account card sections are out of order"
@@ -93,21 +80,6 @@ def test_email_change_copy_mentions_the_spam_folder():
     assert any("code sent to" in line for line in mentions)
     # stage 'old' -- code went to the current address
     assert any("we sent a 6-character code" in line for line in mentions)
-
-
-def test_email_form_states_the_change_interval_before_the_user_submits():
-    """The 7-day limit has to be visible up front, not discovered as a 429.
-
-    Reads the number out of the backend constant rather than hardcoding it, so
-    changing the policy without changing the copy fails here instead of quietly
-    shipping a screen that lies.
-    """
-    from dashboard.backend.users import EMAIL_CHANGE_MIN_INTERVAL_DAYS
-
-    html = _APP_HTML.read_text(encoding="utf-8")
-    idle = html[html.index('<div id="emailChangeIdle">'):html.index('<div id="emailChangeCodeStep"')]
-
-    assert f"once every {EMAIL_CHANGE_MIN_INTERVAL_DAYS} days" in idle
 
 
 def test_logging_out_resets_the_email_change_form():

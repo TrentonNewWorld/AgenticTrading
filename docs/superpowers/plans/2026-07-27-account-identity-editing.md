@@ -256,7 +256,7 @@ import httpx
 
 BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email"
 SEND_TIMEOUT_SECONDS = 10.0
-DEFAULT_FROM_NAME = "Agentic Trading Lab"
+DEFAULT_FROM_NAME = "NewWorldTrading"
 _PROVIDER_ERROR_SNIPPET_CHARS = 200
 
 
@@ -2014,7 +2014,7 @@ def _seconds_since(timestamp: str) -> float:
 
 def _email_change_body(code: str, new_email: str) -> str:
     return (
-        "Someone asked to change the email address on your Agentic Trading Lab "
+        "Someone asked to change the email address on your NewWorldTrading "
         f"account to {new_email}.\n\n"
         f"Your confirmation code is: {code}\n\n"
         f"It expires in {users_module.EMAIL_CHANGE_TTL_MINUTES} minutes. If this "
@@ -2062,7 +2062,7 @@ async def request_email_change(
     # burn the cooldown on a code that does not exist.
     sent = await email_sender.send_email(
         to=str(current_user["email"]),
-        subject="Confirm your Agentic Trading Lab email change",
+        subject="Confirm your NewWorldTrading email change",
         text_body=_email_change_body(code, payload.new_email),
     )
     if not sent:
@@ -2452,7 +2452,7 @@ async def verify_email_change(
         # they can simply resubmit the code they already have.
         sent = await email_sender.send_email(
             to=new_email,
-            subject="Confirm your new Agentic Trading Lab email address",
+            subject="Confirm your new NewWorldTrading email address",
             text_body=_email_change_body(code, new_email),
         )
         if not sent:

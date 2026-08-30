@@ -29,9 +29,13 @@ def default_model_name() -> str:
     return DEFAULT_MODEL
 
 
-def make_client(anthropic_cls: Any) -> Optional[Any]:
-    """Build an Anthropic-compatible client for CommonStack, or ``None``."""
-    key = os.getenv("COMMONSTACK_API_KEY")
+def make_client(anthropic_cls: Any, *, api_key: Optional[str] = None) -> Optional[Any]:
+    """Build an Anthropic-compatible client for CommonStack, or ``None``.
+
+    ``api_key``, when given, is a signed-in user's Connections-saved key and
+    takes priority over ``COMMONSTACK_API_KEY`` -- see
+    infrastructure/llm/providers/__init__.py's ``make_llm_client``."""
+    key = api_key or os.getenv("COMMONSTACK_API_KEY")
     if not key:
         return None
     try:

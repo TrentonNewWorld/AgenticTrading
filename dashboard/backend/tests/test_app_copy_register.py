@@ -89,8 +89,10 @@ def test_backtest_config_prompt_label_is_replaced_with_instruction():
 # --- Presence guards for the highest-value new strings ----------------------
 
 
-def test_competition_organizer_line_is_present():
-    assert "Organized by SecureFinAI Lab with Agentic Trading Lab." in _HTML
+# test_competition_organizer_line_is_present tested the "Organized by
+# the upstream lab..." line, which was removed along with the rest of the
+# the old contest branding on the Competition Leaderboard header --
+# that whole board identity block was retired, not merely reworded.
 
 
 def test_capital_note_new_text_is_present():
@@ -112,8 +114,8 @@ def test_access_key_label_replaces_api_key_in_agent_credentials_modal():
     assert '<span>Access key</span>' in _HTML
     assert 'aria-label="Access key"' in _HTML
     assert (
-        "Use the access key below to connect your own program to Agentic "
-        "Trading Lab. (This is the API key in the SDK and docs.)"
+        "Use the access key below to connect your own program to "
+        "NewWorldTrading. (This is the API key in the SDK and docs.)"
     ) in _HTML
 
 
@@ -167,7 +169,7 @@ def test_oauth_failure_reason_still_reaches_the_console():
 
 def test_managed_model_field_is_hosted_ai_model():
     assert "Hosted AI model" in _HTML
-    assert "Managed for you by Agentic Trading Lab" in _HTML
+    assert "Managed for you by NewWorldTrading" in _HTML
     assert "Managed provider / model" not in _HTML
 
 
@@ -175,7 +177,7 @@ def test_ai_hedge_fund_panel_copy_is_updated():
     assert "AI Hedge Fund analyst panel" in _HTML
     assert (
         "Choose the analysts that shape this agent's strategy. The AI model "
-        "and its settings are hosted and managed by Agentic Trading Lab."
+        "and its settings are hosted and managed by NewWorldTrading."
     ) in _HTML
     assert "analyst committee" not in _HTML
     assert "upstream analysts" not in _HTML
@@ -215,11 +217,15 @@ def test_join_discord_expands_on_home_community_and_competition():
     Competition/Leaderboard page's Discord link, so no bare "Join Discord"
     survives anywhere in app.html.
 
-    `>= 3` rather than `== 3`: the ban on the bare form below is what actually
-    enforces the rule, and a fourth Discord CTA somewhere else is a routine
-    addition that should not redden this suite.
+    `>= 1` rather than a fixed count: the ban on the bare form below is what
+    actually enforces the rule, and the exact number of expanded CTAs is a
+    routine addition/removal that should not redden this suite. (Was `>= 3`
+    until the Competition Leaderboard's the old contest header --
+    one of the three CTAs -- was removed along with the rest of that board
+    identity block; was `>= 2` until the Home "Community Overview" module --
+    fake demo activity, not a real feature -- was removed entirely.)
     """
-    assert _HTML.count("Join our Discord community") >= 3
+    assert _HTML.count("Join our Discord community") >= 1
     assert ">Join Discord<" not in _HTML
 
 
@@ -237,9 +243,9 @@ def test_playground_home_preview_title_is_plain_language():
 
 
 def test_resource_subtitles_are_plain_language():
-    assert "Guides and reference documentation" in _HTML
-    assert "Talk strategy with other members" in _HTML
-    assert "Source code and worked examples" in _HTML
+    # The home resources cards were removed with the permanently-hidden
+    # `home-pager-hidden` block in the 2026-08-29 dead-code cleanup; only the
+    # ban on the old jargon phrasings survives (it is app-wide).
     assert "Guides and API reference" not in _HTML
     assert "Chat with other builders" not in _HTML
     assert "Open source and examples" not in _HTML
@@ -260,16 +266,10 @@ def test_sharpe_tooltip_is_plain_language():
     assert "Annualized for hourly data (sqrt(252*6.5))" not in _HTML
 
 
-def test_competition_about_copy_says_ai_not_llm():
-    assert "a paper-trading competition for AI-powered agents." in _HTML
-    assert "comparing leading AI models, baseline strategies, and market indices." in _HTML
-    assert "paper-trading competition for LLM-powered agents" not in _HTML
-    assert "comparing provided LLM models" not in _HTML
-
-
-def test_participants_empty_state_says_ai_models_and_baseline_strategies():
-    assert "The Ranking board shows AI models and baseline strategies only." in _HTML
-    assert "The Ranking board shows models and baselines only." not in _HTML
+# test_competition_about_copy_says_ai_not_llm and
+# test_participants_empty_state_says_ai_models_and_baseline_strategies tested
+# the About and Participating Teams tabs, both of which were removed from the
+# Competition ("Overview") section entirely.
 
 
 def test_account_description_is_plain_language():
@@ -329,7 +329,8 @@ def test_builtin_agent_placeholder_asks_what_makes_it_different():
 
 
 def test_token_cost_label_says_ai_not_llm():
-    assert "est. AI cost" in _JS
+    # "est. AI cost" rendered from a dead, never-called helper that was
+    # deleted in the 2026-08-29 cleanup; the ban on the jargon label stays.
     assert "est. LLM cost" not in _JS
 
 
@@ -383,7 +384,7 @@ def test_agent_credentials_fallback_subtitle_matches_app_html_copy():
     """
     assert (
         "Your agent is ready. Use the access key below to connect your own "
-        "program to Agentic Trading Lab. (This is the API key in the SDK "
+        "program to NewWorldTrading. (This is the API key in the SDK "
         "and docs.)"
     ) in _JS
     assert "Use the API key below to connect your trading client" not in _JS

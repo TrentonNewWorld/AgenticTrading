@@ -21,9 +21,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
+from dashboard.backend.domain.leaderboard.catalog import resolve_run_config
+from dashboard.backend.domain.leaderboard.real_trading import record_real_trading_snapshot
 from dashboard.backend.domain.leaderboard.strategies import get_strategy
 from dashboard.backend.execution._alpaca_strategy_shared import (
+    capped_portfolio_value,
     compute_rebalance_orders,
+    effective_target_weights,
     fetch_daily_history,
 )
 from dashboard.backend.infrastructure.brokers.alpaca_live import (
@@ -59,7 +63,17 @@ _run_lock = asyncio.Lock()
 
 def execute_enabled() -> bool:
     """True when live order placement is armed (read fresh on every call, like
-    the kill switch it doubles as)."""
+    the kill switch it doubles as). Checks the UI-toggleable DB override
+    (domain/execution_settings.py) first -- an admin flipping the "Live
+    Trading" switch in the account menu takes effect on the very next tick,
+    with no server restart. Only falls back to the ALPACA_LIVE_EXECUTE env
+    var when nobody has ever touched that switch, so a hosted deploy's
+    env-var-only configuration keeps working exactly as before."""
+    from dashboard.backend.domain.execution_settings import ALPACA_LIVE_EXECUTE_KEY, get_override
+
+    override = get_override(ALPACA_LIVE_EXECUTE_KEY)
+    if override is not None:
+        return override
     return os.getenv("ALPACA_LIVE_EXECUTE", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 
@@ -362,6 +376,7 @@ async def run_live_for_strategy(
     strategy_key: str,
     symbols: Optional[List[str]] = None,
     dry_run: bool = True,
+    user_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Run one live decision cycle for a registered leaderboard strategy
     (deterministic ``decide()``, never an LLM call) against the real Alpaca
@@ -374,25 +389,31 @@ async def run_live_for_strategy(
     environment -- same two-gate pattern as ``run_live_for_agent``, and the
     same process-wide lock (a local, single-account setup has no reason to
     let an LLM-driven and a deterministic-strategy live run overlap).
+
+    ``user_id``, when given (the Strategy Catalog Run button is signed in),
+    prefers that user's Connections-saved Alpaca live key over env vars.
     """
     if _run_lock.locked():
         raise ValueError("live_run_in_progress")
 
     async with _run_lock:
-        return await _execute_live_run_for_strategy(strategy_key=strategy_key, symbols=symbols, dry_run=dry_run)
+        return await _execute_live_run_for_strategy(
+            strategy_key=strategy_key, symbols=symbols, dry_run=dry_run, user_id=user_id,
+        )
 
 
 async def _execute_live_run_for_strategy(
-    *, strategy_key: str, symbols: Optional[List[str]], dry_run: bool
+    *, strategy_key: str, symbols: Optional[List[str]], dry_run: bool,
+    user_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     run_id = f"alpaca_live_{strategy_key}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
 
-    strategy = get_strategy({"strategy": strategy_key, "symbols": symbols})
+    strategy = get_strategy(resolve_run_config(strategy_key, symbols))
     if not hasattr(strategy, "decide"):
         raise ValueError(f"strategy '{strategy_key}' has no live-trading decide() method")
 
     try:
-        client = AlpacaLiveTradingClient()
+        client = AlpacaLiveTradingClient(user_id=user_id)
     except AlpacaLiveCredentialsError as exc:
         await _audit("credentials_missing", {"run_id": run_id, "error": str(exc)})
         raise
@@ -434,9 +455,18 @@ async def _execute_live_run_for_strategy(
 
     price_symbols = sorted(set(target_weights) | set(holdings))
     prices = await asyncio.to_thread(client.get_quotes, price_symbols)
-    portfolio_value = float(account["cash"]) + sum(
-        holdings.get(sym, 0) * prices.get(sym, 0) for sym in holdings
-    )
+    # Capped at this strategy's own Allocated capital (Strategy Catalog), not
+    # the whole shared account's cash + holdings -- this is real money, so
+    # see _alpaca_strategy_shared.capped_portfolio_value for why this is the
+    # actual per-strategy real-money-amount control, not just a display
+    # number on the Real Trading Leaderboard.
+    portfolio_value = capped_portfolio_value(strategy_key, float(account["cash"]), holdings, prices)
+    target_weights = effective_target_weights(strategy_key, target_weights, portfolio_value)
+
+    # Real Trading Leaderboard: see the matching call in alpaca_paper_service
+    # for why this records against a notional per-strategy sub-portfolio
+    # rather than this account's real (possibly multi-strategy) positions.
+    record_real_trading_snapshot(strategy_key, "live", target_weights, prices)
 
     raw_orders = compute_rebalance_orders(target_weights, portfolio_value, holdings, prices)
     cap_usd = max_order_usd()

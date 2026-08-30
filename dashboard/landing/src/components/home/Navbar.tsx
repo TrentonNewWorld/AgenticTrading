@@ -24,7 +24,7 @@ export function Navbar() {
         <div className="brand-logo">
           <img src={atlLogo} alt="" />
         </div>
-        <span className="brand-title">Agentic Trading Lab</span>
+        <span className="brand-title">NewWorldTrading</span>
       </Link>
       <div className="flex items-center justify-end gap-4 min-w-0">
         {/*

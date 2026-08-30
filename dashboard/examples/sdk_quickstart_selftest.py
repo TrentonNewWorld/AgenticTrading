@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-command SDK self-test against a running Agentic Trading Lab backend.
+"""One-command SDK self-test against a running NewWorldTrading backend.
 
 What it does:
   1. Logs in with your account (email + password from env) to get an auth token.

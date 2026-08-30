@@ -91,6 +91,7 @@ def make_llm_client(
     integration: Optional[str] = None,
     *,
     reasoning_effort: Optional[str] = None,
+    user_id: Optional[int] = None,
 ):
     """Create an Anthropic-compatible client for trading decisions.
 
@@ -99,10 +100,16 @@ def make_llm_client(
     is set, otherwise native Anthropic — OpenRouter is opt-in only. Returns
     ``None`` when the SDK or the chosen integration's key is unavailable, so
     callers fall back to rule-based trading.
+
+    ``user_id``, when given, prefers that signed-in user's Connections-saved
+    key over the provider's env var -- only meaningful for request-scoped
+    callers; unattended callers omit it and get today's env-var-only
+    behavior unchanged.
     """
     return _providers_make_llm_client(
         integration,
         reasoning_effort=reasoning_effort,
+        user_id=user_id,
     )
 
 

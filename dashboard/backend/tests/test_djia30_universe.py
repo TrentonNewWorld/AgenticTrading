@@ -5,9 +5,6 @@ validator.DJIA_30 is the one canonical Dow-30 for ATL. Every other Dow-ish
 list must import it (Python) or mirror it exactly (frontend, enforced
 textually below): the backtest scripts, the v2 API contract, the
 paper-trading baselines, and the app.js `djia` universe preset. The
-committee trading script (alpaca_trader_with_committee.py) is deliberately
-user-customizable (⭐ CUSTOMIZE) — the guard pins only its *default*, which
-derives from DJIA_30.
 Index verified 2026-07-10 (S&P DJI, effective 2026-06-29).
 """
 import ast
@@ -20,7 +17,6 @@ _REPO = Path(__file__).resolve().parents[3]          # .../agent-trading-lab
 _SCRIPTS = _REPO / "dashboard" / "scripts"
 _BHA = _SCRIPTS / "backtest_hourly_agent.py"
 _BACKTEST = _SCRIPTS / "backtest.py"
-_COMMITTEE = _SCRIPTS / "alpaca_trader_with_committee.py"
 _PAPER = (_REPO / "dashboard" / "backend" / "domain" / "backtesting"
           / "baselines" / "paper.py")
 
@@ -76,7 +72,7 @@ def test_validator_is_the_current_index():
 
 def test_backtest_script_imports_not_hardcodes():
     # No script carries its own Dow list literal — each imports the canonical.
-    for path in (_BHA, _BACKTEST, _COMMITTEE):
+    for path in (_BHA, _BACKTEST):
         assert _module_dow_literal(path) is None, path.name
         assert _imports_canonical(path), path.name
 

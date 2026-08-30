@@ -15,6 +15,7 @@ executed: run this suite locally before shipping a change to this module.
 """
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -31,7 +32,7 @@ _HOME_JS = (_ROOT / "frontend" / "home-page.js").read_text(encoding="utf-8")
 _LEADERBOARD_JS = (_ROOT / "frontend" / "js" / "leaderboard.js").read_text(encoding="utf-8")
 _LIB_TS_PATH = _LIB / "leaderboard.ts"
 _LIB_TS = _LIB_TS_PATH.read_text(encoding="utf-8")
-_ESBUILD = _ROOT / "landing" / "node_modules" / ".bin" / "esbuild"
+_ESBUILD = _ROOT / "landing" / "node_modules" / ".bin" / ("esbuild.cmd" if os.name == "nt" else "esbuild")
 
 
 def _js_array(source: str, name: str) -> list[str]:
@@ -64,7 +65,7 @@ def test_baseline_colours_are_keyed_on_entry_id_not_on_a_display_label():
     styles = re.search(r"BASELINE_STYLES[^=]*=\s*\{(.*?)\n\};", _LIB_TS, re.S)
     assert styles, "BASELINE_STYLES not found"
     body = styles.group(1)
-    assert "buy_hold_djia" in body and "djia_index" in body
+    assert "equal_weight_djia" in body and "djia_index" in body
     assert "Buy & Hold" not in body and '"DJIA"' not in body
 
 
@@ -148,15 +149,15 @@ def _run_ts(script: str):
 # whatever order the fixture happened to already be in.
 _TWELVE_ENTRY_FIXTURE_JS = """
 const entries = [
-  {entry_id: 'spy_index', team_name: 'Agentic Trading Lab', team_badge: 'Market Index', model: 'SPY', is_model: false, cumulative_return: 0.01, portfolio_value: 10100, initial_equity: 10000, equity_curve: []},
+  {entry_id: 'spy_index', team_name: 'NewWorldTrading', team_badge: 'Market Index', model: 'SPY', is_model: false, cumulative_return: 0.01, portfolio_value: 10100, initial_equity: 10000, equity_curve: []},
   {entry_id: 'claude_haiku_4_5', team_name: 'Claude Haiku 4.5', team_badge: 'Model', model: 'Claude Haiku 4.5', is_model: true, cumulative_return: 0.02, portfolio_value: 10200, initial_equity: 10000, equity_curve: []},
-  {entry_id: 'mean_variance_djia', team_name: 'Agentic Trading Lab', team_badge: 'Baseline Strategy', model: 'Mean-Variance', is_model: false, cumulative_return: -0.01, portfolio_value: 9900, initial_equity: 10000, equity_curve: []},
+  {entry_id: 'mean_variance_djia', team_name: 'NewWorldTrading', team_badge: 'Baseline Strategy', model: 'Mean-Variance', is_model: false, cumulative_return: -0.01, portfolio_value: 9900, initial_equity: 10000, equity_curve: []},
   {entry_id: 'gpt_5_5', team_name: 'GPT-5.5', team_badge: 'Model', model: 'GPT-5.5', is_model: true, cumulative_return: 0.028, portfolio_value: 10280, initial_equity: 10000, equity_curve: []},
-  {entry_id: 'djia_index', team_name: 'Agentic Trading Lab', team_badge: 'Market Index', model: 'DJIA', is_model: false, cumulative_return: 0.005, portfolio_value: 10050, initial_equity: 10000, equity_curve: []},
+  {entry_id: 'djia_index', team_name: 'NewWorldTrading', team_badge: 'Market Index', model: 'DJIA', is_model: false, cumulative_return: 0.005, portfolio_value: 10050, initial_equity: 10000, equity_curve: []},
   {entry_id: 'gemini_3_1_pro_preview', team_name: 'Gemini 3.1 Pro Preview', team_badge: 'Model', model: 'Gemini 3.1 Pro Preview', is_model: true, cumulative_return: 0.0156, portfolio_value: 10156, initial_equity: 10000, equity_curve: []},
-  {entry_id: 'buy_hold_djia', team_name: 'Agentic Trading Lab', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.008, portfolio_value: 10080, initial_equity: 10000, equity_curve: []},
+  {entry_id: 'equal_weight_djia', team_name: 'NewWorldTrading', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.008, portfolio_value: 10080, initial_equity: 10000, equity_curve: []},
   {entry_id: 'claude_sonnet_4_6', team_name: 'Claude Sonnet 4.6', team_badge: 'Model', model: 'Claude Sonnet 4.6', is_model: true, cumulative_return: 0.0312, portfolio_value: 10312, initial_equity: 10000, equity_curve: []},
-  {entry_id: 'equal_weight_djia', team_name: 'Agentic Trading Lab', team_badge: 'Baseline Strategy', model: 'Equal-Weight', is_model: false, cumulative_return: 0.003, portfolio_value: 10030, initial_equity: 10000, equity_curve: []},
+  {entry_id: 'buy_hold_djia', team_name: 'NewWorldTrading', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.003, portfolio_value: 10030, initial_equity: 10000, equity_curve: []},
   {entry_id: 'deepseek_v4_pro', team_name: 'DeepSeek V4 Pro', team_badge: 'Model', model: 'DeepSeek V4 Pro', is_model: true, cumulative_return: 0.0749, portfolio_value: 10749, initial_equity: 10000, equity_curve: []},
   {entry_id: 'qwen3_7_plus', team_name: 'Qwen3.7 Plus', team_badge: 'Model', model: 'Qwen3.7 Plus', is_model: false, cumulative_return: 0.0249, portfolio_value: 10249, initial_equity: 10000, equity_curve: []},
   {entry_id: 'nemotron_3_nano_30b', team_name: 'Nemotron 3 Nano 30B', team_badge: 'Model', model: 'Nemotron 3 Nano 30B', is_model: true, cumulative_return: -0.004, portfolio_value: 9960, initial_equity: 10000, equity_curve: []},
@@ -180,7 +181,7 @@ console.log(JSON.stringify(selected.map((e) => e.entry_id)));
     assert result == [
         "claude_haiku_4_5", "gpt_5_5", "gemini_3_1_pro_preview", "claude_sonnet_4_6",
         "deepseek_v4_pro", "qwen3_7_plus", "nemotron_3_nano_30b",
-        "djia_index", "buy_hold_djia",
+        "djia_index", "equal_weight_djia",
     ]
 
 
@@ -203,7 +204,7 @@ console.log(JSON.stringify(selected.map((e) => e.entry_id)));
 
 
 def test_select_board_entries_excludes_a_baseline_not_on_the_allowlist():
-    """`mean_variance_djia`, `equal_weight_djia` and `spy_index` are real
+    """`mean_variance_djia`, `buy_hold_djia` and `spy_index` are real
     baseline/index rows in the config -- none is one of the two ids screen 0
     draws. They must not leak into the selection just for being
     `is_model: false` with SOME recognisable badge."""
@@ -215,7 +216,7 @@ console.log(JSON.stringify(selected.map((e) => e.entry_id)));
 """
     )
     assert "mean_variance_djia" not in result
-    assert "equal_weight_djia" not in result
+    assert "buy_hold_djia" not in result
     assert "spy_index" not in result
 
 
@@ -235,11 +236,11 @@ const entries = [
    equity_curve: [{timestamp: '2026-04-15T14:00:00+00:00', equity: 10000}, {timestamp: '2026-04-15T16:00:00+00:00', equity: 9900}]},
   {entry_id: 'deepseek_v4_pro', team_name: 'DeepSeek V4 Pro', team_badge: 'Model', model: 'DeepSeek V4 Pro', is_model: true, cumulative_return: 0.05, portfolio_value: 10500, initial_equity: 10000,
    equity_curve: []},
-  {entry_id: 'buy_hold_djia', team_name: 'Agentic Trading Lab', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.0, portfolio_value: 10000, initial_equity: 10000,
+  {entry_id: 'equal_weight_djia', team_name: 'NewWorldTrading', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.0, portfolio_value: 10000, initial_equity: 10000,
    equity_curve: [{timestamp: '2026-04-15T14:00:00+00:00', equity: 10000}]},
   {entry_id: 'qwen3_7_plus', team_name: 'Qwen3.7 Plus', team_badge: 'Model', model: 'Qwen3.7 Plus', is_model: true, cumulative_return: 0.015, portfolio_value: 10150, initial_equity: 10000,
    equity_curve: [{timestamp: '2026-04-15T14:00:00+00:00', equity: 10000}, {timestamp: '2026-04-15T15:00:00+00:00', equity: 10075}, {timestamp: '2026-04-15T16:00:00+00:00', equity: 10150}]},
-  {entry_id: 'djia_index', team_name: 'Agentic Trading Lab', team_badge: 'Market Index', model: 'DJIA', is_model: false, cumulative_return: 0.01, portfolio_value: 10100, initial_equity: 10000,
+  {entry_id: 'djia_index', team_name: 'NewWorldTrading', team_badge: 'Market Index', model: 'DJIA', is_model: false, cumulative_return: 0.01, portfolio_value: 10100, initial_equity: 10000,
    equity_curve: [{timestamp: '2026-04-15T14:00:00+00:00', equity: 10000}, {timestamp: '2026-04-15T15:00:00+00:00', equity: 10050}, {timestamp: '2026-04-15T16:00:00+00:00', equity: 10100}]},
 ];
 const board = module.exports.buildBoardData({entries, window: {label: 'test window'}});
@@ -267,10 +268,10 @@ console.log(JSON.stringify({
     assert "deepseek_v4_pro" not in result["seriesKeys"], (
         "a curve-less entry has nothing to plot and must not enter series"
     )
-    # Ragged curves (missing interior point on gpt_5_5, shorter buy_hold_djia)
+    # Ragged curves (missing interior point on gpt_5_5, shorter equal_weight_djia)
     # still produce a series -- they are not "curve-less".
     assert "gpt_5_5" in result["seriesKeys"]
-    assert "buy_hold_djia" in result["seriesKeys"]
+    assert "equal_weight_djia" in result["seriesKeys"]
 
 
 def test_a_missing_interior_point_null_fills_rather_than_shifting_the_axis():
@@ -292,13 +293,13 @@ console.log(JSON.stringify({times: board.times, values: gpt.values}));
 
 
 def test_a_shorter_curve_null_fills_the_times_it_never_reported():
-    """buy_hold_djia only reports t1 -- its series must be exactly 1 real value
+    """equal_weight_djia only reports t1 -- its series must be exactly 1 real value
     plus 2 nulls, aligned to the SAME times array every other series uses, not
     a 1-element array of its own."""
     result = _run_ts(
         _RAGGED_CURVE_FIXTURE_JS
         + """
-const bh = board.series.find((s) => s.key === 'buy_hold_djia');
+const bh = board.series.find((s) => s.key === 'equal_weight_djia');
 console.log(JSON.stringify(bh.values));
 """
     )
@@ -396,15 +397,15 @@ console.log(JSON.stringify({
 
 # A fixture whose payload (ranked) order is deliberately DESTROYED by
 # selectBoardEntries: it regroups into models-then-baselines, so the two
-# baselines land at the end regardless of where they ranked. buy_hold_djia
+# baselines land at the end regardless of where they ranked. equal_weight_djia
 # (+3%) outranks two of the three models here, so a board that skipped the
-# re-sort would publish gpt_5_5 at -2% ABOVE buy_hold_djia at +3%.
+# re-sort would publish gpt_5_5 at -2% ABOVE equal_weight_djia at +3%.
 _INTERLEAVED_RANK_FIXTURE_JS = """
 const entries = [
   {entry_id: 'claude_haiku_4_5', team_name: 'Claude Haiku 4.5', team_badge: 'Model', model: 'Claude Haiku 4.5', is_model: true, cumulative_return: 0.05, portfolio_value: 10500, initial_equity: 10000, equity_curve: []},
-  {entry_id: 'buy_hold_djia', team_name: 'Agentic Trading Lab', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.03, portfolio_value: 10300, initial_equity: 10000, equity_curve: []},
+  {entry_id: 'equal_weight_djia', team_name: 'NewWorldTrading', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.03, portfolio_value: 10300, initial_equity: 10000, equity_curve: []},
   {entry_id: 'qwen3_7_plus', team_name: 'Qwen3.7 Plus', team_badge: 'Model', model: 'Qwen3.7 Plus', is_model: true, cumulative_return: 0.02, portfolio_value: 10200, initial_equity: 10000, equity_curve: []},
-  {entry_id: 'djia_index', team_name: 'Agentic Trading Lab', team_badge: 'Market Index', model: 'DJIA', is_model: false, cumulative_return: 0.01, portfolio_value: 10100, initial_equity: 10000, equity_curve: []},
+  {entry_id: 'djia_index', team_name: 'NewWorldTrading', team_badge: 'Market Index', model: 'DJIA', is_model: false, cumulative_return: 0.01, portfolio_value: 10100, initial_equity: 10000, equity_curve: []},
   {entry_id: 'gpt_5_5', team_name: 'GPT-5.5', team_badge: 'Model', model: 'GPT-5.5', is_model: true, cumulative_return: -0.02, portfolio_value: 9800, initial_equity: 10000, equity_curve: []},
 ];
 const board = module.exports.buildBoardData({entries, window: {label: 'test window'}});
@@ -434,7 +435,7 @@ console.log(JSON.stringify({
     )
     assert result["standingsKeys"] == [
         "claude_haiku_4_5",   # +5%
-        "buy_hold_djia",      # +3% -- a BASELINE, second, which is the point
+        "equal_weight_djia",      # +3% -- a BASELINE, second, which is the point
         "qwen3_7_plus",       # +2%
         "djia_index",         # +1%
         "gpt_5_5",            # -2%
@@ -969,7 +970,7 @@ const entries = [
    equity_curve: [{timestamp: '2026-04-15T14:00:00+00:00', equity: 10000},
                   {timestamp: '2026-04-15T15:00:00+00:00', equity: null},
                   {timestamp: '2026-04-15T16:00:00+00:00', equity: 10100}]},
-  {entry_id: 'buy_hold_djia', team_name: 'Agentic Trading Lab', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.02, portfolio_value: 10200, initial_equity: 10000,
+  {entry_id: 'equal_weight_djia', team_name: 'NewWorldTrading', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.02, portfolio_value: 10200, initial_equity: 10000,
    equity_curve: [{timestamp: '2026-04-15T14:00:00+00:00', equity: 10000},
                   {timestamp: '2026-04-15T15:00:00+00:00', equity: 10150},
                   {timestamp: '2026-04-15T16:00:00+00:00', equity: 10200}]},
@@ -1205,9 +1206,9 @@ def test_an_unmount_is_not_reported_to_the_visitor_as_a_timeout():
 # twelve, rebuilds the two baselines and never rebuilds the seven models.
 _BASELINES_ONLY_FIXTURE_JS = """
 const entries = [
-  {entry_id: 'djia_index', team_name: 'Agentic Trading Lab', team_badge: 'Market Index', model: 'DJIA', is_model: false, cumulative_return: 0.0224, portfolio_value: 10224, initial_equity: 10000,
+  {entry_id: 'djia_index', team_name: 'NewWorldTrading', team_badge: 'Market Index', model: 'DJIA', is_model: false, cumulative_return: 0.0224, portfolio_value: 10224, initial_equity: 10000,
    equity_curve: [{timestamp: '2026-04-15T14:00:00+00:00', equity: 10000}, {timestamp: '2026-04-15T15:00:00+00:00', equity: 10224}]},
-  {entry_id: 'buy_hold_djia', team_name: 'Agentic Trading Lab', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.0487, portfolio_value: 10487, initial_equity: 10000,
+  {entry_id: 'equal_weight_djia', team_name: 'NewWorldTrading', team_badge: 'Baseline Strategy', model: 'Buy & Hold', is_model: false, cumulative_return: 0.0487, portfolio_value: 10487, initial_equity: 10000,
    equity_curve: [{timestamp: '2026-04-15T14:00:00+00:00', equity: 10000}, {timestamp: '2026-04-15T15:00:00+00:00', equity: 10487}]},
 ];
 const board = module.exports.buildBoardData({entries, window: {label: '2026-04-15 → 2026-05-15'}});
@@ -1258,8 +1259,8 @@ console.log(JSON.stringify({
     # Non-vacuity: the payload really did carry two drawable reference curves,
     # so "baselines-only" is distinguishing them from models rather than from
     # nothing at all -- which is what separates this state from "empty".
-    assert sorted(result["seriesKeys"]) == ["buy_hold_djia", "djia_index"]
-    assert sorted(result["standingsKeys"]) == ["buy_hold_djia", "djia_index"]
+    assert sorted(result["seriesKeys"]) == ["djia_index", "equal_weight_djia"]
+    assert sorted(result["standingsKeys"]) == ["djia_index", "equal_weight_djia"]
 
 
 def test_a_full_board_is_reported_as_full_so_the_notice_is_not_permanent():
@@ -1290,7 +1291,7 @@ const deepseek = board.standings.find((s) => s.key === 'deepseek_v4_pro');
 console.log(JSON.stringify({
   isModel: deepseek.isModel,
   inSeries: board.series.some((s) => s.key === 'deepseek_v4_pro'),
-  baselineIsNotAModel: board.standings.find((s) => s.key === 'buy_hold_djia').isModel,
+  baselineIsNotAModel: board.standings.find((s) => s.key === 'equal_weight_djia').isModel,
 }));
 """
     )

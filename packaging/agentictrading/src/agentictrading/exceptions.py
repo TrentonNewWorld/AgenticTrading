@@ -1,4 +1,4 @@
-"""Exceptions raised by the Agentic Trading Lab Python SDK (``ATLClient``).
+"""Exceptions raised by the NewWorldTrading Python SDK (``ATLClient``).
 
 Every error preserves, where available:
 

@@ -1,0 +1,159 @@
+{
+  "session_id": "crypto-leaderboard-contest",
+  "live_session_id": "crypto-leaderboard-live",
+  "initial_capital": 1000,
+  "description": "Crypto dashboard's own Strategy Catalog roster -- separate from leaderboard.json, leaderboard_options.json, leaderboard_futures.json, and leaderboard_forex.json (strategies do not carry over between dashboards). Contest window is computed dynamically (most recently completed full year) via domain/leaderboard/baselines.py's contest_window_for_year(). live_season_start is a FIXED anchor, mirroring the other dashboards' own -- see domain/crypto/leaderboard_service.py's module docstring.",
+  "live_season_start": "2026-08-23",
+  "strategies": [
+    {
+      "id": "cx_momentum_basket",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Momentum Basket",
+      "strategy": "cx_momentum_basket",
+      "symbols": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+        "LTC/USD",
+        "LINK/USD",
+        "DOGE/USD"
+      ]
+    },
+    {
+      "id": "cx_dip_reversion",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Dip Reversion",
+      "strategy": "cx_dip_reversion",
+      "symbols": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+        "LTC/USD",
+        "LINK/USD",
+        "DOGE/USD"
+      ]
+    },
+    {
+      "id": "cx_sma_cross",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "SMA 10/30 Cross",
+      "strategy": "cx_sma_cross",
+      "symbols": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+        "LTC/USD",
+        "LINK/USD",
+        "DOGE/USD"
+      ]
+    },
+    {
+      "id": "cx_rsi_reversion",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "RSI-14 Reversion",
+      "strategy": "cx_rsi_reversion",
+      "symbols": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+        "LTC/USD",
+        "LINK/USD",
+        "DOGE/USD"
+      ]
+    },
+    {
+      "id": "cx_donchian_breakout",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Donchian 20/10 Breakout",
+      "strategy": "cx_donchian_breakout",
+      "symbols": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+        "LTC/USD",
+        "LINK/USD",
+        "DOGE/USD"
+      ]
+    },
+    {
+      "id": "cx_zscore_meanrev",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Z-Score Mean Reversion",
+      "strategy": "cx_zscore_meanrev",
+      "symbols": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+        "LTC/USD",
+        "LINK/USD",
+        "DOGE/USD"
+      ]
+    },
+    {
+      "id": "cx_ema_ribbon",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "EMA Ribbon 8/21/50",
+      "strategy": "cx_ema_ribbon",
+      "symbols": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+        "LTC/USD",
+        "LINK/USD",
+        "DOGE/USD"
+      ]
+    },
+    {
+      "id": "cx_vol_breakout",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Volatility Breakout",
+      "strategy": "cx_vol_breakout",
+      "symbols": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+        "LTC/USD",
+        "LINK/USD",
+        "DOGE/USD"
+      ]
+    },
+    {
+      "id": "cx_trend_dip",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "Trend-Filtered Dip Buyer",
+      "strategy": "cx_trend_dip",
+      "symbols": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+        "LTC/USD",
+        "LINK/USD",
+        "DOGE/USD"
+      ]
+    },
+    {
+      "id": "cx_multiday_momentum",
+      "name": "NewWorldTrading",
+      "label": "Baseline Strategy",
+      "model": "20-Day Momentum Rank",
+      "strategy": "cx_multiday_momentum",
+      "symbols": [
+        "BTC/USD",
+        "ETH/USD",
+        "SOL/USD",
+        "LTC/USD",
+        "LINK/USD",
+        "DOGE/USD"
+      ]
+    }
+  ]
+}

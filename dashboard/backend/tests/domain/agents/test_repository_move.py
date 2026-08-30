@@ -75,13 +75,14 @@ def test_create_agent_schema(store):
         "description", "pipeline", "cash_allocation", "backtest_allocation",
         "api_key_prefix", "owner_user_id", "scopes",
         "created_at", "last_used_at", "api_key", "live_trading_enabled",
-        "category",
+        "category", "asset_class",
     }
     assert agent["name"] == "My Agent"
     assert agent["model_name"] == "gpt-x"
     assert agent["owner_user_id"] == 7
     assert agent["agent_id"].startswith("agent_")
     assert agent["api_key"].startswith("ag_")
+    assert agent["asset_class"] == "stocks"
     assert agent["api_key_prefix"] == agent["api_key"][:12]
     # api_key_hash must never leak in the public dict.
     assert "api_key_hash" not in agent

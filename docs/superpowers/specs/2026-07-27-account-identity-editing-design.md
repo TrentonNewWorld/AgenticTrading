@@ -340,7 +340,7 @@ Configuration, all read at call time so tests can set and unset freely:
 
 - `BREVO_API_KEY` — API key; unset means the feature is off.
 - `ACCOUNT_EMAIL_FROM` — the Brevo-verified sender address.
-- `ACCOUNT_EMAIL_FROM_NAME` — optional, defaults to `Agentic Trading Lab`.
+- `ACCOUNT_EMAIL_FROM_NAME` — optional, defaults to `NewWorldTrading`.
 
 Returns `False` after `print("ERROR: ...")` when unconfigured, when the POST raises, or on
 a non-2xx response (logging status and a truncated body). 10-second timeout. Never raises.

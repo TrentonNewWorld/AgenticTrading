@@ -31,7 +31,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-FinAgents/agent_pools/alpha_agent_pool/tests/*.json
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -206,16 +205,9 @@ cython_debug/
 /memory/
 
 # Memory agent database files
-FinAgents/memory/*.db
-FinAgents/memory/*.sqlite
-FinAgents/memory/*.sqlite3
 memory_agent.db
 
 # Agent pool data files
-FinAgents/agent_pools/*/memory_unit.json
-FinAgents/agent_pools/*/momentum_signal_flow.json
-FinAgents/agent_pools/*/data_cache/
-FinAgents/agent_pools/*/*.db
 
 # Data cache and temporary files
 dashboard/storage/data/cache/*.csv
@@ -229,18 +221,10 @@ dashboard/storage/audit/
 # Log files
 *.log
 logs/
-FinAgents/**/*.log
 
 # Jupyter notebook checkpoints
 .ipynb_checkpoints/
 
-FinAgents/agent_pools/alpha_agent_pool/qlib/qlib_data/
-FinAgents/agent_pools/alpha_agent_pool/qlib/enhanced_visualizations/
-FinAgents/agent_pools/alpha_agent_pool/agents/theory_driven/BTC_agent
-FinAgents/agent_pools/alpha_agent_pool/agents/theory_driven/mlruns/
-FinAgents/agent_pools/alpha_agent_pool/agents/20_factors/
-FinAgents/agent_pools/alpha_agent_pool/qlib/backtest_results/
-FinAgents/agent_pools/backtest_agent/qlib_data/
 
 # Local Alpaca credentials (use credentials/alpaca.json.example as template)
 credentials/*
@@ -254,3 +238,7 @@ credentials/*
 # To commit a genuine nested CLAUDE.md on purpose: git add -f path/to/CLAUDE.md
 **/CLAUDE.md
 !/CLAUDE.md
+dist/
+.claude/
+.env.bak*
+dashboard/.env.bak*

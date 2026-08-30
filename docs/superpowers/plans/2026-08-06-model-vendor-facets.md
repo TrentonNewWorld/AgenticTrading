@@ -1067,7 +1067,7 @@ Append these four objects to the `templates` array in `dashboard/config/marketpl
         "contrarian",
         "mean reversion"
       ],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_contrarian_dip",
@@ -1088,7 +1088,7 @@ Append these four objects to the `templates` array in `dashboard/config/marketpl
         "rotation",
         "trend"
       ],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_sector_rotator",
@@ -1109,7 +1109,7 @@ Append these four objects to the `templates` array in `dashboard/config/marketpl
         "risk management",
         "defensive"
       ],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_volatility_guard",
@@ -1130,7 +1130,7 @@ Append these four objects to the `templates` array in `dashboard/config/marketpl
         "a-shares",
         "momentum"
       ],
-      "author": "Agentic Trading Lab",
+      "author": "NewWorldTrading",
       "pipeline": [
         {
           "id": "sub_ashare_momentum",

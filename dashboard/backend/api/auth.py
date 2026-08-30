@@ -159,7 +159,7 @@ def _normalize_email(value: str) -> str:
     # renders an email as plain text then inherits it: the admin console builds
     # its role-change confirm() as
     # ``Promote {email} to admin?\n\nThey will see Admin…``, and an address of
-    # the form ``a@b.com\n\nThis account is verified by SecureFinAI Lab.`` puts
+    # the form ``a@b.com\n\nThis account is verified by the platform.`` puts
     # attacker-chosen lines into the dialog an admin reads while deciding
     # whether to grant admin. Escaping cannot help there — a native dialog has
     # no markup to escape — so the address must never contain the character.
@@ -326,6 +326,24 @@ def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="Invalid or expired session")
     return user
+
+
+def get_current_user_optional(
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+) -> Optional[dict]:
+    """Like ``get_current_user``, but ``None`` instead of a 401 when signed
+    out or the session is invalid/expired.
+
+    For routes that must stay reachable without login (e.g. Strategy
+    Catalog's Run in Paper/Live, historically unauthenticated) but that can
+    *use* a signed-in caller's identity when one is present -- e.g. to
+    prefer their Connections-saved API key over env vars. Never raises.
+    """
+    token = _session_token(request, authorization)
+    if not token:
+        return None
+    return users_module.user_store.get_user_for_token(token)
 
 
 def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
@@ -707,7 +725,7 @@ def _humanize_wait(seconds: float) -> str:
 def _email_change_old_body(code: str, new_email: str) -> str:
     """Stage 'old', to the CURRENT address: the account owner."""
     return (
-        "Someone asked to change the email address on your Agentic Trading Lab "
+        "Someone asked to change the email address on your NewWorldTrading "
         f"account to {new_email}.\n\n"
         f"Your confirmation code is: {code}\n\n"
         f"It expires in {users_module.EMAIL_CHANGE_TTL_MINUTES} minutes. If this "
@@ -718,13 +736,13 @@ def _email_change_old_body(code: str, new_email: str) -> str:
 def _email_change_new_body(code: str) -> str:
     """Stage 'new', to the address being adopted -- possibly a bystander's.
 
-    Its owner may have no Agentic Trading Lab account, so no "your account"
+    Its owner may have no NewWorldTrading account, so no "your account"
     and no advice to change a password they do not have: instructions that
     cannot apply to the reader are exactly what phishing looks like.
     """
     return (
         "Someone asked to make this address the contact email for their "
-        "Agentic Trading Lab account.\n\n"
+        "NewWorldTrading account.\n\n"
         f"Your confirmation code is: {code}\n\n"
         f"It expires in {users_module.EMAIL_CHANGE_TTL_MINUTES} minutes. If "
         "this was you, enter it on the account page to finish. If not, ignore "
@@ -828,7 +846,7 @@ async def request_email_change(
     # burn the cooldown on a code that does not exist.
     sent = await email_sender.send_email(
         to=str(current_user["email"]),
-        subject="Confirm your Agentic Trading Lab email change",
+        subject="Confirm your NewWorldTrading email change",
         text_body=_email_change_old_body(code, payload.new_email),
     )
     if not sent:
@@ -914,7 +932,7 @@ async def verify_email_change(
         # they can simply resubmit the code they already have.
         sent = await email_sender.send_email(
             to=new_email,
-            subject="Confirm your new Agentic Trading Lab email address",
+            subject="Confirm your new NewWorldTrading email address",
             text_body=_email_change_new_body(code),
         )
         if not sent:

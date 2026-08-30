@@ -33,6 +33,18 @@ _REBALANCE_DAYS = 21
 class MomentumEffectStrategy(BaselineStrategy):
     key = "momentum_effect"
 
+    PARAM_SCHEMA = {
+        "top_n": {"label": "Positions held", "type": "int", "default": _TOP_N, "min": 1, "max": 30},
+        "rebalance_days": {"label": "Rebalance every (trading days)", "type": "int", "default": _REBALANCE_DAYS, "min": 1, "max": 63},
+        "lookback_days": {"label": "Momentum lookback (trading days)", "type": "int", "default": _DESIRED_LOOKBACK_DAYS, "min": 5, "max": 252},
+    }
+
+    def __init__(self, config):
+        super().__init__(config)
+        self._top_n = self.config.get("top_n", _TOP_N)
+        self._rebalance_days = self.config.get("rebalance_days", _REBALANCE_DAYS)
+        self._lookback_days = self.config.get("lookback_days", _DESIRED_LOOKBACK_DAYS)
+
     def required_symbols(self) -> List[str]:
         symbols = self.config.get("symbols")
         return list(symbols) if symbols else list(DJIA_30)
@@ -41,10 +53,10 @@ class MomentumEffectStrategy(BaselineStrategy):
         n = len(history)
         if n < _MIN_HISTORY:
             return {}
-        lookback = min(_DESIRED_LOOKBACK_DAYS, n - 1)
+        lookback = min(self._lookback_days, n - 1)
         close = history.close
         trailing_return = close.iloc[-1] / close.iloc[-1 - lookback] - 1
-        top = trailing_return.dropna().sort_values(ascending=False).head(_TOP_N)
+        top = trailing_return.dropna().sort_values(ascending=False).head(self._top_n)
         if top.empty:
             return {}
         return {sym: 1.0 / len(top) for sym in top.index}
@@ -63,7 +75,7 @@ class MomentumEffectStrategy(BaselineStrategy):
 
         curve, n_trades = run_daily_signal_strategy(
             bars_subset, start_date, end_date, initial_capital, self._weight_fn,
-            rebalance_every_days=_REBALANCE_DAYS,
+            rebalance_every_days=self._rebalance_days,
         )
         self._num_trades = n_trades
         return curve

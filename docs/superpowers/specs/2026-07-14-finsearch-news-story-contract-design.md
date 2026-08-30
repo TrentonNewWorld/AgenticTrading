@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-14
 **Status:** **implemented** — AF #359 shipped and is live; the ATL consumer lands in #110. This document is a point-in-time design record: the "Rollout / merge order" section below describes the plan as written, not what happened (the order inverted — see the postscript). The live contract is documented in [`docs/integrations/finsearch-news-items.md`](../../integrations/finsearch-news-items.md); prefer that as the reference.
-**Repos:** Agentic FinSearch (AF, `fingpt_rcos`, PR #359) + Agentic Trading Lab (ATL, PR #107 → #110)
+**Repos:** Agentic FinSearch (AF, `fingpt_rcos`, PR #359) + NewWorldTrading (ATL, PR #107 → #110)
 **Supersedes nothing; extends** `docs/integrations/finsearch-news-sentiment.md` (Phase A contract).
 
 ---

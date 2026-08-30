@@ -293,3 +293,74 @@ class LLMAgentStrategy(BaselineStrategy):
 
     def num_trades(self) -> int:
         return self._num_trades
+
+    def decide(self, history) -> Dict[str, float]:
+        """Live/paper-trading entrypoint (see catalog.py's ``_catalog_roster``
+        / ``alpaca_paper_service.py`` for the caller). Unlike ``run()``'s
+        hourly contest replay, live/paper trading only ever hands this one
+        point in time -- ``history`` is a ``DailyHistory`` of daily OHLCV up
+        to and including the most recent close (``_signal_engine.py``) -- so
+        this makes exactly one LLM call and reports back the resulting
+        position weights, the same ``{symbol: weight}`` contract every other
+        strategy's ``decide()`` returns. The scratch ``PortfolioManager`` here
+        is not the real account: real dollar sizing happens one layer up
+        (``compute_rebalance_orders`` / ``record_real_trading_snapshot``),
+        against that caller's own portfolio value -- this method only reports
+        proportions."""
+        symbols = self.required_symbols()
+        bars_by_symbol: Dict[str, pd.DataFrame] = {}
+        for sym in symbols:
+            if sym not in history.close.columns:
+                continue
+            frame = pd.DataFrame({
+                "open": history.open.get(sym),
+                "high": history.high.get(sym),
+                "low": history.low.get(sym),
+                "close": history.close.get(sym),
+                "volume": history.volume.get(sym),
+            }).dropna(subset=["close"])
+            if not frame.empty:
+                bars_by_symbol[sym] = frame
+        if not bars_by_symbol:
+            return {}
+
+        data = {sym: TechnicalIndicators.calculate_indicators(df) for sym, df in bars_by_symbol.items()}
+        last_ts = max(df.index[-1] for df in data.values())
+        price_cache = build_price_cache(data, [last_ts])
+        market_data = {sym: df.loc[last_ts] for sym, df in data.items() if last_ts in df.index}
+        if not market_data:
+            return {}
+
+        profile = get_market_profile(ALPACA)
+        # initial_capital is a placeholder: this manager exists only to turn
+        # one LLM decision into share counts so they can be read back as
+        # weights, never to track real or notional dollars.
+        manager = PortfolioManager(initial_capital=1.0, t_plus_one_enabled=profile.t_plus_one_enabled)
+        state = manager.get_portfolio_state(market_data, price_cache, last_ts)
+        state["timestamp"] = last_ts
+
+        client = self._make_client()
+        model_id = self.model_id or default_model_name(self.integration)
+        if client is not None:
+            decision = manager.make_trading_decision_with_llm(
+                state, client, mode=self.mode, model=model_id,
+                strategy_prompt=self.strategy_prompt, temperature=self.temperature,
+            )
+        else:
+            decision = manager.make_trading_decision(state)
+
+        manager.execute_actions(decision.get("actions", []), market_data, last_ts)
+        manager.update_equity(market_data, price_cache, last_ts)
+
+        equity = manager.equity_history[-1]["equity"] if manager.equity_history else manager.cash
+        if not equity:
+            return {}
+        weights: Dict[str, float] = {}
+        for sym, shares in manager.positions.items():
+            if shares <= 0:
+                continue
+            row = market_data.get(sym)
+            price = row["close"] if row is not None else None
+            if price:
+                weights[sym] = (shares * price) / equity
+        return weights

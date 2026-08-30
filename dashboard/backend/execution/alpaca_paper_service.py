@@ -24,9 +24,13 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from dashboard.backend.domain.agents.marketplace import get_marketplace_template
+from dashboard.backend.domain.leaderboard.catalog import resolve_run_config
+from dashboard.backend.domain.leaderboard.real_trading import record_real_trading_snapshot
 from dashboard.backend.domain.leaderboard.strategies import get_strategy
 from dashboard.backend.execution._alpaca_strategy_shared import (
+    capped_portfolio_value,
     compute_rebalance_orders,
+    effective_target_weights,
     fetch_daily_history,
 )
 from dashboard.backend.execution.alpaca_live_service import risk_gate_orders
@@ -268,28 +272,35 @@ async def run_paper_for_strategy(
     strategy_key: str,
     symbols: Optional[List[str]] = None,
     dry_run: bool = True,
+    user_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Run one paper-trading decision cycle for a registered leaderboard
     strategy. ``dry_run=True`` (the default) always forces review-only, even
     if ``ALPACA_PAPER_EXECUTE`` is set. Real (paper) orders require both
     ``dry_run=False`` on the call and ``ALPACA_PAPER_EXECUTE=true`` in the
-    environment -- same two-gate pattern as the live path."""
+    environment -- same two-gate pattern as the live path.
+
+    ``user_id``, when given (the Strategy Catalog Run button is signed in),
+    prefers that user's Connections-saved Alpaca paper key over env vars."""
     if _run_lock.locked():
         raise ValueError("paper_run_in_progress")
     async with _run_lock:
-        return await _execute_paper_run(strategy_key=strategy_key, symbols=symbols, dry_run=dry_run)
+        return await _execute_paper_run(
+            strategy_key=strategy_key, symbols=symbols, dry_run=dry_run, user_id=user_id,
+        )
 
 
 async def _execute_paper_run(
-    *, strategy_key: str, symbols: Optional[List[str]], dry_run: bool
+    *, strategy_key: str, symbols: Optional[List[str]], dry_run: bool,
+    user_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     run_id = f"alpaca_paper_{strategy_key}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
 
-    strategy = get_strategy({"strategy": strategy_key, "symbols": symbols})
+    strategy = get_strategy(resolve_run_config(strategy_key, symbols))
     if not hasattr(strategy, "decide"):
         raise ValueError(f"strategy '{strategy_key}' has no live-trading decide() method")
 
-    client = AlpacaPaperTradingClient()
+    client = AlpacaPaperTradingClient(user_id=user_id)
     account = await asyncio.to_thread(client.get_account)
     if account is None:
         raise ValueError("alpaca_paper_account_unavailable")
@@ -327,9 +338,21 @@ async def _execute_paper_run(
 
     price_symbols = sorted(set(target_weights) | set(holdings))
     prices = await asyncio.to_thread(client.get_quotes, price_symbols)
-    portfolio_value = float(account["cash"]) + sum(
-        holdings.get(sym, 0) * prices.get(sym, 0) for sym in holdings
-    )
+    # Capped at this strategy's own Allocated capital (Strategy Catalog), not
+    # the whole shared account's cash + holdings -- see
+    # _alpaca_strategy_shared.capped_portfolio_value for why this is the
+    # actual real-money-amount-per-strategy control, not just a display
+    # number. effective_target_weights then applies a fixed "$ per stock"
+    # override if one is set, in place of proportional weight sizing.
+    portfolio_value = capped_portfolio_value(strategy_key, float(account["cash"]), holdings, prices)
+    target_weights = effective_target_weights(strategy_key, target_weights, portfolio_value)
+
+    # Real Trading Leaderboard: mark this strategy's own notional
+    # sub-portfolio to these same real prices and rebalance it to the same
+    # target_weights, isolated from whatever else this shared account holds.
+    # See domain/leaderboard/real_trading.py for why a notional ledger
+    # rather than reading the account's real positions.
+    record_real_trading_snapshot(strategy_key, "paper", target_weights, prices)
 
     raw_orders = compute_rebalance_orders(target_weights, portfolio_value, holdings, prices)
     cap_usd = max_order_usd()

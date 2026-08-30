@@ -742,21 +742,6 @@ function homeFormatReturnPct(value) {
     return `${sign}${pct.toFixed(2)}%`;
 }
 
-function homeSparkPolyline(values, width = 52, height = 18) {
-    const nums = (values || []).map(Number).filter(Number.isFinite);
-    if (nums.length < 2) {
-        return `0,${height / 2} ${width},${height / 2}`;
-    }
-    const min = Math.min(...nums);
-    const max = Math.max(...nums);
-    const span = max - min || 1;
-    return nums.map((v, i) => {
-        const x = (i / (nums.length - 1)) * width;
-        const y = height - ((v - min) / span) * (height - 2) - 1;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-}
-
 function getHomeAuthUser() {
     if (typeof getStoredAuthUser === 'function') return getStoredAuthUser();
     return window.AUTH_USER || null;
@@ -1132,6 +1117,33 @@ async function loadHomePortfolioLedger() {
         console.warn('Home portfolio API unavailable:', error?.message || error);
         homePortfolioLive = null;
         return null;
+    }
+}
+
+function homeMoney(v) {
+    if (v === null || v === undefined) return '—';
+    return '$' + Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function loadRealPortfolioModule() {
+    // Lives as a third stat inside the existing "My Portfolio" card (see the
+    // git history for why: a standalone card in .dashboard-bottom-grid
+    // measured out to not fit this page's fixed-height, no-scroll "screen"
+    // budget at a normal 1280x720 viewport without squeezing Market News's
+    // own list to 0px -- reusing metrics-row space already budgeted for
+    // this card was the fix, not fighting the grid for more room). Full
+    // per-broker breakdown lives on API Connections and each dashboard's
+    // own Manual page; this is just the headline total.
+    const valueEl = document.getElementById('homeMetricRealMoney');
+    if (!valueEl) return;
+    try {
+        const base = (typeof API_BASE !== 'undefined') ? API_BASE : '';
+        const res = await fetch(`${base}/api/v1/wallets/portfolio-summary`, { credentials: 'include' });
+        const data = await res.json();
+        valueEl.textContent = data.total !== null ? homeMoney(data.total) : 'Not connected';
+    } catch (error) {
+        console.warn('Real portfolio module unavailable:', error?.message || error);
+        valueEl.textContent = '—';
     }
 }
 
@@ -2115,6 +2127,7 @@ function refreshHomeModules() {
     updateHomeAgentModule();
     loadHomeLeaderboardModule();
     loadHomeMarketNewsModule();
+    loadRealPortfolioModule();
 }
 
 function initHomeSnapScroll() {

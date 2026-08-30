@@ -1,6 +1,6 @@
 # PR #67 Fix Checklist — "Major Platform and Architecture Update"
 
-Source: 91-agent adversarial review, 2026-07-03. PR by Allan-Feng, 292 files, +30k/−4.9k, CONFLICTING.
+Source: 91-agent adversarial review, 2026-07-03. PR by TrentonNewWorld, 292 files, +30k/−4.9k, CONFLICTING.
 73 findings confirmed (dedup'd below): **1 critical, 8 high, ~18 unique medium, ~24 low**.
 
 **Bottom line:** the *package refactor* is sound and near-shippable; nearly every bug is in the *new features* bolted alongside (Protocol v1, SDK, Discord, strategy store, built-in agents, landing page, leaderboard models). Recommend splitting refactor from features. Fix order below is roughly merge-priority.

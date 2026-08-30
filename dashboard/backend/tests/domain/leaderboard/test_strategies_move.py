@@ -57,6 +57,21 @@ _EXPECTED_KEYS = {
     "contrarian_dip_buyer",
     "sector_rotator",
     "volatility_guard",
+    "sandboxed",
+    # TradingView classics promoted from the Three-Year Strategy Gauntlet
+    # (2026-08-29) -- every classic that cleared the operator's 10% bar.
+    "tv_rsi2_connors",
+    "tv_golden_cross",
+    "tv_donchian_turtle",
+    "tv_bollinger_meanrev",
+    "tv_ichimoku",
+    "tv_stochastic",
+    "tv_williams_r",
+    "tv_cci_100",
+    "tv_adx_dmi",
+    "tv_52w_high",
+    "tv_dual_momentum",
+    "tv_ema_ribbon",
 }
 
 

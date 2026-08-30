@@ -30,6 +30,16 @@ _MIN_HISTORY = 31
 class MomentumScoutStrategy(BaselineStrategy):
     key = "momentum_scout"
 
+    PARAM_SCHEMA = {
+        "top_n": {"label": "Positions held", "type": "int", "default": _TOP_N, "min": 1, "max": 30},
+        "rebalance_days": {"label": "Rebalance every (trading days)", "type": "int", "default": _REBALANCE_DAYS, "min": 1, "max": 63},
+    }
+
+    def __init__(self, config):
+        super().__init__(config)
+        self._top_n = self.config.get("top_n", _TOP_N)
+        self._rebalance_days = self.config.get("rebalance_days", _REBALANCE_DAYS)
+
     def required_symbols(self) -> List[str]:
         symbols = self.config.get("symbols")
         return list(symbols) if symbols else list(DJIA_30)
@@ -48,7 +58,7 @@ class MomentumScoutStrategy(BaselineStrategy):
         vol_ratio = (volume.iloc[-1] / vol_avg30).clip(upper=3)
         score = mom10 * (1 + 0.3 * (vol_ratio - 1))
         ranked = score.dropna().sort_values(ascending=False)
-        picks = [s for s in ranked.index if ranked[s] > 0][:_TOP_N]
+        picks = [s for s in ranked.index if ranked[s] > 0][:self._top_n]
         if not picks:
             return {}
         base_w = 1.0 / len(picks)
@@ -81,7 +91,7 @@ class MomentumScoutStrategy(BaselineStrategy):
 
         curve, n_trades = run_daily_signal_strategy(
             bars_subset, start_date, end_date, initial_capital, self._weight_fn,
-            rebalance_every_days=_REBALANCE_DAYS,
+            rebalance_every_days=self._rebalance_days,
         )
         self._num_trades = n_trades
         return curve

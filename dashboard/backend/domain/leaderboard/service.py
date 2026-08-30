@@ -1403,12 +1403,23 @@ def _rank_sort_key(entry: Dict[str, Any]) -> tuple:
     return (-float(pv), -(entry.get("cumulative_return") or 0))
 
 
+#: Hard cap on how many entries the board ever shows, regardless of how many
+#: strategies are configured or have a cached run -- fixed at the user's
+#: request so the board's size stays constant no matter how many of the
+#: configured strategies actually have data on a given day (a partial-cache
+#: state after a config change or a skip no longer changes how many rows
+#: appear, just which ones make the cut).
+MAX_LEADERBOARD_ENTRIES = 10
+
+
 def _rank_entries(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Assign official ranks by final portfolio value (higher is better)."""
+    """Assign official ranks by final portfolio value (higher is better),
+    then keep only the top MAX_LEADERBOARD_ENTRIES."""
     if not entries:
         return entries
 
     entries.sort(key=_rank_sort_key)
+    entries = entries[:MAX_LEADERBOARD_ENTRIES]
     for idx, entry in enumerate(entries):
         entry["rank"] = idx + 1
     return entries

@@ -1,9 +1,9 @@
 Overview
 ==========
 
-Agentic Trading Lab is a research and educational environment for studying trading systems powered by large language models. It is built alongside a survey of 130+ agentic trading papers and is designed to make that research accessible: customize agents, evaluate performance, and observe behavior under realistic market constraints.
+NewWorldTrading is a research and educational environment for studying trading systems powered by large language models. It is built alongside a survey of 130+ agentic trading papers and is designed to make that research accessible: customize agents, evaluate performance, and observe behavior under realistic market constraints.
 
-**Live app:** `agentic-trading-lab.vercel.app <https://agentic-trading-lab.vercel.app/>`_ · **Community:** `Discord <https://discord.gg/9HnQ6XDG98>`_
+**Live app:** `localhost:8000 <https://localhost:8000/>`_ · **Community:** `Discord <https://discord.gg/9HnQ6XDG98>`_
 
 Goals
 -----
@@ -18,7 +18,7 @@ Repository layout
 .. code-block:: text
 
    AgenticTrading/
-   ├── dashboard/       Agentic Trading Lab web application
+   ├── dashboard/       NewWorldTrading web application
    │   ├── backend/     FastAPI app, SQLite, paper trading, LLM validator
    │   ├── frontend/    Dashboard (served at http://localhost:8000 when local)
    │   ├── config/      Default run IDs and date ranges

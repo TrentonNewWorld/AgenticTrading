@@ -935,7 +935,7 @@ In `dashboard/backend/domain/chat/service.py`, replace the docstring at lines 13
 
 ```python
     """
-    Send a message to an Agentic Trading Lab agent.
+    Send a message to an NewWorldTrading agent.
 
     This function is the shared entry point for every chat surface. Note that it
     runs IN-PROCESS in whichever service calls it: the Discord bot imports it

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: agentic-trading-api
+    name: newworldtrading-api
     env: python
     region: oregon
     plan: standard

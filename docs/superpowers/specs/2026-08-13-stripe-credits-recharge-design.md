@@ -10,7 +10,7 @@ Base: `origin/main@c131f8c`
 
 ## 1. Context
 
-Agentic Trading Lab (ATL) records estimated model costs but does not currently
+NewWorldTrading (ATL) records estimated model costs but does not currently
 have a user credit balance, a payment provider integration, or a billing
 ledger. This design defines the first, deliberately narrow billing loop: a
 signed-in user buys dollar-denominated ATL Credits through Stripe Test Mode,

@@ -13,8 +13,8 @@ aggregation schema, and daily downsample policy live here.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 
@@ -25,6 +25,28 @@ from dashboard.backend.domain.backtesting.metrics import (
     calculate_sharpe,
 )
 from dashboard.backend.infrastructure.market_data.alpaca_bars import AlpacaDataLoader
+
+
+def contest_window_for_year(as_of: date) -> Tuple[date, date]:
+    """The most recently completed full year ending the day before
+    ``as_of`` -- "Competition Leaderboard" per its redefined purpose
+    (viewing-only ranking of catalog strategies over the last fully
+    completed year, auto-rolling forward as real time passes rather than a
+    hardcoded date pair).
+
+    Deliberately a fixed 365-day ``timedelta`` back from ``end``, not a
+    year-preserving ``date(as_of.year - 1, as_of.month, as_of.day)`` -- the
+    latter needs its own Feb 29 special case (no Feb 29 exists in a
+    non-leap target year), while a day-count offset is well-defined for
+    every possible ``as_of`` with no branch at all. Matches the existing
+    convention in ``strategy_testing/backtester.py``'s own window
+    (``end = now - 1 day``, ``start = end - 365 days``) and
+    ``domain/options/catalog.py``'s ``_current_window()``, so all three
+    "most recent completed year" computations in this codebase agree.
+    """
+    end = as_of - timedelta(days=1)
+    start = end - timedelta(days=365)
+    return start, end
 
 
 def fetch_hourly_bars(symbols: List[str], start_date: str, end_date: str) -> Dict[str, pd.DataFrame]:

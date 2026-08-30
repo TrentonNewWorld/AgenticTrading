@@ -57,13 +57,9 @@ def test_favicon_ico_still_serves_png():
     assert "image/png" in resp.headers.get("content-type", "")
 
 
-def test_home_news_signals_js_is_served():
-    """The Home news & signals panel script must be routed. app.html loads
-    ``home-news-signals.js``, but app.py never registered a route for it
-    (every sibling asset has one), so the request 404ed and the panel's five
-    containers rendered permanently empty since the panel shipped."""
+def test_home_news_signals_js_is_gone():
+    """home-news-signals.js painted into a permanently-hidden DOM block and
+    was removed in the 2026-08-29 dead-code cleanup -- the route must stay
+    gone rather than 500 on a missing file."""
     client = TestClient(app)
-    resp = client.get("/home-news-signals.js")
-    assert resp.status_code == 200
-    assert "text/javascript" in resp.headers.get("content-type", "")
-    assert b"newsSignalsPanel" in resp.content
+    assert client.get("/home-news-signals.js").status_code == 404

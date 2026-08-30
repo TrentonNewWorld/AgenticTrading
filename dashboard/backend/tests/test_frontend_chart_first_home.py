@@ -256,7 +256,7 @@ def test_chart_draws_the_baselines_the_rank_list_filters_out():
     """
     entries = [
         _entry("deepseek_v4_pro", "DeepSeek V4 Pro", is_model=True, curve=[10000, 12100]),
-        _entry("buy_hold_djia", "Buy & Hold", is_model=False, curve=[10000, 10550]),
+        _entry("equal_weight_djia", "Daily Equal-Weight", is_model=False, curve=[10000, 10550]),
         _entry("djia_index", "DJIA", is_model=False, curve=[10000, 10280]),
         _entry("mean_variance_djia", "Mean-Variance", is_model=False, curve=[10000, 10100]),
     ]
@@ -265,7 +265,7 @@ def test_chart_draws_the_baselines_the_rank_list_filters_out():
         ".series.map(s => s.label)"
     )
     assert "DeepSeek V4 Pro" in labels
-    assert "Buy & Hold" in labels, "the chart must carry a strategy baseline"
+    assert "Daily Equal-Weight" in labels, "the chart must carry a strategy baseline"
     assert "DJIA" in labels, "the chart must carry an index baseline"
     assert "Mean-Variance" not in labels, (
         "two reference curves, not five -- the panel's chart is 187-280px tall"
@@ -276,14 +276,14 @@ def test_chart_draws_the_baselines_the_rank_list_filters_out():
 def test_baselines_are_dashed_and_models_are_not():
     entries = [
         _entry("deepseek_v4_pro", "DeepSeek V4 Pro", is_model=True, curve=[10000, 12100]),
-        _entry("buy_hold_djia", "Buy & Hold", is_model=False, curve=[10000, 10550]),
+        _entry("equal_weight_djia", "Daily Equal-Weight", is_model=False, curve=[10000, 10550]),
     ]
     series = _run_node(
         f"homeChartSeries({json.dumps(entries)}, buildEquityCurvesFromEntries).series"
     )
     by_label = {s["label"]: s for s in series}
-    assert by_label["Buy & Hold"]["dash"], "baselines read as reference curves, not entrants"
-    assert by_label["Buy & Hold"]["isBaseline"] is True
+    assert by_label["Daily Equal-Weight"]["dash"], "baselines read as reference curves, not entrants"
+    assert by_label["Daily Equal-Weight"]["isBaseline"] is True
     assert not by_label["DeepSeek V4 Pro"]["dash"]
     assert by_label["DeepSeek V4 Pro"]["isBaseline"] is False
 
@@ -333,7 +333,7 @@ def test_a_series_with_no_usable_points_is_dropped_rather_than_drawn_flat():
     good = _entry(
         "deepseek_v4_pro", "DeepSeek V4 Pro", is_model=True, curve=[10000, 12100]
     )
-    blank = _entry("buy_hold_djia", "Buy & Hold", is_model=False, curve=[10000, 10550])
+    blank = _entry("equal_weight_djia", "Daily Equal-Weight", is_model=False, curve=[10000, 10550])
     for point in blank["equity_curve"]:
         point["timestamp"] = ""
 
@@ -390,7 +390,7 @@ def test_mixed_initial_equity_does_not_break_the_chart():
             curve=[100000, 107490], initial_equity=100000,
         ),
         _entry(
-            "buy_hold_djia", "Buy & Hold", is_model=False,
+            "equal_weight_djia", "Daily Equal-Weight", is_model=False,
             curve=[10000, 10550], initial_equity=10000,
         ),
     ]
@@ -398,12 +398,12 @@ def test_mixed_initial_equity_does_not_break_the_chart():
         f"homeChartSeries({json.dumps(entries)}, buildEquityCurvesFromEntries).series"
     )
     by_label = {s["label"]: s["values"] for s in series}
-    assert set(by_label) == {"DeepSeek V4 Pro", "Buy & Hold"}
+    assert set(by_label) == {"DeepSeek V4 Pro", "Daily Equal-Weight"}
 
     # Fractions, so the two are on one axis despite a 10x difference in base.
     # Raw dollars would put these finals 96,940 apart.
     assert by_label["DeepSeek V4 Pro"][-1] == pytest.approx(0.0749, abs=1e-4)
-    assert by_label["Buy & Hold"][-1] == pytest.approx(0.0550, abs=1e-4)
+    assert by_label["Daily Equal-Weight"][-1] == pytest.approx(0.0550, abs=1e-4)
     assert all(
         abs(v) < 1 for values in by_label.values() for v in values if v is not None
     ), "a value outside +/-100% means the series is still in dollars"
@@ -424,7 +424,7 @@ def test_home_chart_matches_the_leaderboards_percent_formula():
             curve=[100000, 103000, 107490], initial_equity=100000,
         ),
         _entry(
-            "buy_hold_djia", "Buy & Hold", is_model=False,
+            "equal_weight_djia", "Daily Equal-Weight", is_model=False,
             curve=[10000, 9800, 10550], initial_equity=10000,
         ),
     ]

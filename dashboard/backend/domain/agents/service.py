@@ -20,7 +20,11 @@ from dashboard.backend.domain.agents.repository import agent_store, _UNSET
 from dashboard.backend.domain.agents import auth_cache
 from dashboard.backend.domain.agents.credential_store import agent_credential_store
 from dashboard.backend.domain.agents.defaults import default_starter_pipeline
-from dashboard.backend.domain.agents.taxonomy import coerce_category, normalize_category
+from dashboard.backend.domain.agents.taxonomy import (
+    coerce_asset_class,
+    coerce_category,
+    normalize_category,
+)
 from dashboard.backend.domain.agents.runtime import (
     DEFAULT_RUNTIME_TYPE,
     PIPELINE_RUNTIME_TYPE,
@@ -382,6 +386,7 @@ class AgentService:
         backtest_allocation: Optional[float] = None,
         seed_default_pipeline: bool = True,
         category: Optional[str] = None,
+        asset_class: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Register an agent.
 
@@ -399,6 +404,7 @@ class AgentService:
         runtime_type = normalize_runtime_type(runtime_type)
         runtime_config = normalize_runtime_config(runtime_type, runtime_config or {})
         category = coerce_category(category)  # see update_agent for why
+        asset_class = coerce_asset_class(asset_class)
         if cash_allocation is None:
             cash_allocation = float(DEFAULT_AGENT_CASH_ALLOCATION)
         agent = self.agents.create_agent(
@@ -413,6 +419,7 @@ class AgentService:
             cash_allocation=cash_allocation,
             backtest_allocation=backtest_allocation,
             category=category,
+            asset_class=asset_class,
         )
         if (
             seed_default_pipeline
@@ -440,6 +447,7 @@ class AgentService:
         category: Optional[str],
         pipeline: Optional[List[Dict[str, Any]]],
         backtest_allocation: Optional[float] = None,
+        asset_class: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create a built-in agent and, if the source carried its own pipeline,
         write it in -- the create-then-copy-the-pipeline-then-enrich tail shared
@@ -476,6 +484,7 @@ class AgentService:
                 runtime_type == PIPELINE_RUNTIME_TYPE and not has_own_pipeline
             ),
             category=category,
+            asset_class=asset_class,
         )
         if has_own_pipeline:
             agent = self.agents.update_agent(agent["agent_id"], pipeline=pipeline) or agent
@@ -524,6 +533,11 @@ class AgentService:
             pipeline=template.get("pipeline"),
             # A catalog template has no backtest allocation of its own.
             backtest_allocation=None,
+            # coerce_asset_class (not normalize) is fine here, unlike category:
+            # an unrecognized/absent value falls back to "stocks", which is
+            # also this field's own default -- there is no separate "unshelve"
+            # state to preserve the way category has one.
+            asset_class=coerce_asset_class(template.get("asset_class")),
         )
 
     def duplicate_agent(
@@ -568,6 +582,7 @@ class AgentService:
             # Lenient, matching clone_marketplace_template: a stored legacy
             # category must stamp None rather than reject the duplicate.
             category=normalize_category(source.get("category")),
+            asset_class=coerce_asset_class(source.get("asset_class")),
             pipeline=source.get("pipeline"),
             # Copied (unlike cash_allocation -- see _create_builtin_copy's
             # docstring) so the two agents' equity curves start from the same

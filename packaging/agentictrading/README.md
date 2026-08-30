@@ -1,14 +1,14 @@
 # agentictrading
 
-**Lightweight Python client for [Agentic Trading Lab](https://agentic-trading-lab.vercel.app/)** — an open-source experimental playground for LLM-powered trading agents.
+**Lightweight Python client for [NewWorldTrading](https://localhost:8000/)** — an open-source experimental playground for LLM-powered trading agents.
 
-Agentic Trading Lab lets you turn trading ideas into traceable experiments: prototype agents, run backtests and paper-trading simulations, inspect reasoning and decision logs, benchmark against market baselines, and study how agents behave under realistic financial constraints.
+NewWorldTrading lets you turn trading ideas into traceable experiments: prototype agents, run backtests and paper-trading simulations, inspect reasoning and decision logs, benchmark against market baselines, and study how agents behave under realistic financial constraints.
 
-This package provides a small client (standard library only) for the Agentic Trading Lab REST API, so you can drive backtests and read results directly from Python. The install is **dependency-free on macOS and Linux**; on Windows it also pulls the `tzdata` data wheel, because `zoneinfo` has no system IANA time-zone database there.
+This package provides a small client (standard library only) for the NewWorldTrading REST API, so you can drive backtests and read results directly from Python. The install is **dependency-free on macOS and Linux**; on Windows it also pulls the `tzdata` data wheel, because `zoneinfo` has no system IANA time-zone database there.
 
-- **Live demo:** https://agentic-trading-lab.vercel.app/
+- **Live demo:** https://localhost:8000/
 - **Docs:** https://finagent-orchestration.readthedocs.io/
-- **Source:** https://github.com/Allan-Feng/AgenticTrading
+- **Source:** https://github.com/TrentonNewWorld/AgenticTrading
 
 > **Status:** early release (`0.2.0`). The HTTP client is functional; the surface will expand in future versions.
 
@@ -22,7 +22,7 @@ pip install agentictrading
 
 For the versioned Agent–Environment Protocol (runs, steps, decisions), use
 `ATLClient`. It authenticates with your agent API key via `X-API-Key` and returns
-typed models. See [`docs/api/python-sdk-quickstart.md`](https://github.com/Allan-Feng/AgenticTrading/blob/main/docs/api/python-sdk-quickstart.md).
+typed models. See [`docs/api/python-sdk-quickstart.md`](https://github.com/TrentonNewWorld/AgenticTrading/blob/main/docs/api/python-sdk-quickstart.md).
 
 ```python
 import os
@@ -136,4 +136,4 @@ agentictrading ticker AAPL,NVDA --api https://... # latest quotes
 
 ## License
 
-OpenMDW-1.0 — see [LICENSE](LICENSE). Copyright (c) SecureFinAI Lab.
+OpenMDW-1.0 — see [LICENSE](LICENSE).

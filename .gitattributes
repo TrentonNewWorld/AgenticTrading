@@ -27,3 +27,4 @@
 *.gz      binary
 *.whl     binary
 .DS_Store binary
+*.sh text eol=lf

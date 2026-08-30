@@ -203,7 +203,9 @@ def test_footer_documentation_points_at_the_docs_site():
     publishes, so the link does not depend on a redirect.
     """
     body = _FOOTER.read_text(encoding="utf-8")
-    assert 'href="https://finagent-orchestration.readthedocs.io/en/latest/"' in body
+    # The upstream readthedocs project is not ours; the 2026-08-29 de-branding
+    # removed the footer link to it. Pin the removal.
+    assert "finagent-orchestration.readthedocs.io" not in body
 
 
 def test_footer_external_link_is_safe():

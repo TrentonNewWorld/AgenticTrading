@@ -71,7 +71,7 @@ export const MODEL_COLOR_PALETTE = [
 
 /** Mirrors the relevant rows of `LEADERBOARD_STYLES`, rekeyed onto entry ids. */
 export const BASELINE_STYLES: Record<string, { color: string; dash: string }> = {
-  buy_hold_djia: { color: '#38BDF8', dash: '10 6' },
+  equal_weight_djia: { color: '#4ADE80', dash: '10 6' },
   djia_index: { color: '#94A3B8', dash: '8 4 2 4' },
 };
 

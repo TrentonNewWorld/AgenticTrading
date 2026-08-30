@@ -15,6 +15,19 @@ from typing import List, Dict, Optional, Any
 from dashboard.backend.paths import DEFAULT_DB_PATH, REPO_ROOT
 from dashboard.backend.db_url import describe_database_url
 
+# On Windows, a cp1252 console kills the process at the first emoji print
+# (startup/migration logging is full of them). Reconfiguring the streams here
+# makes UTF-8 output work without the PYTHONUTF8=1 env var the launchers set;
+# on Linux/macOS this is a no-op. errors="replace" so an exotic console can
+# never crash the app over a log line.
+import sys as _sys
+if _sys.platform == "win32":
+    for _stream in (_sys.stdout, _sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError):
+            pass
+
 # Use persistent disk path if set (Render), otherwise local dashboard storage path.
 # A relative DATABASE_PATH (the .env.example default) is resolved against the
 # repo root, not the current process's cwd -- backtest runs spawn a subprocess
@@ -380,6 +393,22 @@ class BacktestDatabase:
                     conn.commit()
                     print(f"✅ Added {col_name} to agent_runs")
             
+            # Discriminates which dashboard (asset class) a run belongs to, so
+            # Options/Futures/Forex/Crypto runs can share this same table
+            # without colliding with Stocks' — see dashboard-plan Sub-phase 0.
+            # Defaulted rather than left NULL: every pre-existing row is a
+            # Stocks run by definition (no other dashboard existed when it was
+            # written), and downstream ranking/lookup code filters on this
+            # column, so a NULL would silently drop old runs off every board.
+            if 'asset_class' not in columns:
+                print("🔄 Migrating: Adding asset_class to agent_runs...")
+                cursor.execute("""
+                    ALTER TABLE agent_runs ADD COLUMN asset_class TEXT DEFAULT 'stocks'
+                """)
+                cursor.execute("UPDATE agent_runs SET asset_class = 'stocks' WHERE asset_class IS NULL")
+                conn.commit()
+                print("✅ Added asset_class to agent_runs")
+
             if 'session_id' in columns and 'llm_model' in columns:
                 print("✅ Schema up-to-date (session_id, llm_model exist)")
 
@@ -644,11 +673,14 @@ class BacktestDatabase:
                    input_tokens: int = 0,
                    output_tokens: int = 0,
                    est_cost_usd: float = 0.0,
-                   metadata: Optional[Dict[str, Any]] = None) -> None:
+                   metadata: Optional[Dict[str, Any]] = None,
+                   asset_class: str = "stocks") -> None:
         """Insert a new backtest run with session_id, LLM model and token-cost tracking.
 
         ``metadata`` is an optional JSON config snapshot (e.g. the effective
-        LLM_MAX_OUTPUT_TOKENS in force during the run)."""
+        LLM_MAX_OUTPUT_TOKENS in force during the run). ``asset_class``
+        discriminates which dashboard (stocks/options/futures/forex/crypto)
+        this run belongs to."""
         conn = self._get_connection()
         cursor = conn.cursor()
 
@@ -657,13 +689,15 @@ class BacktestDatabase:
             (run_id, session_id, agent_name, mode, start_date, end_date,
              initial_equity, final_equity, total_return, sharpe_ratio,
              max_drawdown, num_trades, llm_model,
-             llm_calls, input_tokens, output_tokens, est_cost_usd, metadata)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             llm_calls, input_tokens, output_tokens, est_cost_usd, metadata,
+             asset_class)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (run_id, session_id, agent_name, mode, start_date, end_date,
               initial_equity, final_equity, total_return, sharpe_ratio,
               max_drawdown, num_trades, llm_model,
               llm_calls, input_tokens, output_tokens, est_cost_usd,
-              json.dumps(metadata) if metadata is not None else None))
+              json.dumps(metadata) if metadata is not None else None,
+              asset_class))
 
         conn.commit()
         conn.close()

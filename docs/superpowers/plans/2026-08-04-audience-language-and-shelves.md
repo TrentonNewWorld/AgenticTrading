@@ -14,7 +14,7 @@
 - Register: a private banker explaining a capability to a longtime client. Short declarative sentences, concrete nouns. The test for every sentence: *would a private banker say this out loud about the client's money?*
 - Finance vocabulary is trust **currency** (keep: backtest, Sharpe ratio, max drawdown, long-only, paper trading w/ gloss, Magnificent 7). Technology vocabulary is trust **cost**.
 - Anti-flippancy: never describe trading with *game, play, toy, fun, magic, just, only takes, brains*. Speed claims must name the rigor behind them. Canonical counterexample: "Here it costs one sentence and a few minutes."
-- Glossary (banned → replacement): LLM→"AI model"/"AI-powered" (sole exception: the category name "Prompting LLMs" + its description, verbatim); prompt (noun)→"trading instruction"/"Instruction"; bare "model"→"AI model"; frontier model→"leading AI model"; API key→"access key" in app UI (developer bridge once: "(the API key in the SDK and docs)"); session→drop or "sign-in"; pipeline→"multi-step strategy"; token cost→"AI cost"; deterministic→"repeatable"; managed provider/runtime→"hosted and managed by Agentic Trading Lab"; deploy job→describe the outcome; sleeve→plain sentence; brains→"AI models"; localhost→"a desktop computer"; bare Discord→"our Discord community" on first use per surface.
+- Glossary (banned → replacement): LLM→"AI model"/"AI-powered" (sole exception: the category name "Prompting LLMs" + its description, verbatim); prompt (noun)→"trading instruction"/"Instruction"; bare "model"→"AI model"; frontier model→"leading AI model"; API key→"access key" in app UI (developer bridge once: "(the API key in the SDK and docs)"); session→drop or "sign-in"; pipeline→"multi-step strategy"; token cost→"AI cost"; deterministic→"repeatable"; managed provider/runtime→"hosted and managed by NewWorldTrading"; deploy job→describe the outcome; sleeve→plain sentence; brains→"AI models"; localhost→"a desktop computer"; bare Discord→"our Discord community" on first use per surface.
 - "agent" is KEPT (it's the brand); gloss once per surface: "an AI trading assistant that follows your written instruction."
 - Canonical no-real-money sentence (never shorten — Robinhood live trading exists as opt-in; never say "real-time" — bars are hourly): **"Every test here uses simulated money. Real money is involved only if you explicitly connect a brokerage account and turn on live trading."**
 
@@ -37,7 +37,7 @@
 
 ## Owner decisions (RESOLVED 2026-08-04)
 
-1. **RESOLVED — footer identity:** the operating entity is **SecureFinAI Lab**; use a standard open-source footer (exact copy in Task A3; the contact path is the GitHub repository link). All three personas ranked "who runs this?" the #1 trust-killer. (Privacy/terms links remain tracked as issue #278.)
+1. **RESOLVED — footer identity:** the operating entity is **the upstream lab**; use a standard open-source footer (exact copy in Task A3; the contact path is the GitHub repository link). All three personas ranked "who runs this?" the #1 trust-killer. (Privacy/terms links remain tracked as issue #278.)
 2. **RESOLVED — AI Hedge Fund attribution:** keep "based on the open-source AI Hedge Fund project by virattt" in the card description (plan default confirmed).
 3. **RESOLVED — "Prompting LLMs"** ships verbatim. Recorded tension: the 70+ persona still stumbles on "LLMs"; mitigation is the acronym-free helper copy under the section, and an optional later tooltip gloss.
 4. **DEFERRED — optional layout follow-ups (not in this plan):** replacing the landing hero's `agent-playground.exe` terminal chrome with a plain "conversation" card, and demoting the "Join Discord" CTA below "Get Started" — both flagged by personas, both layout (not copy) changes; revisit after v1.
@@ -91,10 +91,10 @@ Copy table (every row is exact; current text verified against source 2026-08-04)
 
 **Files:** Modify `dashboard/landing/src/components/home/FooterCTA.tsx:25`; Test: extend `test_landing_copy_register.py`.
 
-Current: `"© 2026 Agentic Trading Lab. All rights reserved."`
-Proposed: `"© 2026 SecureFinAI Lab · Agentic Trading Lab is an open-source research platform by SecureFinAI Lab, organizer of the SecureFinAI Contest 2026 · GitHub"` — where "GitHub" links to the repository (the standard open-source contact path). Match the surrounding footer's existing link markup for the GitHub anchor.
+Current: `"© 2026 NewWorldTrading. All rights reserved."`
+Proposed: `"© 2026 the upstream lab · NewWorldTrading is an open-source research platform by the upstream lab, organizer of the the old contest · GitHub"` — where "GitHub" links to the repository (the standard open-source contact path). Match the surrounding footer's existing link markup for the GitHub anchor.
 
-- [ ] **Step 1:** Failing guard: shipped bundle contains "© 2026 SecureFinAI Lab" and "open-source research platform". **Step 2:** FAIL → edit source → rebuild per A1 Step 4 → guards + bundle integrity PASS. **Step 3: Commit** `ux(landing): footer names SecureFinAI Lab as the operating entity`.
+- [ ] **Step 1:** Failing guard: shipped bundle contains "© 2026 the upstream lab" and "open-source research platform". **Step 2:** FAIL → edit source → rebuild per A1 Step 4 → guards + bundle integrity PASS. **Step 3: Commit** `ux(landing): footer names the upstream lab as the operating entity`.
 
 ---
 
@@ -257,7 +257,7 @@ Edits to existing templates:
 - `balanced-starter`: `category` `"Foundation"` → `"prompting_llms"`; description "A simple foundation agent that…" → "A simple starter agent that diversifies across strong stocks, buys dips, and takes profits after run-ups."
 - `momentum-scout`: `category` → `"prompting_llms"` (description already clean).
 - `pipeline-analyst`: `category` `"Advanced"` → `"us_stocks"`; description "A three-step pipeline: …" → "A three-step strategy: gather market facts, convert them into signals, then produce executable orders."; tags `["pipeline", "multi-step"]` → `["multi-step strategy", "official template"]`.
-- `ai-hedge-fund`: `category` `"Hosted"` → `"us_stocks"`; description → "A hosted panel of AI analysts that weigh in on every trade, run through Agentic Trading Lab's long-only backtest engine. Based on the open-source AI Hedge Fund project by virattt." (attribution KEPT — Owner decision 2); tags `["multi-agent", "fundamentals", "first-party"]` → `["analyst team", "fundamentals", "official template"]`; author stays "virattt / Agentic Trading Lab".
+- `ai-hedge-fund`: `category` `"Hosted"` → `"us_stocks"`; description → "A hosted panel of AI analysts that weigh in on every trade, run through NewWorldTrading's long-only backtest engine. Based on the open-source AI Hedge Fund project by virattt." (attribution KEPT — Owner decision 2); tags `["multi-agent", "fundamentals", "first-party"]` → `["analyst team", "fundamentals", "official template"]`; author stays "virattt / NewWorldTrading".
 - `balanced-starter`/`momentum-scout` tags: `["starter", "diversified"]` / `["momentum", "trend"]` — keep (already plain).
 
 New templates (same shape as `balanced-starter`; `presetKey: "simple_instruction"`, same `outputFormat` string verbatim):
@@ -270,7 +270,7 @@ New templates (same shape as `balanced-starter`; `presetKey: "simple_instruction
   "description": "Buy and hold a handful of the strongest Dow companies, selling only when a position deteriorates badly. Mirrors the buy-and-hold benchmark on our leaderboard.",
   "category": "us_stocks",
   "tags": ["buy and hold", "blue chips"],
-  "author": "Agentic Trading Lab",
+  "author": "NewWorldTrading",
   "pipeline": [{
     "id": "sub_blue_chip_steady",
     "presetKey": "simple_instruction",
@@ -286,7 +286,7 @@ New templates (same shape as `balanced-starter`; `presetKey: "simple_instruction
   "description": "Spread the money evenly across all available Dow stocks and keep the split even. Mirrors the equal-weight benchmark on our leaderboard.",
   "category": "us_stocks",
   "tags": ["equal weight", "diversified"],
-  "author": "Agentic Trading Lab",
+  "author": "NewWorldTrading",
   "pipeline": [{
     "id": "sub_even_split_dow",
     "presetKey": "simple_instruction",
@@ -302,7 +302,7 @@ New templates (same shape as `balanced-starter`; `presetKey: "simple_instruction
   "description": "A patient strategy for Chinese A-shares, built for that market's rule that shares bought today cannot be sold until the next trading day.",
   "category": "cn_ashares",
   "tags": ["a-shares", "patient"],
-  "author": "Agentic Trading Lab",
+  "author": "NewWorldTrading",
   "pipeline": [{
     "id": "sub_ashare_steady",
     "presetKey": "simple_instruction",
@@ -390,15 +390,15 @@ Rename `'My Foundation Agent'` → `'My Trading Agent'` (`app.js:1566`) — disp
 | app.html addAgent option | "Get an API key and session for your backtest client" | "For developers: get an access key to connect your own program" |
 | app.html createBuiltinAgent subtitle | "A hosted agent powered by a frontier model. It appears on your agent cards here and becomes selectable from the Agentic Trading Discord server with `/agent`." | "A hosted agent powered by a leading AI model. It appears on your agent cards here and can also be used from our Discord community with `/agent`." |
 | app.html builtin placeholder | "What is this agent's edge?" | "What makes this agent different?" |
-| app.html agentCredentials subtitle | "Your agent is ready. Use the API key below to connect your trading client to Agentic Trading Lab." | "Your agent is ready. Use the access key below to connect your own program to Agentic Trading Lab. (This is the API key in the SDK and docs.)" |
+| app.html agentCredentials subtitle | "Your agent is ready. Use the API key below to connect your trading client to NewWorldTrading." | "Your agent is ready. Use the access key below to connect your own program to NewWorldTrading. (This is the API key in the SDK and docs.)" |
 | app.html credentials label | "API key" | "Access key" |
 | app.js:960 | "New API key" | "New access key" |
 | app.js:1257 | "Create a new API key for "X"? The current key will stop working immediately." | "Create a new access key for "X"? The current key stops working right away — any connected program must switch to the new key." |
 | app.js:2020–2021 | "New API key created" / "…Update your client — the old key no longer works." | "New access key created" / "…Update your program — the old key no longer works." |
-| app.html agentEditor label | "Managed provider / model" ("Managed by Agentic Trading Lab") | "Hosted AI model" ("Managed for you by Agentic Trading Lab") |
+| app.html agentEditor label | "Managed provider / model" ("Managed by NewWorldTrading") | "Hosted AI model" ("Managed for you by NewWorldTrading") |
 | ★ app.html agentEditor capital note | "Reserved from My Portfolio. Real sleeve." | "Reserved from your My Portfolio balance while this agent paper-trades. Backtests use a separate simulated amount and never touch it." (My Portfolio is the simulated $10k ledger — never say "real money" here) |
 | app.html agentEditor replace note | "This agent currently uses a custom multi-step pipeline. Saving this instruction replaces it." | "This agent currently uses a custom multi-step strategy. Saving this instruction replaces it." |
-| app.html aihedge title + text | "AI Hedge Fund analyst committee" / "Choose the upstream analysts that compose this agent's strategy. The hosted OpenRouter model and runtime controls are managed by Agentic Trading Lab." | "AI Hedge Fund analyst panel" / "Choose the analysts that shape this agent's strategy. The AI model and its settings are hosted and managed by Agentic Trading Lab." |
+| app.html aihedge title + text | "AI Hedge Fund analyst committee" / "Choose the upstream analysts that compose this agent's strategy. The hosted OpenRouter model and runtime controls are managed by NewWorldTrading." | "AI Hedge Fund analyst panel" / "Choose the analysts that shape this agent's strategy. The AI model and its settings are hosted and managed by NewWorldTrading." |
 | app.html label | "Financial Datasets API key" | "Financial Datasets access key (from financialdatasets.ai)" |
 | app.html credential note | "Encrypted in credential storage. The value is never returned to this browser after saving." | "Encrypted and stored securely. For your protection, it is never shown again after you save." |
 | app.html backtest hint | "Multi-step agent pipelines can take several minutes (timeout: 10 min)." | "Multi-step strategies can take several minutes (limit: 10 minutes)." |
@@ -410,7 +410,7 @@ Rename `'My Foundation Agent'` → `'My Trading Agent'` (`app.js:1566`) — disp
 | app.html backtest config row | "Decision source" | "Decision method" |
 | app.html market data notice | "vn.py simulated bars · deterministic · no LLM calls" | "Simulated practice data — repeatable results, rule-based decisions only (no AI)" |
 | app.html Sharpe tooltip | "Annualized for hourly data (sqrt(252*6.5))" | "Risk-adjusted return, annualized from hourly results." |
-| app.html Competition contest header | "SecureFinAI Contest 2026" (relationship to ATL unstated) | add one line beneath the contest title: "Organized by SecureFinAI Lab with Agentic Trading Lab." |
+| app.html Competition contest header | "the old contest" (relationship to ATL unstated) | add one line beneath the contest title: "Organized by the upstream lab with NewWorldTrading." |
 | ★ app.html Competition About | "…a paper-trading competition for LLM-powered agents." | "…a paper-trading competition for AI-powered agents." |
 | ★ app.html Competition About | "LLM entries are added when the daily deploy job runs." | "New AI entries appear when the leaderboard next updates." (the daily job is unwired — issue #145; never say "automatically each trading day") |
 | app.html Competition About | "…comparing provided LLM models, baseline strategies, and market indices." | "…comparing leading AI models, baseline strategies, and market indices." |

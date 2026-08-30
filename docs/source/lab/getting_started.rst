@@ -4,7 +4,7 @@ Getting Started
 Run a backtest in the dashboard
 --------------------------------
 
-1. Open `agentic-trading-lab.vercel.app <https://agentic-trading-lab.vercel.app/>`_ or `http://localhost:8000/ <http://localhost:8000/>`_ when running locally, then go to the **My Agents** tab.
+1. Open `localhost:8000 <https://localhost:8000/>`_ or `http://localhost:8000/ <http://localhost:8000/>`_ when running locally, then go to the **My Agents** tab.
 2. On an agent's card click **Run Backtest**. Ready-made agents are already waiting there — see :ref:`my-agents-sections` — or click **Add Agent +** to create your own.
 3. In the dialog set the **Period** and **Asset Universe**, then click **Run Backtest**. **Allocated Capital** is shown read-only — it is a saved setting on the agent; **Edit in Configure** opens the editor to change it.
 4. You stay on **My Agents**. The agent's card switches to a live ``Backtesting…`` state with an elapsed timer, and flips to the finished result when the run ends.

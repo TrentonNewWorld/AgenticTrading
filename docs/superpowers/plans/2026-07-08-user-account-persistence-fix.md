@@ -521,7 +521,7 @@ git commit -m "docs: document USERS_DATABASE_URL and the account-persistence inc
 
 ### Task 5: Provision Neon and deploy — MANUAL, human only
 
-Not eligible for autonomous/subagent execution: it needs a Neon account and Render dashboard secret entry, plus a merge from Allan (per `[[render-prod-architecture]]`, `FlyM1ss` has no push access to `Allan-Feng/AgenticTrading`, and Render deploys from that fork's `main`, not `Open-Finance-Lab/AgenticTrading` `main`).
+Not eligible for autonomous/subagent execution: it needs a Neon account and Render dashboard secret entry, plus a merge from Allan (per `[[render-prod-architecture]]`, `FlyM1ss` has no push access to `TrentonNewWorld/AgenticTrading`, and Render deploys from that fork's `main`, not `TrentonNewWorld/AgenticTrading` `main`).
 
 **Files:** none — this is an operational task.
 
@@ -533,13 +533,13 @@ Sign up / log in at neon.tech (free, no credit card). Create a new project (any 
 
 In the Neon project dashboard, copy the **pooled** connection string (the one with `-pooler` in the hostname) — this is what `USERS_DATABASE_URL` should be set to, per the Global Constraints note about avoiding client-side pooling.
 
-- [ ] **Step 3: Open a PR with Tasks 1-4 and get it merged to `Open-Finance-Lab/AgenticTrading` main**
+- [ ] **Step 3: Open a PR with Tasks 1-4 and get it merged to `TrentonNewWorld/AgenticTrading` main**
 
 Standard PR flow. Nothing in this PR touches prod behavior yet (`USERS_DATABASE_URL` is unset everywhere until Step 4), so it's safe to merge on its own.
 
 - [ ] **Step 4: Cross-fork PR to Allan, get it merged, confirm deploy**
 
-Open `Open-Finance-Lab:main → Allan-Feng:main` (per existing process in `[[render-prod-architecture]]`). Once Allan merges, Render auto-deploys — but this deploy alone doesn't turn on Postgres yet, since the env var isn't set.
+Open `the upstream org:main → TrentonNewWorld:main` (per existing process in `[[render-prod-architecture]]`). Once Allan merges, Render auto-deploys — but this deploy alone doesn't turn on Postgres yet, since the env var isn't set.
 
 - [ ] **Step 5: Set `USERS_DATABASE_URL` in the Render dashboard**
 

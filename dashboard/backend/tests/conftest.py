@@ -117,6 +117,23 @@ os.environ.pop("ATL_STRIPE_TEST_BILLING_ENABLED", None)
 os.environ.pop("STRIPE_SECRET_KEY", None)
 os.environ.pop("STRIPE_WEBHOOK_SECRET", None)
 
+# Real-money execution gates. A developer's dashboard/.env may legitimately
+# arm these for their own running server (an operator's standing choice to
+# keep live trading on), but app.py's unconditional load_dotenv() at import
+# time would otherwise leak that choice into every test process, making
+# e.g. the "promotion is refused without live execute" tests see live
+# execution as armed and get a real 200 where they expect a 400.
+#
+# Set to "" rather than popped: load_dotenv() defaults to override=False,
+# which only skips a key ALREADY present in os.environ -- a popped (absent)
+# key still gets filled in from dashboard/.env's real value the moment
+# app.py (or anything importing it) runs its own load_dotenv() call later.
+# An explicit empty string counts as "already set," so the file's value
+# never lands, and the empty string still reads as falsy everywhere this
+# flag is checked (`.strip().lower() in {"1", "true", "yes", "on"}`).
+os.environ["ALPACA_LIVE_EXECUTE"] = ""
+os.environ["MANUAL10_ALLOW_REAL_MONEY"] = ""
+
 # Daily Leaderboard knobs. LEADERBOARD_DAILY_AUTO_DEPLOY is the flag that lets a
 # public GET of ?period=daily kick off deploy_model_run for every competition
 # entry -- real, billable LLM calls. A developer with it exported would have the
@@ -222,7 +239,6 @@ def _reset_shared_scale_state(monkeypatch):
     from dashboard.backend.domain.agents import auth_cache
     from dashboard.backend import db_pool
     from dashboard.backend.api import auth as auth_api
-    from dashboard.backend.api.routers import credits as credits_router
     from dashboard.backend.api.routers import leaderboard as leaderboard_router
     from dashboard.backend.api.routers import backtests as backtests_router
 
@@ -241,10 +257,6 @@ def _reset_shared_scale_state(monkeypatch):
     # refresh budget would otherwise be consumed cumulatively across the suite
     # and later tests would start seeing 429s.
     leaderboard_router._daily_refresh_rate_limiter.reset()
-    credits_router._CHECKOUT_LIMITER.reset()
-    credits_router._ORDER_POLL_LIMITER.reset()
-    credits_router._ADMIN_REFUND_LIMITER.reset()
-    credits_router._WEBHOOK_LIMITER.reset()
     # Dashboard backtest slots are process-global. Tests mock the worker so
     # _finalize_slot never runs; without a reset the 20-slot process cap
     # refuses later /backtest/run calls with success:false.

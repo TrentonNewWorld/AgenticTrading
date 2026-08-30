@@ -24,6 +24,14 @@ _REBALANCE_DAYS = 21
 class EvenSplitDowStrategy(BaselineStrategy):
     key = "even_split_dow"
 
+    PARAM_SCHEMA = {
+        "rebalance_days": {"label": "Rebalance every (trading days)", "type": "int", "default": _REBALANCE_DAYS, "min": 1, "max": 63},
+    }
+
+    def __init__(self, config):
+        super().__init__(config)
+        self._rebalance_days = self.config.get("rebalance_days", _REBALANCE_DAYS)
+
     def required_symbols(self) -> List[str]:
         symbols = self.config.get("symbols")
         return list(symbols) if symbols else list(DJIA_30)
@@ -51,7 +59,7 @@ class EvenSplitDowStrategy(BaselineStrategy):
 
         curve, n_trades = run_daily_signal_strategy(
             bars_subset, start_date, end_date, initial_capital, self._weight_fn,
-            rebalance_every_days=_REBALANCE_DAYS,
+            rebalance_every_days=self._rebalance_days,
         )
         self._num_trades = n_trades
         return curve

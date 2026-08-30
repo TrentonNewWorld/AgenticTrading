@@ -3,14 +3,10 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
-// Standalone build config. This app was exported from a Replit pnpm monorepo;
-// it has since been de-monorepo'd so `npm install && npm run build` works on
-// its own (see README). Two changes vs the original export:
-//   * PORT / BASE_PATH are optional — they default to sane local/production
-//     values instead of throwing, so a bare `npm run build` succeeds.
-//   * The Replit-only vite plugins (cartographer, dev-banner,
-//     runtime-error-modal) were dropped; they only ran inside Replit and their
-//     versions came from the (now-absent) workspace catalog.
+// Standalone build config: `npm install && npm run build` works on its own
+// (see README). PORT / BASE_PATH are optional — they default to sane
+// local/production values instead of throwing, so a bare `npm run build`
+// succeeds.
 const port = Number(process.env.PORT ?? '5173');
 const basePath = process.env.BASE_PATH ?? '/';
 

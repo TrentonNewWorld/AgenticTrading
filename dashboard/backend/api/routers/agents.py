@@ -7,9 +7,10 @@ exception messages, ownership/auth behavior, and ``AgentService`` calls are
 unchanged; only the module location moved.
 """
 
+import threading
 from typing import Annotated, Any, Dict, List, Literal, Optional
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, File, Form, Header, HTTPException, Request, UploadFile
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -26,7 +27,12 @@ from dashboard.backend.domain.backtesting.constants import (
     MIN_BACKTEST_INITIAL_CAPITAL,
 )
 from dashboard.backend.domain.agents.repository import _UNSET
-from dashboard.backend.domain.agents.taxonomy import AgentCategory, coerce_category
+from dashboard.backend.domain.agents.taxonomy import (
+    AgentCategory,
+    AssetClass,
+    coerce_asset_class,
+    coerce_category,
+)
 from dashboard.backend.domain.agents.credential_store import (
     FINANCIAL_DATASETS_CREDENTIAL,
     agent_credential_store,
@@ -40,6 +46,22 @@ from dashboard.backend.domain.agents.service import (
     agent_service,
 )
 from dashboard.backend.domain.agents import marketplace as marketplace_catalog
+from dashboard.backend.domain.leaderboard import catalog as strategy_catalog
+from dashboard.backend.domain.crypto import catalog as crypto_catalog
+from dashboard.backend.domain.futures import catalog as futures_catalog
+from dashboard.backend.domain.forex import catalog as forex_catalog
+from dashboard.backend.domain.options import catalog as options_catalog
+
+# asset_class -> the catalog module whose convert_agent_to_strategy() the
+# /convert-to-strategy route below dispatches to. "prediction" is deliberately
+# absent: no catalog module exists yet (Group C).
+_ASSET_CLASS_CATALOGS = {
+    "stocks": strategy_catalog,
+    "crypto": crypto_catalog,
+    "futures": futures_catalog,
+    "forex": forex_catalog,
+    "options": options_catalog,
+}
 from dashboard.backend.domain.agents.runtime import (
     AI_HEDGE_FUND_RUNTIME_TYPE,
     normalize_runtime_config,
@@ -67,6 +89,18 @@ _CATEGORY_DESCRIPTION = (
     "folded; unknown values are rejected with 422."
 )
 
+# Unlike CategoryField, empty/omitted coerces to "stocks" rather than raising
+# or clearing -- every agent has exactly one asset class, immutable after
+# creation (no asset_class field on UpdateAgentBody: changing what an agent
+# trades mid-life would strand its pipeline's decision schema and paper
+# wallet against the wrong market).
+AssetClassField = Annotated[AssetClass, BeforeValidator(coerce_asset_class)]
+
+_ASSET_CLASS_DESCRIPTION = (
+    "What this agent trades. Defaults to \"stocks\" and cannot be changed "
+    "after creation."
+)
+
 
 class CreateAgentBody(BaseModel):
     name: str = Field(min_length=1, max_length=100)
@@ -86,6 +120,7 @@ class CreateAgentBody(BaseModel):
         le=MAX_BACKTEST_INITIAL_CAPITAL,
     )
     category: CategoryField = Field(default=None, description=_CATEGORY_DESCRIPTION)
+    asset_class: AssetClassField = Field(default="stocks", description=_ASSET_CLASS_DESCRIPTION)
 
 
 class PipelineStep(BaseModel):
@@ -197,6 +232,7 @@ def create_agent(
         cash_allocation=cash,
         backtest_allocation=body.backtest_allocation,
         category=body.category,
+        asset_class=body.asset_class,
     )
     if ctx["user_id"]:
         portfolio_service.get_or_create_portfolio(ctx["user_id"])
@@ -208,6 +244,85 @@ def create_agent(
             f"python3 external_agent_client.py --api {request.base_url.scheme}://{request.base_url.netloc} "
             f"--api-key <api_key> --start 2026-04-15 --end 2026-04-16"
         ),
+    }
+
+
+@router.post("/upload")
+def upload_agent(
+    request: Request,
+    file: UploadFile = File(...),
+    name: Optional[str] = Form(default=None),
+    asset_class: str = Form(default="stocks"),
+    authorization: Optional[str] = Header(default=None),
+):
+    """Create a built-in agent from an uploaded file instead of typing a
+    trading instruction by hand -- the file can be a clear instruction
+    already, a strategy described loosely, or code; an LLM reads it and
+    extracts a plain-language instruction (see
+    domain/strategy_extraction.py::extract_agent_prompt). Unlike
+    ``POST /v1/manual10/strategies/upload`` and its per-asset-class siblings,
+    there is no separate pending/approve step: the created agent starts
+    unactivated (nothing here runs unattended -- a human still has to press
+    Run Backtest), so there is nothing further to gate before it can be
+    inspected and edited from Configure like any other agent.
+
+    Deliberately plain ``def``, not ``async def``: this module is pinned in
+    test_event_loop_threadpool.py's ``BLOCKING_IO_ROUTER_MODULES`` because
+    every handler in it does synchronous I/O (here: the LLM extraction call)
+    with no ``await`` in sight, so FastAPI must run it in the threadpool, not
+    the event loop -- an ``async def`` version would freeze every concurrent
+    request for as long as the LLM call takes. ``file.file.read()`` below is
+    ``UploadFile``'s synchronous read (the underlying ``SpooledTemporaryFile``),
+    not the usual awaited ``file.read()``, for the same reason."""
+    from dashboard.backend.domain.agents.defaults import (
+        SIMPLE_INSTRUCTION_LABEL, SIMPLE_INSTRUCTION_OUTPUT_FORMAT, SIMPLE_INSTRUCTION_PRESET_KEY,
+    )
+    from dashboard.backend.domain.agents.taxonomy import coerce_asset_class
+    from dashboard.backend.domain.strategy_extraction import extract_agent_prompt
+
+    ctx = _require_owner_context(request, authorization)
+    try:
+        resolved_asset_class = coerce_asset_class(asset_class)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    raw = file.file.read()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="file must be UTF-8 text") from exc
+
+    extraction = extract_agent_prompt(text, resolved_asset_class, user_id=ctx["user_id"])
+    if extraction.prompt is None:
+        raise HTTPException(status_code=400, detail=extraction.summary)
+
+    resolved_name = (name or "").strip() or (file.filename or "Uploaded Agent").rsplit(".", 1)[0]
+    agent = agent_service.create_agent(
+        name=resolved_name,
+        model_name="anthropic/claude-haiku-4-5",
+        owner_user_id=ctx["user_id"],
+        owner_browser_session=ctx["browser_session"],
+        agent_type="builtin",
+        description=f"Created from an upload: {extraction.summary}"[:280],
+        asset_class=resolved_asset_class,
+        seed_default_pipeline=False,
+    )
+    pipeline = [{
+        "id": f"sub_upload_{agent['agent_id'][-8:]}",
+        "presetKey": SIMPLE_INSTRUCTION_PRESET_KEY,
+        "label": SIMPLE_INSTRUCTION_LABEL,
+        "prompt": extraction.prompt,
+        "outputFormat": SIMPLE_INSTRUCTION_OUTPUT_FORMAT,
+    }]
+    agent_service.agents.update_agent(agent["agent_id"], pipeline=pipeline)
+    agent["pipeline"] = pipeline
+    if ctx["user_id"]:
+        portfolio_service.get_or_create_portfolio(ctx["user_id"])
+    return {
+        "agent": agent_service.agent_with_stats(agent),
+        "session_id": agent["session_id"],
+        "api_key": agent.pop("api_key"),
+        "extraction_summary": extraction.summary,
     }
 
 
@@ -634,6 +749,80 @@ def delete_agent(
     if owner_user_id:
         portfolio_service.reclaim_all_on_delete(owner_user_id=int(owner_user_id))
     return {"status": "deleted", "agent_id": agent_id, "reclaimed": sleeve}
+
+
+@router.post("/{agent_id}/convert-to-strategy")
+def convert_agent_to_strategy(
+    agent_id: str,
+    request: Request,
+    authorization: Optional[str] = Header(default=None),
+    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+):
+    """Turn this agent's trading instruction into a permanent Strategy Catalog
+    entry (domain/leaderboard/catalog.py::convert_agent_to_strategy), then
+    delete the agent -- it no longer exists afterward, but the dashboard now
+    knows how to trade like it via the new catalog entry."""
+    ctx = _owner_context(request, authorization)
+    agent = _require_agent_access(agent_id, ctx, api_key=x_api_key)
+
+    if agent.get("runtime_type") != "pipeline":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "only pipeline-runtime agents can be converted to a strategy "
+                f"(this agent is runtime_type={agent.get('runtime_type')!r})"
+            ),
+        )
+    prompt = next(
+        (
+            step.get("prompt", "").strip()
+            for step in (agent.get("pipeline") or [])
+            if step.get("prompt")
+        ),
+        None,
+    )
+    if not prompt:
+        raise HTTPException(status_code=400, detail="this agent has no trading instruction to convert")
+
+    asset_class = agent.get("asset_class") or "stocks"
+    catalog_module = _ASSET_CLASS_CATALOGS.get(asset_class)
+    if catalog_module is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"converting a {asset_class} agent to a strategy isn't supported yet",
+        )
+    try:
+        entry = catalog_module.convert_agent_to_strategy(
+            name=agent["name"],
+            model_id=agent.get("model_name"),
+            strategy_prompt=prompt,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Only delete the agent once the strategy write above actually succeeded --
+    # a failed conversion must never destroy the source agent with nothing to
+    # show for it. Mirrors delete_agent()'s own cleanup order.
+    agent_credential_store.delete_all(agent_id)
+    agent_service.delete_agent(agent_id)
+    owner_user_id = agent.get("owner_user_id")
+    if owner_user_id:
+        portfolio_service.reclaim_all_on_delete(owner_user_id=int(owner_user_id))
+
+    # The new entry's own backtest curve is real, billable LLM API cost (see
+    # llm_agent.py's module docstring) and can take a while, so it must not
+    # block this response. get_strategy_catalog(force_refresh=True) is the
+    # same call the page's own Refresh button makes -- there's no cheaper
+    # single-entry recompute path today.
+    def _refresh_catalog():
+        try:
+            strategy_catalog.get_strategy_catalog(force_refresh=True)
+        except Exception as exc:  # best-effort background job; never crash the app
+            print(f"post-conversion catalog refresh failed: {exc}")
+
+    threading.Thread(target=_refresh_catalog, daemon=True).start()
+
+    return {"converted": True, "strategy": entry, "deleted_agent_id": agent_id}
 
 
 @router.post("/{agent_id}/rotate-api-key")

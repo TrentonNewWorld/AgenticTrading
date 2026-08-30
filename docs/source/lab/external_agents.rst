@@ -1,7 +1,7 @@
 Plug in an External Agent or Model
 ==================================
 
-Agentic Trading Lab can run **your own agent or LLM** against its hourly backtest
+NewWorldTrading can run **your own agent or LLM** against its hourly backtest
 engine over a simple REST API. The split is:
 
 - **You** own the brain: any model, prompt, or rule set, running anywhere (your
@@ -272,7 +272,7 @@ example:
 
 The MVP is long-only, uses T+1 market execution, and does not connect a broker
 or vn.py Gateway. See the `vn.py CTA integration guide
-<https://github.com/Open-Finance-Lab/AgenticTrading/blob/main/docs/integrations/vnpy-cta.md>`_
+<https://github.com/TrentonNewWorld/AgenticTrading/blob/main/docs/integrations/vnpy-cta.md>`_
 for settings, custom ``module:Class`` strategies, audit artifacts, and the full
 compatibility limits.
 
@@ -350,7 +350,7 @@ analysis date. Replaying an existing artifact makes no LLM calls at all.
 
 Run it with ``dashboard/examples/tradingagents_atl_backtest.py`` (English
 ``--help`` and console output). The full setup guide,
-`TradingAgents 接入 ATL <https://github.com/Open-Finance-Lab/AgenticTrading/blob/main/docs/integrations/tradingagents.zh-CN.md>`_,
+`TradingAgents 接入 ATL <https://github.com/TrentonNewWorld/AgenticTrading/blob/main/docs/integrations/tradingagents.zh-CN.md>`_,
 is written in Simplified Chinese.
 
 

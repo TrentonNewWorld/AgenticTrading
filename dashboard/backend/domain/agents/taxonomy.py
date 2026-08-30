@@ -19,12 +19,14 @@ order inside My Agents' Stocks shelf, mirroring ``MARKET_LABELS`` in
 ``dashboard/frontend/app.js``. Reorder the members and the Community listing
 reorders with it (see :func:`category_sort_rank`).
 
-These are *markets*, not asset classes. My Agents shelves by what an agent
-trades (Stocks, Crypto, Futures) and only Stocks is live, so "crypto" and
-"futures" are deliberately absent here: those shelves are locked, inert rows in
-the frontend with nothing assignable to them. Adding a member would make them
-selectable in Configure and cloneable from Community while no bar source,
-``MarketProfile`` or engine support exists behind either.
+These are *markets*, not asset classes: ``AgentCategory`` sub-groups agents
+*within* the Stocks shelf (US equities vs China A-shares — both run on the
+same share-based, hourly-bar ``HourlyBacktester``/``MarketProfile`` engine).
+It says nothing about Options/Futures/Forex/Crypto/Prediction, which is what
+:data:`AssetClass` below is for — a separate, orthogonal field. Do not fold
+one into the other: an agent's asset class decides which engine and decision
+schema it uses at all; its category (when its asset class is "stocks") picks
+which equities market within that engine.
 """
 from typing import Literal, Optional, Tuple, get_args
 
@@ -90,3 +92,39 @@ def category_sort_rank(value: object) -> int:
     if slug is None:
         return len(AGENT_CATEGORY_ORDER)
     return AGENT_CATEGORY_ORDER.index(slug)
+
+
+#: What an agent trades. Orthogonal to ``AgentCategory`` above -- see the
+#: module docstring. Declaration order is this shelf's display order in My
+#: Agents, same convention as ``AGENT_CATEGORY_ORDER``.
+AssetClass = Literal["stocks", "options", "futures", "forex", "crypto", "prediction"]
+
+ASSET_CLASS_ORDER: Tuple[str, ...] = get_args(AssetClass)
+
+ASSET_CLASSES = frozenset(ASSET_CLASS_ORDER)
+
+DEFAULT_ASSET_CLASS = "stocks"
+
+
+def coerce_asset_class(value: object) -> str:
+    """Canonicalize a caller-supplied asset class, or raise ``ValueError``.
+
+    Unlike :func:`coerce_category`, empty input does not clear anything --
+    every agent has exactly one asset class, defaulting to ``"stocks"``,
+    never unset.
+    """
+    if value is None:
+        return DEFAULT_ASSET_CLASS
+    if not isinstance(value, str):
+        raise ValueError(
+            f"asset_class must be a string, got {type(value).__name__}"
+        )
+    slug = value.strip().lower()
+    if not slug:
+        return DEFAULT_ASSET_CLASS
+    if slug not in ASSET_CLASSES:
+        raise ValueError(
+            f"unknown asset_class {slug[:_MAX_ECHO_LENGTH]!r}; "
+            f"allowed: {sorted(ASSET_CLASSES)}"
+        )
+    return slug

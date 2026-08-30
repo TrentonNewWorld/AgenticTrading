@@ -72,6 +72,8 @@
     "zod": "^3.24.0"
   },
   "dependencies": {
-    "@vercel/analytics": "^2.0.1"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
   }
 }

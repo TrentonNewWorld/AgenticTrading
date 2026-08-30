@@ -41,8 +41,15 @@ _REBALANCE_DAYS = 252
 class BlueChipSteadyStrategy(BaselineStrategy):
     key = "blue_chip_steady"
 
+    PARAM_SCHEMA = {
+        "top_n": {"label": "Positions held", "type": "int", "default": _TOP_N, "min": 1, "max": 30},
+        "stop_loss": {"label": "Stop loss (negative fraction, e.g. -0.25)", "type": "float", "default": _STOP_LOSS, "min": -0.9, "max": -0.01},
+    }
+
     def __init__(self, config):
         super().__init__(config)
+        self._top_n = self.config.get("top_n", _TOP_N)
+        self._stop_loss = self.config.get("stop_loss", _STOP_LOSS)
         self._picks: Optional[List[str]] = None
         self._entry_px: Dict[str, float] = {}
         self._stopped_out: Set[str] = set()
@@ -55,7 +62,7 @@ class BlueChipSteadyStrategy(BaselineStrategy):
         close = history.close
         offset = min(220, len(history) - 1)
         trailing = close.iloc[-1] / close.iloc[-1 - offset] - 1 if offset > 0 else close.iloc[-1] * 0
-        picks = trailing.dropna().sort_values(ascending=False).head(_TOP_N).index.tolist()
+        picks = trailing.dropna().sort_values(ascending=False).head(self._top_n).index.tolist()
         self._picks = picks
         self._entry_px = {s: float(close.iloc[-1][s]) for s in picks}
         self._stopped_out = set()
@@ -70,7 +77,7 @@ class BlueChipSteadyStrategy(BaselineStrategy):
         for s in list(active):
             px = close.get(s)
             entry = self._entry_px.get(s)
-            if px is not None and entry and px / entry - 1 < _STOP_LOSS:
+            if px is not None and entry and px / entry - 1 < self._stop_loss:
                 self._stopped_out.add(s)
         active = [s for s in self._picks if s not in self._stopped_out]
         if not active:

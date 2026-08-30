@@ -7,7 +7,7 @@
 > its `--help` output and all console messages are in English.
 
 这项集成让 [TradingAgents](https://github.com/TauricResearch/TradingAgents) 用户把本地的
-多 Agent 研究结论放到 Agentic Trading Lab（ATL）中模拟成交，得到交易记录、指标、
+多 Agent 研究结论放到 NewWorldTrading（ATL）中模拟成交，得到交易记录、指标、
 收益曲线、Agent Card 和排行榜结果。
 
 一句话类比：TradingAgents 是用户自己的“研究委员会”，ATL 是统一的“交易赛道和

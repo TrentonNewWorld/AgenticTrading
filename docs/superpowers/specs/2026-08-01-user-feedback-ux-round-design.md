@@ -297,7 +297,7 @@ they stay correct unedited because every added parameter defaults to `null`.
 
 ### B7. Deferred — cancel
 
-**Filed as [issue #273](https://github.com/Open-Finance-Lab/AgenticTrading/issues/273).** Not
+**Filed as [issue #273](https://github.com/TrentonNewWorld/AgenticTrading/issues/273).** Not
 in this round. Covers `POST /backtest/cancel`, `subprocess.run` → `Popen` + stored handle +
 `terminate()`, `cancelled` as a status distinct from `error`, preservation of the existing
 timeout path, and the PR #163 completion-detection race as the hazard to design around.
@@ -455,7 +455,7 @@ Order is not enforced; C is independent of both.
 ## Open follow-ups
 
 - **Cancel a running backtest** — filed as
-  [issue #273](https://github.com/Open-Finance-Lab/AgenticTrading/issues/273). Out of scope
+  [issue #273](https://github.com/TrentonNewWorld/AgenticTrading/issues/273). Out of scope
   here; see B7.
 - **Dead footer links** — now **in scope** as C6, not a follow-up.
 - **`docs/landing-narrative-copy.md`** — superseded by Workstream C, but **deliberately not

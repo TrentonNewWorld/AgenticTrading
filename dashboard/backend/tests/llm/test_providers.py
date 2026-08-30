@@ -87,15 +87,15 @@ def test_make_llm_client_openrouter_uses_openrouter_key(monkeypatch):
 def test_make_llm_client_passes_reasoning_only_to_openrouter(monkeypatch):
     captured = {}
 
-    def _openrouter_client(anthropic_cls, *, reasoning_effort=None):
+    def _openrouter_client(anthropic_cls, *, reasoning_effort=None, api_key=None):
         captured["openrouter"] = (anthropic_cls, reasoning_effort)
         return "openrouter-client"
 
-    def _commonstack_client(anthropic_cls):
+    def _commonstack_client(anthropic_cls, *, api_key=None):
         captured["commonstack"] = anthropic_cls
         return "commonstack-client"
 
-    def _anthropic_client(anthropic_cls):
+    def _anthropic_client(anthropic_cls, *, api_key=None):
         captured["anthropic"] = anthropic_cls
         return "anthropic-client"
 

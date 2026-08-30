@@ -92,7 +92,7 @@ Every task's requirements implicitly include this section.
 - **Postgres twin parity:** `test_store_twin_parity.py` compares column **names** only and cannot see f-string DDL. `NOT NULL` and type divergence are invisible to it and must be checked by hand. *Phase 1 adds no tables.*
 - **Any test importing an optional dep (`vnpy`, `discord`) must `importorskip`.** An unguarded import raises during *collection*, and a collection error aborts the whole pytest session — 0 tests run, and the deploy hook that gates on backend tests never fires.
 - **Frontend cache-busters:** every touched `/app` asset needs its own `?v=` bump in `dashboard/frontend/app.html` — they are versioned independently, not globally. **The landing bundle needs none**: Vite asset names are content-hashed, and the hash is the cache bust.
-- **Merging to Open-Finance-Lab `main` auto-deploys prod.** A CI job hits the Render deploy hook once backend tests pass on `main`.
+- **Merging to the upstream org `main` auto-deploys prod.** A CI job hits the Render deploy hook once backend tests pass on `main`.
 - ~~**PR #326 is open and touches `dashboard/frontend/js/leaderboard.js`.** Rebase onto it before starting Phase 1 frontend work; do not resolve conflicts by discarding its hover-gate fixes.~~ **Void — #326 merged 2026-08-09.** The live hazard is now different: `js/leaderboard.js` went 1,037 → 1,600 lines across #326, #352 and #357, so every line reference into it in this plan is stale.
 - **Cache-buster collisions are the recurring merge hazard on this repo.** Two PRs bumping the same `?v=` produce a conflict that resolves silently to the *lower* number if taken carelessly. Resolve upward, always.
 - **`OPENROUTER_API_KEY` must be set locally** for Phase 0. Nemotron and DeepSeek are reached through OpenRouter, which is never auto-selected (`providers/__init__.py:11`). Unset, every probe run silently falls back to rule-based and the probe measures nothing.
@@ -704,7 +704,7 @@ onto PR #326 if it has not yet merged.~~ (#326 merged 2026-08-09.)
 
 **Interfaces:**
 - Consumes: `PROBE_INSTRUCTIONS`/`SEEDABLE` (Task 2), `strategy_prompt` support (Task 1).
-- Produces: six config entries with `id` values `open_house_reference`, `open_seed_aggressive_momentum`, `open_seed_defensive_cash`, `open_seed_equal_weight_hold`, `open_seed_contrarian_reversion`, `open_seed_verbose_analytical`, each carrying `"label": "Open Track"` and `"authored_by": "Agentic Trading Lab"`. Task 5 filters the API payload on `label == "Open Track"`.
+- Produces: six config entries with `id` values `open_house_reference`, `open_seed_aggressive_momentum`, `open_seed_defensive_cash`, `open_seed_equal_weight_hold`, `open_seed_contrarian_reversion`, `open_seed_verbose_analytical`, each carrying `"label": "Open Track"` and `"authored_by": "NewWorldTrading"`. Task 5 filters the API payload on `label == "Open Track"`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -766,7 +766,7 @@ def test_every_open_track_entry_carries_an_instruction():
 def test_every_open_track_entry_is_labelled_house_authored():
     """Seeds must never be mistakable for user entries."""
     for entry in OPEN_TRACK:
-        assert entry.get("authored_by") == "Agentic Trading Lab", entry["id"]
+        assert entry.get("authored_by") == "NewWorldTrading", entry["id"]
 
 
 def test_every_open_track_entry_is_pinned_to_the_season_model():
@@ -812,7 +812,7 @@ instruction — this is what makes it the bar being challenged:
       "id": "open_house_reference",
       "name": "House instruction",
       "label": "Open Track",
-      "authored_by": "Agentic Trading Lab",
+      "authored_by": "NewWorldTrading",
       "model": "Nemotron 3 Nano 30B",
       "provider": "NVIDIA",
       "strategy": "llm_agent",
@@ -829,7 +829,7 @@ instruction — this is what makes it the bar being challenged:
       "id": "open_seed_aggressive_momentum",
       "name": "Aggressive momentum",
       "label": "Open Track",
-      "authored_by": "Agentic Trading Lab",
+      "authored_by": "NewWorldTrading",
       "model": "Nemotron 3 Nano 30B",
       "provider": "NVIDIA",
       "strategy": "llm_agent",
@@ -1913,7 +1913,7 @@ EOF
 
 - [ ] **Step 5: Post-merge prod verification**
 
-Merging to Open-Finance-Lab `main` auto-deploys. After the deploy completes:
+Merging to the upstream org `main` auto-deploys. After the deploy completes:
 
 ```bash
 curl -s https://agentictrading.onrender.com/api/v1/leaderboard | python -c "

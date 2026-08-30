@@ -46,6 +46,23 @@ from .contrarian_dip_buyer import ContrarianDipBuyerStrategy
 from .sector_rotator import SectorRotatorStrategy
 from .volatility_guard import VolatilityGuardStrategy
 
+# User-uploaded strategies added via the Testing page (upload -> scan ->
+# backtest -> "Add to strategies list"); source code stored inline in the
+# leaderboard.json entry and re-run through the same sandbox every time.
+from .sandboxed import SandboxedStrategy
+from .tv_rsi2_connors import TvRsi2ConnorsStrategy
+from .tv_golden_cross import TvGoldenCrossStrategy
+from .tv_donchian_turtle import TvDonchianTurtleStrategy
+from .tv_bollinger_meanrev import TvBollingerMeanrevStrategy
+from .tv_ichimoku import TvIchimokuStrategy
+from .tv_stochastic import TvStochasticStrategy
+from .tv_williams_r import TvWilliamsRStrategy
+from .tv_cci_100 import TvCci100Strategy
+from .tv_adx_dmi import TvAdxDmiStrategy
+from .tv_52w_high import Tv52wHighStrategy
+from .tv_dual_momentum import TvDualMomentumStrategy
+from .tv_ema_ribbon import TvEmaRibbonStrategy
+
 _STRATEGY_CLASSES = [
     BuyHoldStrategy,
     EqualWeightIndexStrategy,
@@ -76,6 +93,19 @@ _STRATEGY_CLASSES = [
     ContrarianDipBuyerStrategy,
     SectorRotatorStrategy,
     VolatilityGuardStrategy,
+    SandboxedStrategy,
+    TvRsi2ConnorsStrategy,
+    TvGoldenCrossStrategy,
+    TvDonchianTurtleStrategy,
+    TvBollingerMeanrevStrategy,
+    TvIchimokuStrategy,
+    TvStochasticStrategy,
+    TvWilliamsRStrategy,
+    TvCci100Strategy,
+    TvAdxDmiStrategy,
+    Tv52wHighStrategy,
+    TvDualMomentumStrategy,
+    TvEmaRibbonStrategy,
 ]
 
 _REGISTRY: Dict[str, Type[BaselineStrategy]] = {cls.key: cls for cls in _STRATEGY_CLASSES}

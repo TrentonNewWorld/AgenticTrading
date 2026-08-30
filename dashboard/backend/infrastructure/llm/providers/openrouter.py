@@ -207,9 +207,14 @@ def make_client(
     anthropic_cls: Any,
     *,
     reasoning_effort: Optional[str] = None,
+    api_key: Optional[str] = None,
 ) -> Optional[Any]:
-    """Build an Anthropic-compatible OpenRouter client, or ``None``."""
-    key = os.getenv("OPENROUTER_API_KEY")
+    """Build an Anthropic-compatible OpenRouter client, or ``None``.
+
+    ``api_key``, when given, is a signed-in user's Connections-saved key and
+    takes priority over ``OPENROUTER_API_KEY`` -- see
+    infrastructure/llm/providers/__init__.py's ``make_llm_client``."""
+    key = api_key or os.getenv("OPENROUTER_API_KEY")
     if not key:
         return None
     kwargs: dict[str, Any] = {

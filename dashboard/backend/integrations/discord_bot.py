@@ -1,41 +1,18 @@
 from __future__ import annotations
 
-import asyncio
-import io
+import json
 import os
-import time
-import uuid
+import random
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Optional
-from urllib.parse import urlencode
+from typing import Optional
 
 import discord
-import requests
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
 
-from dashboard.backend.domain.chat.service import (
-    chat_with_agent,
-    reset_agent_conversation,
-    synthesize_strategy_prompt,
-)
-from dashboard.backend.infrastructure.llm.token_cost import is_free_model
-from dashboard.backend.integrations.discord_jobs import (
-    STATUS_COMPLETED,
-    STATUS_FAILED,
-    STATUS_NOTIFIED,
-    STATUS_NOTIFY_FAILED,
-    STATUS_WATCHING,
-    get_job_store,
-)
-
-
-def _model_override(model_name: Optional[str]) -> Optional[str]:
-    """Map a sentinel / rule-based model name (e.g. the default ``'local-model'``)
-    to ``None`` so it is treated as "no explicit model" instead of being sent to
-    the hosted-model API as a real model id. Real model ids pass through."""
-    return None if is_free_model(model_name) else model_name
+from dashboard.backend.domain.chat.service import SUPPORT_WHOP_URL, support_answer
 
 
 _env_path = Path(__file__).resolve().parents[2] / ".env"
@@ -53,78 +30,64 @@ def require_env(name: str) -> str:
     return value
 
 
-# Fallback agent used until a Discord user selects a built-in agent via /agent.
-DEFAULT_AGENT_ID = "default"
+# ---------------------------------------------------------------------------
+# /support keyword FAQ -- tried BEFORE the model, for two reasons: these are
+# exact, reviewed answers to the common questions, and they cost nothing,
+# which keeps OpenRouter's daily free quota available for questions that
+# actually need it. Also the OFFLINE fallback when the model-backed
+# support_answer() (domain/chat/service.py, grounded in its knowledge base)
+# is unavailable: no key configured, provider outage, quota spent.
+# Keyed by keywords checked against the lowercased question; first match
+# wins. The Whop URL is owned by the chat service so the model KB and this
+# fallback can never drift apart.
+_SUPPORT_FAQ: list[tuple[tuple[str, ...], str]] = [
+    (
+        ("get the bot", "download", "where do i get", "how do i get", "whop"),
+        f"The bot is free — grab it here: {SUPPORT_WHOP_URL}\n"
+        "See #get-the-bot for setup steps and how to build your own strategy.",
+    ),
+    (
+        ("make my own strategy", "build a strategy", "create a strategy", "write a strategy", "upload a strategy"),
+        "Go to **Testing** in the dashboard, paste or upload your strategy code. "
+        "It gets scanned for safety, then backtested over the most recent completed "
+        "year with a $1,000 starting wallet. If it clears the bar, you can add it to "
+        "the **Strategy** catalog from there.",
+    ),
+    # ORDER MATTERS from here down: first match wins, so the more specific
+    # entry must come first. "leaderboard" sits above the paper/live entry
+    # because "what is the live trading leaderboard" contains "live trading"
+    # and was being answered with the paper-vs-live explanation instead.
+    (
+        ("leaderboard",),
+        "The **Live Trading Leaderboard** (Overview tab) shows real results from orders "
+        "that were actually placed — not a simulation. If a strategy hasn't traded yet, "
+        "it won't have a row there.",
+    ),
+    (
+        ("paper", "live trading", "real money", "is it trading real money", "is my strategy live"),
+        "A strategy can run in **Paper** (simulated) or **Live** (real money) — they're "
+        "independent switches on the Strategy Catalog page. Live additionally needs the "
+        "account-level **Live Trading** switch turned on (account menu) — both have to be "
+        "on for real orders to place. Check the Strategy page to see which mode a given "
+        "strategy is actually activated in.",
+    ),
+    (
+        ("safe", "risk", "lose money", "how much can i lose", "guardrails"),
+        "Live orders go through a risk gate: a per-order dollar cap, no shorting, sells "
+        "capped to what's actually held, and sizing capped to the strategy's own allocated "
+        "capital. That limits how much a single bad order can do, but it doesn't make "
+        "trading risk-free — you can still lose money. Trading involves risk of loss; "
+        "past performance doesn't guarantee future results.",
+    ),
+]
 
-# Per-Discord-user selection of a built-in agent (in-memory MVP state).
-# Key:   Discord user id (str)
-# Value: {"agent_id", "name", "model_name", "session_id"}
-_selected_agents: dict[str, dict[str, Any]] = {}
 
-
-def selected_agent_for(user_id: str) -> Optional[dict[str, Any]]:
-    """Return the built-in agent the Discord user last chose via /agent, if any."""
-    return _selected_agents.get(str(user_id))
-
-# Stable namespace so each Discord user maps to a fixed backtest session UUID
-# (the /backtest routes require a valid UUID X-Session-Id).
-_SESSION_NAMESPACE = uuid.UUID("8f1b2c3d-0000-4000-8000-a9b8c7d6e5f4")
-
-# Background watchers: poll longer than Discord's ~15m interaction token so
-# results still post to the channel when the API's 30m backtest budget is used.
-_POLL_INTERVAL_SEC = 5
-_MAX_POLLS = 360  # 30 minutes
-_active_watchers: set[str] = set()
-
-
-def api_base() -> str:
-    """Base URL of the running Agentic Trading Lab backend."""
-    return os.getenv("ATL_API_BASE", "http://localhost:8000").rstrip("/")
-
-
-# Production SPA (Vercel). The API often lives on Render; Discord deep links must
-# open the frontend, not the API host.
-_DEFAULT_PUBLIC_APP = "https://agentic-trading-lab.vercel.app"
-
-
-def public_app_base() -> str:
-    """Playground base URL for Discord Dashboard deep links.
-
-    Prefer ``PUBLIC_APP_URL``. If unset and ``ATL_API_BASE`` points at the
-    Render API, fall back to the Vercel app (not the API origin). Locally,
-    fall back to the API host (which also serves ``/app``).
-    """
-    raw = (os.getenv("PUBLIC_APP_URL") or "").rstrip("/")
-    if not raw:
-        api = api_base()
-        if "onrender.com" in api.lower():
-            raw = _DEFAULT_PUBLIC_APP
-        else:
-            raw = api
-    if raw.endswith("/app"):
-        return raw
-    return f"{raw}/app"
-
-
-def dashboard_backtest_url(
-    *,
-    agent_id: Optional[str] = None,
-    run_id: Optional[str] = None,
-) -> str:
-    """Build a Playground URL for Discord result messages.
-
-    Prefer ``/app?view=backtest&agent_id=…&run_id=…`` when both ids are known;
-    otherwise fall back to agent-only or the bare Playground URL so the reply
-    always includes a clickable dashboard link.
-    """
-    params: dict[str, str] = {"view": "backtest"}
-    if agent_id:
-        params["agent_id"] = str(agent_id)
-    if run_id:
-        params["run_id"] = str(run_id)
-    if len(params) == 1:
-        return public_app_base()
-    return f"{public_app_base()}?{urlencode(params)}"
+def _support_answer(question: str) -> Optional[str]:
+    q = question.lower()
+    for keywords, answer in _SUPPORT_FAQ:
+        if any(k in q for k in keywords):
+            return answer
+    return None
 
 
 def _parse_id_list(raw: Optional[str]) -> list[int]:
@@ -156,664 +119,28 @@ def allowed_channel_ids() -> set[int]:
     return set(_parse_id_list(os.getenv("DISCORD_CHANNEL_ID")))
 
 
-def session_for(user_id: str) -> str:
-    """Deterministic per-user backtest session id (valid UUID)."""
-    return str(uuid.uuid5(_SESSION_NAMESPACE, f"discord-user:{user_id}"))
-
-
-_CHAT_FAILURE_MSG = (
-    "The model request failed. Check the bot terminal and verify the "
-    "Discord token, the hosted-model key (COMMONSTACK_API_KEY or "
-    "ANTHROPIC_API_KEY), the model id, and the account balance."
-)
-
-
-def _free_chat_channel_allowed(channel_id: int) -> bool:
-    """When ``DISCORD_CHANNEL_ID`` is set, plain messages in those channels trigger chat."""
-    allowed = allowed_channel_ids()
-    return bool(allowed) and channel_id in allowed
-
-
-def should_handle_free_chat(
-    *,
-    author_is_bot: bool,
-    content: str,
-    is_dm: bool,
-    channel_id: int,
-    mentions_bot: bool,
-    is_reply_to_bot: bool,
-) -> bool:
-    """Whether a normal (non-slash) message should invoke the chat agent.
-
-    - DMs: any non-empty message (no ``/ask`` needed).
-    - Guild, ``DISCORD_CHANNEL_ID`` set: any message in those channels.
-    - Guild, no allowlist: only @mention or reply-to-bot.
-    """
-    if author_is_bot:
-        return False
-    if content.strip().startswith("!"):
-        return False
-    if is_dm:
-        return bool(content.strip())
-    # @mention / reply works even when content is empty (missing Message Content Intent).
-    if mentions_bot or is_reply_to_bot:
-        return True
-    if _free_chat_channel_allowed(channel_id):
-        return bool(content.strip())
-    return False
-
-
-def extract_chat_prompt(content: str, *, bot_user_id: Optional[int]) -> str:
-    """Strip leading @bot mention so ``@MyBot hello`` becomes ``hello``."""
-    text = content.strip()
-    if bot_user_id is not None:
-        text = text.replace(f"<@{bot_user_id}>", "").replace(f"<@!{bot_user_id}>", "")
-    return text.strip()
-
-
-def split_discord_message(
-    text: str,
-    limit: int = 1800,
-) -> list[str]:
-    """
-    Split long model responses into Discord-safe chunks.
-    """
-    if len(text) <= limit:
-        return [text]
-
-    chunks: list[str] = []
-    remaining = text
-
-    while remaining:
-        if len(remaining) <= limit:
-            chunks.append(remaining)
-            break
-
-        split_at = remaining.rfind("\n", 0, limit)
-
-        if split_at < limit // 2:
-            split_at = remaining.rfind(" ", 0, limit)
-
-        if split_at < limit // 2:
-            split_at = limit
-
-        chunks.append(remaining[:split_at].strip())
-        remaining = remaining[split_at:].strip()
-
-    return chunks
-
-
-# ---------------------------------------------------------------------------
-# Backend HTTP helpers (run in a thread so the event loop is not blocked)
-# ---------------------------------------------------------------------------
-
-def _http_post(path: str, *, json: dict[str, Any], headers: Optional[dict] = None, timeout: int = 30) -> dict:
-    resp = requests.post(f"{api_base()}{path}", json=json, headers=headers or {}, timeout=timeout)
-    resp.raise_for_status()
-    return resp.json() if resp.content else {}
-
-
-def _http_get(path: str, *, headers: Optional[dict] = None, timeout: int = 30) -> dict:
-    resp = requests.get(f"{api_base()}{path}", headers=headers or {}, timeout=timeout)
-    resp.raise_for_status()
-    return resp.json() if resp.content else {}
-
-
-def _http_get_bytes(path: str, *, headers: Optional[dict] = None, timeout: int = 60) -> bytes:
-    resp = requests.get(f"{api_base()}{path}", headers=headers or {}, timeout=timeout)
-    resp.raise_for_status()
-    return resp.content
-
-
-def _http_get_status(
-    path: str,
-    *,
-    headers: Optional[dict] = None,
-    timeout: int = 30,
-) -> tuple[int, dict]:
-    """GET that returns (status_code, json_body) without raising on 4xx."""
-    resp = requests.get(f"{api_base()}{path}", headers=headers or {}, timeout=timeout)
-    try:
-        body = resp.json() if resp.content else {}
-    except Exception:
-        body = {}
-    if not isinstance(body, dict):
-        body = {}
-    return resp.status_code, body
-
-
-def bot_api_headers(discord_user_id: str) -> dict[str, str]:
-    """Service headers for Discord → backend identity calls."""
-    return {
-        "X-Discord-Bot-Secret": (os.getenv("DISCORD_BOT_API_SECRET") or "").strip(),
-        "X-Discord-User-Id": str(discord_user_id),
-    }
-
-
-async def api_post(path: str, *, json: dict[str, Any], headers: Optional[dict] = None, timeout: int = 30) -> dict:
-    return await asyncio.to_thread(_http_post, path, json=json, headers=headers, timeout=timeout)
-
-
-async def api_get(path: str, *, headers: Optional[dict] = None, timeout: int = 30) -> dict:
-    return await asyncio.to_thread(_http_get, path, headers=headers, timeout=timeout)
-
-
-async def api_get_bytes(path: str, *, headers: Optional[dict] = None, timeout: int = 60) -> bytes:
-    return await asyncio.to_thread(_http_get_bytes, path, headers=headers, timeout=timeout)
-
-
-async def fetch_owned_agents(
-    discord_user_id: str,
-) -> tuple[list[dict[str, Any]], Optional[str]]:
-    """Fetch agents owned by the website account linked to this Discord user.
-
-    Returns ``(agents, error_code)``. ``error_code`` is ``discord_not_linked``,
-    ``fetch_failed``, or ``None`` on success.
-    """
-    status, data = await asyncio.to_thread(
-        _http_get_status,
-        "/api/v1/discord/agents",
-        headers=bot_api_headers(discord_user_id),
-    )
-    if status == 404:
-        detail = data.get("detail")
-        code = detail.get("code") if isinstance(detail, dict) else None
-        if code == "discord_not_linked":
-            return [], "discord_not_linked"
-        # Any other 404 (misconfigured ATL_API_BASE, a route rename) is a real
-        # outage — don't tell the user their account "isn't linked".
-        print(f"Discord owned-agents fetch failed: HTTP 404 {data!r}")
-        return [], "fetch_failed"
-    if status >= 400:
-        print(f"Discord owned-agents fetch failed: HTTP {status} {data!r}")
-        return [], "fetch_failed"
-    agents = data.get("agents", []) if isinstance(data, dict) else []
-    return (agents if isinstance(agents, list) else []), None
-
-
-async def deliver_agent_chat(
-    discord_user_id: str,
-    prompt: str,
-) -> tuple[list[str], Optional[str]]:
-    """Run the hosted-model chat path shared by ``/ask`` and free-form messages.
-
-    Returns ``(response_chunks, error_message)``. On success ``error_message`` is
-    ``None``; on failure ``response_chunks`` is empty.
-    """
-    selected = selected_agent_for(discord_user_id)
-    agent_id = selected["agent_id"] if selected else DEFAULT_AGENT_ID
-    model = _model_override(selected.get("model_name")) if selected else None
-
-    try:
-        answer = await chat_with_agent(
-            user_id=discord_user_id,
-            agent_id=agent_id,
-            message=prompt,
-            model=model,
-        )
-        return split_discord_message(answer), None
-    except Exception as exc:
-        print("Discord chat request failed:", repr(exc))
-        return [], _CHAT_FAILURE_MSG
-
-
-class AgentSelect(discord.ui.Select):
-    """Dropdown letting a user pick one of their owned built-in agents."""
-
-    def __init__(self, agents: list[dict[str, Any]]):
-        options: list[discord.SelectOption] = []
-        for agent in agents[:25]:  # Discord caps selects at 25 options.
-            model = agent.get("model_name") or "local-model"
-            run_count = agent.get("run_count") or 0
-            agent_type = agent.get("agent_type") or "builtin"
-            options.append(
-                discord.SelectOption(
-                    label=(agent.get("name") or "agent")[:100],
-                    value=agent["agent_id"],
-                    description=f"{agent_type} · {model} · {run_count} run(s)"[:100],
-                )
-            )
-        super().__init__(
-            placeholder="Choose one of your agents…",
-            min_values=1,
-            max_values=1,
-            options=options,
-        )
-        self._agents = {agent["agent_id"]: agent for agent in agents}
-
-    async def callback(self, interaction: discord.Interaction) -> None:
-        agent = self._agents.get(self.values[0])
-        if not agent:
-            await interaction.response.edit_message(
-                content="That agent is no longer available. Run `/agent` again.",
-                view=None,
-            )
-            return
-
-        _selected_agents[str(interaction.user.id)] = {
-            "agent_id": agent["agent_id"],
-            "name": agent.get("name") or "agent",
-            "model_name": agent.get("model_name") or "local-model",
-            "session_id": agent.get("session_id"),
-            "agent_type": agent.get("agent_type") or "builtin",
-        }
-
-        await interaction.response.edit_message(
-            content=(
-                f"You're now chatting with **{agent.get('name')}** "
-                f"(model `{agent.get('model_name') or 'local-model'}`).\n"
-                "Message me directly (or use `/ask`) — `/backtest` to run a strategy; "
-                "results show up on the agent's card on the website."
-            ),
-            view=None,
-        )
-
-
-class AgentSelectView(discord.ui.View):
-    def __init__(self, agents: list[dict[str, Any]], *, timeout: float = 120):
-        super().__init__(timeout=timeout)
-        self.add_item(AgentSelect(agents))
-
-
-class StrategyRunBacktestView(discord.ui.View):
-    """One-click backtest after ``/strategy`` saves a prompt."""
-
-    def __init__(self, *, discord_user_id: str, code: str, timeout: float = 600):
-        super().__init__(timeout=timeout)
-        self.discord_user_id = discord_user_id
-        self.code = code
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if str(interaction.user.id) != self.discord_user_id:
-            await interaction.response.send_message(
-                "Only the person who ran `/strategy` can use this button.",
-                ephemeral=True,
-            )
-            return False
-        return True
-
-    @discord.ui.button(label="Run backtest", style=discord.ButtonStyle.green)
-    async def run_backtest_button(
-        self,
-        interaction: discord.Interaction,
-        button: discord.ui.Button,
-    ) -> None:
-        await interaction.response.defer(thinking=True, ephemeral=True)
-        self.stop()
-        try:
-            await interaction.message.edit(view=None)
-        except Exception:
-            pass
-        await execute_backtest(
-            interaction,
-            self.discord_user_id,
-            code=self.code,
-        )
-
-
-def format_backtest_summary(
-    metrics: dict[str, Any],
-    *,
-    label: str,
-    agent_id: Optional[str] = None,
-    agent_name: Optional[str] = None,
-    share_url: Optional[str] = None,
-) -> tuple[str, Optional[str]]:
-    """Build the Discord result text. Returns (summary, run_id)."""
-
-    def pct(v: Any) -> str:
-        return "—" if v is None else f"{float(v) * 100:.2f}%"
-
-    def num(v: Any) -> str:
-        return "—" if v is None else f"{float(v):.2f}"
-
-    run_id = metrics.get("run_id")
-    summary = (
-        f"**Backtest complete** · `{label}`\n"
-        f"Window: {metrics.get('start_date', '?')} → {metrics.get('end_date', '?')}  ·  "
-        f"model: {metrics.get('llm_model', '?')}\n"
-        f"Return: **{pct(metrics.get('total_return'))}**  ·  "
-        f"Sharpe: {num(metrics.get('sharpe_ratio'))}  ·  "
-        f"Max DD: {pct(metrics.get('max_drawdown'))}  ·  "
-        f"Trades: {metrics.get('num_trades', 0)}\n"
-        f"Final equity: ${float(metrics.get('final_equity') or 0):,.0f}"
-    )
-    dash_url = dashboard_backtest_url(agent_id=agent_id, run_id=run_id)
-    summary += f"\nDashboard: {dash_url}"
-    if share_url:
-        summary += f"\nView: {share_url}"
-    if agent_id and agent_name:
-        summary += (
-            f"\nSaved to **{agent_name}**'s card — open the Dashboard link above."
-        )
-    return summary, run_id if isinstance(run_id, str) else None
-
-
-async def _edit_ack(
-    interaction: Optional[discord.Interaction],
-    content: str,
-) -> None:
-    if interaction is None:
-        return
-    try:
-        await interaction.edit_original_response(content=content)
-    except Exception as exc:
-        print("Discord ack edit failed:", repr(exc))
-
-
-async def _post_channel_result(
-    *,
-    channel_id: int,
-    discord_user_id: str,
-    content: str,
-    chart: Optional[discord.File] = None,
-) -> None:
-    """Post final results in-channel (survives interaction-token expiry)."""
-    channel = bot.get_channel(channel_id)
-    if channel is None:
-        channel = await bot.fetch_channel(channel_id)
-    mention = f"<@{discord_user_id}>"
-    kwargs: dict[str, Any] = {"content": f"{mention}\n{content}"}
-    if chart is not None:
-        kwargs["file"] = chart
-    await channel.send(**kwargs)  # type: ignore[union-attr]
-
-
-async def watch_and_deliver_backtest(
-    job_id: str,
-    *,
-    interaction: Optional[discord.Interaction] = None,
-) -> None:
-    """Poll API status for a persisted job and post results when done."""
-    if job_id in _active_watchers:
-        return
-    _active_watchers.add(job_id)
-    store = get_job_store()
-    try:
-        job = store.get(job_id)
-        if job is None:
-            return
-        if job.status in (STATUS_NOTIFIED, STATUS_NOTIFY_FAILED):
-            return
-
-        store.update(job_id, status=STATUS_WATCHING)
-        headers = {"X-Session-Id": job.session_id}
-        terminal_error: Optional[str] = None
-
-        for i in range(_MAX_POLLS):
-            await asyncio.sleep(_POLL_INTERVAL_SEC)
-            try:
-                status = await api_get("/backtest/status", headers=headers)
-            except Exception:
-                continue
-
-            if status.get("running"):
-                # Best-effort progress on the ephemeral ACK while the token lives.
-                if interaction is not None and (i + 1) % 12 == 0:
-                    elapsed = (i + 1) * _POLL_INTERVAL_SEC
-                    await _edit_ack(
-                        interaction,
-                        (
-                            f"Backtest running (`{job.label}`)… "
-                            f"({elapsed}s elapsed). Results will post here when done."
-                        ),
-                    )
-                continue
-
-            if status.get("error"):
-                terminal_error = str(status["error"])[:1500]
-                break
-
-            if status.get("success") or status.get("runs_count"):
-                break
-        else:
-            terminal_error = (
-                "Backtest is still running after 30 minutes. "
-                "Check the dashboard later, or ask an admin to inspect the API worker."
-            )
-
-        if terminal_error:
-            store.update(job_id, status=STATUS_FAILED, error=terminal_error)
-            fail_text = f"**Backtest failed** · `{job.label}`\n{terminal_error}"
-            try:
-                await _post_channel_result(
-                    channel_id=job.channel_id,
-                    discord_user_id=job.discord_user_id,
-                    content=fail_text,
-                )
-                await _edit_ack(
-                    interaction,
-                    f"Backtest failed (`{job.label}`). Details posted in-channel.",
-                )
-                store.update(job_id, status=STATUS_NOTIFIED, notified_at=time.time())
-            except Exception as exc:
-                print("Discord failure notify failed:", repr(exc))
-                store.update(job_id, status=STATUS_NOTIFY_FAILED, error=str(exc))
-            return
-
-        # Resolve metrics for THIS run. Prefer the exact id we minted up front.
-        # The "/runs/latest/metrics" fallback is deliberately identity-gated:
-        # Discord sessions are stable per user, so "latest" can be a PRIOR
-        # backtest from this same session and would post stale numbers under a
-        # fresh run. Accept it only when it *is* this run, or when we have no
-        # live_run_id to key on (legacy jobs). (PR #163 completion-race finding.)
-        metrics: Optional[dict[str, Any]] = None
-        if job.live_run_id:
-            try:
-                metrics = await api_get(f"/runs/{job.live_run_id}", headers=headers)
-            except Exception:
-                metrics = None
-        if metrics is None:
-            try:
-                latest = await api_get("/runs/latest/metrics", headers=headers)
-            except Exception:
-                latest = None
-            if latest is not None and (
-                not job.live_run_id or latest.get("run_id") == job.live_run_id
-            ):
-                metrics = latest
-        if metrics is None:
-            err = "Backtest finished, but metrics for this run could not be read."
-            store.update(job_id, status=STATUS_FAILED, error=err)
-            try:
-                await _post_channel_result(
-                    channel_id=job.channel_id,
-                    discord_user_id=job.discord_user_id,
-                    content=(
-                        f"**Backtest finished** · `{job.label}`\n{err}\n"
-                        "Check the dashboard."
-                    ),
-                )
-                store.update(
-                    job_id,
-                    status=STATUS_NOTIFIED,
-                    notified_at=time.time(),
-                )
-            except Exception as notify_exc:
-                store.update(
-                    job_id, status=STATUS_NOTIFY_FAILED, error=str(notify_exc)
-                )
-            return
-
-        summary, run_id = format_backtest_summary(
-            metrics,
-            label=job.label,
-            agent_id=job.agent_id,
-            agent_name=job.agent_name,
-            share_url=job.share_url,
-        )
-        run_id = run_id or job.live_run_id
-        store.update(job_id, status=STATUS_COMPLETED, run_id=run_id)
-
-        chart: Optional[discord.File] = None
-        if run_id:
-            try:
-                png = await api_get_bytes(f"/runs/{run_id}/plot.png", headers=headers)
-                chart = discord.File(io.BytesIO(png), filename=f"backtest_{run_id}.png")
-            except Exception as exc:
-                print("Discord /backtest plot failed:", repr(exc))
-
-        # Delivery is at-least-once: we post, then mark NOTIFIED. If the process
-        # dies in that gap the job stays open and resume_open_backtest_jobs()
-        # re-posts on restart (a possible duplicate message, never a lost one).
-        # Exactly-once would need a transactional send+mark we don't have here;
-        # a duplicate result post is an acceptable failure mode for this feature.
-        try:
-            await _post_channel_result(
-                channel_id=job.channel_id,
-                discord_user_id=job.discord_user_id,
-                content=summary,
-                chart=chart,
-            )
-            await _edit_ack(
-                interaction,
-                (
-                    f"Backtest complete (`{job.label}`). "
-                    "Results (+ chart) were posted in this channel."
-                ),
-            )
-            store.update(
-                job_id,
-                status=STATUS_NOTIFIED,
-                run_id=run_id,
-                notified_at=time.time(),
-            )
-        except Exception as exc:
-            print("Discord result notify failed:", repr(exc))
-            store.update(job_id, status=STATUS_NOTIFY_FAILED, error=str(exc))
-    finally:
-        _active_watchers.discard(job_id)
-
-
-def schedule_backtest_watch(
-    job_id: str,
-    *,
-    interaction: Optional[discord.Interaction] = None,
-) -> None:
-    """Fire-and-forget watcher; safe to call from slash handlers and resume."""
-    asyncio.create_task(
-        watch_and_deliver_backtest(job_id, interaction=interaction),
-        name=f"discord-backtest-{job_id}",
-    )
-
-
-async def resume_open_backtest_jobs() -> None:
-    """On bot startup, re-attach watchers for unfinished persisted jobs."""
-    store = get_job_store()
-    open_jobs = store.list_open()
-    if not open_jobs:
-        return
-    print(f"Resuming {len(open_jobs)} Discord backtest job(s)…")
-    for job in open_jobs:
-        schedule_backtest_watch(job.job_id)
-
-
-async def execute_backtest(
-    interaction: discord.Interaction,
-    discord_user_id: str,
-    *,
-    prompt: Optional[str] = None,
-    code: Optional[str] = None,
-    start: Optional[str] = None,
-    end: Optional[str] = None,
-) -> None:
-    """Start a backtest and return immediately; results post when the job finishes.
-
-    The interaction must already be deferred. Final metrics + chart are posted
-    in-channel (mentioning the user) so delivery survives Discord's 15-minute
-    interaction token and long LLM backtests.
-    """
-    selected = selected_agent_for(discord_user_id)
-    session_id = session_for(discord_user_id)
-    headers = {"X-Session-Id": session_id}
-
-    share_url: Optional[str] = None
-    label = "custom"
-    if prompt and prompt.strip():
-        strategy_prompt = prompt.strip()
-    elif code:
-        label = code
-        try:
-            record = await api_get(f"/api/strategies/{code}")
-            strategy_prompt = record.get("prompt")
-            share_url = record.get("share_url")
-            if not strategy_prompt:
-                raise ValueError("empty prompt")
-        except Exception:
-            await interaction.edit_original_response(
-                content=(
-                    f"No strategy found for code `{code}`. "
-                    "Type a `prompt` directly or create one with `/strategy`."
-                )
-            )
-            return
-    else:
-        await interaction.edit_original_response(
-            content="Give me a strategy: type a `prompt` directly, or pass a saved `code`."
-        )
-        return
-
-    payload: dict[str, Any] = {"strategy_prompt": strategy_prompt}
-    if selected and (selected.get("agent_type") or "builtin") == "builtin":
-        payload["agent_id"] = selected["agent_id"]
-    model_override = _model_override(selected.get("model_name")) if selected else None
-    if model_override:
-        payload["model"] = model_override
-    if start:
-        payload["start_date"] = start
-    if end:
-        payload["end_date"] = end
-
-    try:
-        started = await api_post("/backtest/run", json=payload, headers=headers)
-    except Exception as exc:
-        print("Discord /backtest start failed:", repr(exc))
-        await interaction.edit_original_response(
-            content=f"Could not start the backtest. Is the backend running at `{api_base()}`?"
-        )
-        return
-
-    if not started.get("success", True):
-        await interaction.edit_original_response(
-            content=f"Backtest not started: {started.get('error', 'unknown error')}"
-        )
-        return
-
-    effective_session = started.get("session_id") or session_id
-    live_run_id = started.get("live_run_id") or started.get("run_id")
-    attached_agent_id = payload.get("agent_id")
-    agent_name = selected.get("name") if selected and attached_agent_id else None
-
-    if interaction.channel_id is None:
-        await interaction.edit_original_response(
-            content=(
-                "Backtest started, but this context has no channel to post results to. "
-                "Check the dashboard when it finishes."
-            )
-        )
-        return
-
-    job = get_job_store().create_job(
-        discord_user_id=discord_user_id,
-        channel_id=int(interaction.channel_id),
-        guild_id=interaction.guild_id,
-        session_id=effective_session,
-        label=label,
-        live_run_id=live_run_id,
-        agent_id=attached_agent_id,
-        agent_name=agent_name,
-        share_url=share_url,
-    )
-
-    run_hint = f" · run `{live_run_id}`" if live_run_id else ""
-    await interaction.edit_original_response(
-        content=(
-            f"Backtest queued (`{label}`){run_hint} with real Alpaca bars + hosted model.\n"
-            "I'll post the results (+ chart) in this channel when it finishes — "
-            "no need to keep this message open."
-        )
-    )
-    schedule_backtest_watch(job.job_id, interaction=interaction)
+def support_channel_id() -> Optional[int]:
+    """Channel the 24h ``/support`` reminder posts into. ``None`` disables the
+    reminder loop entirely rather than guessing a channel -- posting into the
+    wrong channel is worse than not posting."""
+    ids = _parse_id_list(os.getenv("DISCORD_SUPPORT_CHANNEL_ID"))
+    return ids[0] if ids else None
+
+
+def support_role_id() -> Optional[int]:
+    """Optional role pinged when ``/support`` has no curated answer for a
+    question. Unset means the fallback reply just links the channels instead
+    of pinging anyone."""
+    ids = _parse_id_list(os.getenv("DISCORD_SUPPORT_ROLE_ID"))
+    return ids[0] if ids else None
+
+
+def snark_channel_id() -> Optional[int]:
+    """Channel the 4-hour snark rotation posts into (meant for #general, NOT
+    the support channel). ``None`` disables the rotation entirely rather than
+    guessing a channel."""
+    ids = _parse_id_list(os.getenv("DISCORD_SNARK_CHANNEL_ID"))
+    return ids[0] if ids else None
 
 
 class RestrictedCommandTree(app_commands.CommandTree):
@@ -839,7 +166,7 @@ class RestrictedCommandTree(app_commands.CommandTree):
         return True
 
 
-class AgenticTradingDiscordBot(commands.Bot):
+class NewWorldTradingDiscordBot(commands.Bot):
     def __init__(self) -> None:
         intents = discord.Intents.default()
         intents.message_content = True
@@ -869,22 +196,224 @@ class AgenticTradingDiscordBot(commands.Bot):
 
         allowed = allowed_channel_ids()
         if allowed:
-            print(f"Command channel allowlist active: {sorted(allowed)}")
-            print(
-                "Free chat: plain messages in allowlisted channels (no /ask). "
-                "Also: DMs, @mention, or reply-to-bot elsewhere."
-            )
+            print(f"/support is restricted to channel(s): {sorted(allowed)}")
         else:
             print(
-                "Free chat: DMs, @mention, or reply-to-bot. "
-                "Set DISCORD_CHANNEL_ID for open chat in specific channels."
+                "/support works in any channel. "
+                "Set DISCORD_CHANNEL_ID to restrict it."
             )
 
-        # Re-attach watchers for jobs that were mid-flight when the bot restarted.
-        await resume_open_backtest_jobs()
+        if support_channel_id() is not None and not _support_reminder_loop.is_running():
+            _support_reminder_loop.start()
+
+        if snark_channel_id() is not None and not _snark_loop.is_running():
+            _snark_loop.start()
 
 
-bot = AgenticTradingDiscordBot()
+bot = NewWorldTradingDiscordBot()
+
+
+SUPPORT_REMINDER_TEXT = (
+    "**NewWorldSupport** is here — ask a question with `/support` "
+    "and I'll do my best to answer it."
+)
+
+#: Wall-clock spacing between reminders. Enforced against a persisted
+#: timestamp, NOT just by the loop interval -- see _reminder_is_due.
+SUPPORT_REMINDER_INTERVAL = timedelta(hours=24)
+
+#: Survives restarts. Without it the reminder posts on every boot: the loop's
+#: first iteration fires immediately, so a watchdog restart (or a laptop
+#: reboot) re-posts and resets the 24h clock. That is "every 24h OR whenever
+#: the process starts", which is not what was asked for and reads as spam if
+#: anything ever restart-loops.
+_REMINDER_STATE_PATH = (
+    Path(__file__).resolve().parents[2] / "storage" / "data" / "discord_support_reminder.json"
+)
+
+
+def _reminder_last_sent() -> Optional[datetime]:
+    """When the reminder last went out, or ``None`` if never / unreadable.
+    Unreadable state means "send" rather than "never send" -- a corrupt file
+    must not silently disable the reminder forever."""
+    try:
+        raw = json.loads(_REMINDER_STATE_PATH.read_text(encoding="utf-8"))
+        return datetime.fromisoformat(raw["last_sent"])
+    except Exception:
+        return None
+
+
+def _record_reminder_sent(when: datetime) -> None:
+    try:
+        _REMINDER_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _REMINDER_STATE_PATH.write_text(
+            json.dumps({"last_sent": when.isoformat()}), encoding="utf-8"
+        )
+    except Exception as exc:
+        # Non-fatal: worst case the next boot re-posts early. Never let a
+        # read-only disk stop the reminder itself.
+        print(f"Discord: could not record support-reminder timestamp: {exc}")
+
+
+def _reminder_is_due(now: datetime, last_sent: Optional[datetime]) -> bool:
+    """Pure, so the 24h spacing is testable without waiting a day."""
+    if last_sent is None:
+        return True
+    return (now - last_sent) >= SUPPORT_REMINDER_INTERVAL
+
+
+# Polls hourly; the 24h spacing is enforced by _reminder_is_due against the
+# persisted timestamp. A short poll with a real due-check is what makes the
+# reminder survive restarts AND laptop sleep: tasks.loop(hours=24) alone would
+# simply not fire while the machine was suspended, silently skipping a day.
+@tasks.loop(hours=1)
+async def _support_reminder_loop() -> None:
+    """Posts a reminder into the configured support channel every 24h. Only
+    starts when DISCORD_SUPPORT_CHANNEL_ID is set (see setup_hook) -- no
+    channel configured means no reminder, rather than guessing one."""
+    channel_id = support_channel_id()
+    if channel_id is None:
+        return
+
+    now = datetime.now(timezone.utc)
+    if not _reminder_is_due(now, _reminder_last_sent()):
+        return
+
+    # get_channel reads the local cache; fetch_channel asks the API. The cache
+    # can legitimately miss (a channel the bot hasn't seen traffic in yet), so
+    # a miss must not be treated as "no such channel" -- that silently skipped
+    # a whole 24h cycle.
+    channel = bot.get_channel(channel_id)
+    if channel is None:
+        try:
+            channel = await bot.fetch_channel(channel_id)
+        except Exception as exc:
+            print(f"Discord: support reminder skipped, channel {channel_id} unreachable: {exc}")
+            return
+    try:
+        await channel.send(SUPPORT_REMINDER_TEXT)
+    except Exception as exc:
+        # Deliberately do NOT record a timestamp on failure -- the next hourly
+        # poll should retry, not wait another full day.
+        print(f"Discord: support reminder failed to send: {exc}")
+        return
+    _record_reminder_sent(now)
+    print(f"Discord: support reminder posted to channel {channel_id}.")
+
+
+@_support_reminder_loop.before_loop
+async def _before_support_reminder() -> None:
+    """tasks.loop fires its first iteration immediately, but setup_hook (where
+    the loop is started) runs BEFORE the gateway READY event -- so the channel
+    cache is still empty and the first reminder was being skipped on every
+    single boot. Waiting for ready makes that first poll actually able to
+    send (whether it *does* send is then decided by _reminder_is_due)."""
+    await bot.wait_until_ready()
+
+
+# ---------------------------------------------------------------------------
+# Snark rotation -- a random message from the 200-strong pool every 4 hours,
+# aimed at #general (DISCORD_SNARK_CHANNEL_ID). Same persisted-timestamp
+# design as the support reminder, and for the same two reasons: a bare
+# tasks.loop(hours=4) re-posts on every restart (the first iteration fires
+# immediately) AND silently skips beats while the laptop is asleep. Hourly-ish
+# polling plus a wall-clock due-check gives real 4-hour spacing through both.
+
+SNARK_INTERVAL = timedelta(hours=4)
+
+#: How many recently-posted message indices to remember (and avoid). 50 out
+#: of a 200 pool means a message can't reappear within ~8 days at the 4h
+#: cadence, which is what makes the rotation feel random instead of like the
+#: same five roasts on shuffle.
+_SNARK_RECENT_WINDOW = 50
+
+_SNARK_STATE_PATH = (
+    Path(__file__).resolve().parents[2] / "storage" / "data" / "discord_snark.json"
+)
+
+
+def _snark_state() -> dict:
+    """``{"last_sent": iso|None, "recent": [int, ...]}``. Unreadable state
+    means "post now, remember nothing" -- a corrupt file must not silently
+    kill the rotation."""
+    try:
+        raw = json.loads(_SNARK_STATE_PATH.read_text(encoding="utf-8"))
+        recent = [i for i in raw.get("recent", []) if isinstance(i, int)]
+        return {"last_sent": raw.get("last_sent"), "recent": recent}
+    except Exception:
+        return {"last_sent": None, "recent": []}
+
+
+def _snark_last_sent(state: dict) -> Optional[datetime]:
+    try:
+        return datetime.fromisoformat(state["last_sent"]) if state["last_sent"] else None
+    except Exception:
+        return None
+
+
+def _record_snark_sent(when: datetime, index: int, state: dict) -> None:
+    recent = (state.get("recent", []) + [index])[-_SNARK_RECENT_WINDOW:]
+    try:
+        _SNARK_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _SNARK_STATE_PATH.write_text(
+            json.dumps({"last_sent": when.isoformat(), "recent": recent}),
+            encoding="utf-8",
+        )
+    except Exception as exc:
+        print(f"Discord: could not record snark state: {exc}")
+
+
+def _pick_snark(recent: list[int], rng: random.Random | None = None) -> int:
+    """Random index from the pool, excluding recently-used ones. Pure given
+    an ``rng``, so the no-repeat behavior is testable. If recent somehow
+    covers the whole pool, fall back to fully random rather than never
+    posting again."""
+    from dashboard.backend.integrations.snark_messages import SNARK_MESSAGES
+
+    rng = rng or random
+    candidates = [i for i in range(len(SNARK_MESSAGES)) if i not in set(recent)]
+    if not candidates:
+        candidates = list(range(len(SNARK_MESSAGES)))
+    return rng.choice(candidates)
+
+
+@tasks.loop(minutes=30)
+async def _snark_loop() -> None:
+    channel_id = snark_channel_id()
+    if channel_id is None:
+        return
+
+    state = _snark_state()
+    now = datetime.now(timezone.utc)
+    last = _snark_last_sent(state)
+    if last is not None and (now - last) < SNARK_INTERVAL:
+        return
+
+    channel = bot.get_channel(channel_id)
+    if channel is None:
+        try:
+            channel = await bot.fetch_channel(channel_id)
+        except Exception as exc:
+            print(f"Discord: snark skipped, channel {channel_id} unreachable: {exc}")
+            return
+
+    from dashboard.backend.integrations.snark_messages import SNARK_MESSAGES
+
+    index = _pick_snark(state["recent"])
+    try:
+        await channel.send(SNARK_MESSAGES[index])
+    except Exception as exc:
+        # No timestamp on failure: the next half-hour poll retries instead of
+        # waiting out a full 4h beat.
+        print(f"Discord: snark failed to send: {exc}")
+        return
+    _record_snark_sent(now, index, state)
+    print(f"Discord: snark #{index} posted to channel {channel_id}.")
+
+
+@_snark_loop.before_loop
+async def _before_snark() -> None:
+    await bot.wait_until_ready()
 
 
 @bot.event
@@ -898,350 +427,52 @@ async def on_ready() -> None:
     )
 
 
-@bot.event
-async def on_message(message: discord.Message) -> None:
-    """Free-form chat: DMs, allowlisted channels, @mention, or reply-to-bot."""
-    bot_user = bot.user
-    is_reply_to_bot = False
-    if message.reference is not None:
-        resolved = message.reference.resolved
-        if isinstance(resolved, discord.Message) and bot_user is not None:
-            is_reply_to_bot = resolved.author.id == bot_user.id
-
-    mentions_bot = bool(bot_user and bot_user in message.mentions)
-    is_dm = isinstance(message.channel, discord.DMChannel)
-
-    if not should_handle_free_chat(
-        author_is_bot=message.author.bot,
-        content=message.content or "",
-        is_dm=is_dm,
-        channel_id=message.channel.id,
-        mentions_bot=mentions_bot,
-        is_reply_to_bot=is_reply_to_bot,
-    ):
-        await bot.process_commands(message)
-        return
-
-    prompt = extract_chat_prompt(
-        message.content or "",
-        bot_user_id=bot_user.id if bot_user else None,
-    )
-    if not prompt:
-        if mentions_bot or is_reply_to_bot:
-            raw = (message.content or "").strip()
-            if not raw:
-                await message.reply(
-                    "I see the @mention, but Discord isn't sending me your message "
-                    "text in this server. Enable **Message Content Intent** for this "
-                    "bot in the [Developer Portal](https://discord.com/developers/applications) "
-                    "→ Bot → Privileged Gateway Intents, then restart the bot. "
-                    "Or **DM me** directly — that works without the intent.",
-                    mention_author=False,
-                )
-            else:
-                await message.reply(
-                    "What would you like to ask? Include your question in the same "
-                    "message as the @mention.",
-                    mention_author=False,
-                )
-        await bot.process_commands(message)
-        return
-
-    discord_user_id = str(message.author.id)
-    async with message.channel.typing():
-        chunks, error = await deliver_agent_chat(discord_user_id, prompt)
-
-    if error:
-        await message.reply(error, mention_author=False)
-    else:
-        await message.reply(chunks[0], mention_author=False)
-        for chunk in chunks[1:]:
-            await message.channel.send(chunk)
-
-    await bot.process_commands(message)
-
-
 @bot.tree.command(
-    name="ask",
-    description="Chat with your Agentic Trading Lab agent (hosted model).",
+    name="support",
+    description="Ask NewWorldSupport a question about the bot (setup, strategies, paper vs. live).",
 )
-@app_commands.describe(
-    prompt="The message you want to send to your trading agent."
-)
-async def ask(
-    interaction: discord.Interaction,
-    prompt: str,
-) -> None:
-    # The deferred response is ephemeral, so only the invoking user sees it.
-    await interaction.response.defer(
-        thinking=True,
-        ephemeral=True,
-    )
-
-    discord_user_id = str(interaction.user.id)
-
-    chunks, error = await deliver_agent_chat(discord_user_id, prompt)
-    if error:
-        await interaction.edit_original_response(content=error)
+@app_commands.describe(question="What do you need help with?")
+async def support(interaction: discord.Interaction, question: str) -> None:
+    # Public, not ephemeral: answers double as a visible FAQ for the channel,
+    # and the escalation ping below only reaches the support role if the
+    # message is actually visible (a role mention inside an ephemeral reply
+    # notifies no one).
+    # Curated FAQ first, model second. That ordering is cost control as much
+    # as accuracy: the common questions get an exact, reviewed answer AND
+    # never spend a request from OpenRouter's daily free quota.
+    canned = _support_answer(question)
+    if canned is not None:
+        await interaction.response.send_message(f"**NewWorldSupport**\n{canned}"[:2000])
         return
 
-    for index, chunk in enumerate(chunks):
-        if index == 0:
-            await interaction.edit_original_response(content=chunk)
-        else:
-            await interaction.followup.send(
-                chunk,
-                ephemeral=True,
-            )
-
-
-@bot.tree.command(
-    name="strategy",
-    description="Turn your idea / chat into a trading strategy prompt you can backtest.",
-)
-@app_commands.describe(
-    idea="Optional: describe your strategy. Omit to compile from your recent /ask chat.",
-)
-async def strategy(
-    interaction: discord.Interaction,
-    idea: Optional[str] = None,
-) -> None:
-    await interaction.response.defer(thinking=True, ephemeral=True)
-
-    discord_user_id = str(interaction.user.id)
-    selected = selected_agent_for(discord_user_id)
-    agent_id = selected["agent_id"] if selected else DEFAULT_AGENT_ID
-    # Same model resolution as /ask — previously /strategy always used
-    # resolve_chat_model()'s gateway default and ignored the selected agent.
-    model = _model_override(selected.get("model_name")) if selected else None
-
+    await interaction.response.defer(thinking=True)
     try:
-        prompt = await synthesize_strategy_prompt(
-            user_id=discord_user_id,
-            agent_id=agent_id,
-            extra=idea,
-            model=model,
-        )
-    except ValueError as exc:
-        await interaction.edit_original_response(content=str(exc))
-        return
+        llm_answer = await support_answer(question)
     except Exception as exc:
-        print("Discord /strategy synthesis failed:", repr(exc))
-        await interaction.edit_original_response(
-            content="Could not generate a strategy prompt. Check the hosted-model key and the bot terminal."
-        )
-        return
+        # Includes a 429 once OpenRouter's daily free quota is spent, and a
+        # RuntimeError if the configured model isn't a ":free" id. Never
+        # retries onto a paid model -- escalating to a human is the correct,
+        # free behavior.
+        print(f"Discord /support: model answer unavailable ({type(exc).__name__}): {exc}")
+        llm_answer = None
 
-    try:
-        record = await api_post(
-            "/api/strategies",
-            json={
-                "prompt": prompt,
-                "description": idea,
-                "source": "discord",
-                "owner": f"discord:{discord_user_id}",
-            },
-            # Per-user rate-limit key: without an id header the server's strategies
-            # write limiter falls back to the peer IP, so every Discord user would
-            # share this one bot process's single bucket. Key it per Discord user.
-            headers={"X-Browser-Id": f"discord:{discord_user_id}"},
-        )
-    except Exception as exc:
-        print("Discord /strategy store failed:", repr(exc))
+    if llm_answer:
         await interaction.edit_original_response(
             content=(
-                "Generated a strategy but could not save it. Is the backend running "
-                f"at `{api_base()}`? (set ATL_API_BASE if not)"
-            )
+                f"**NewWorldSupport**\n{llm_answer}\n\n"
+                "-# AI-generated · not financial advice · ask a mod if this looks wrong"
+            )[:2000]
         )
         return
 
-    code = record.get("code")
-
-    header = (
-        f"**Strategy saved** · code `{code}`\n"
-        "Click **Run backtest** below when you're ready.\n\n"
-        "**Prompt:**\n"
-    )
-    body = f"```\n{prompt}\n```"
-    view = StrategyRunBacktestView(discord_user_id=discord_user_id, code=str(code))
-
-    chunks = split_discord_message(header + body)
-    for index, chunk in enumerate(chunks):
-        if index == 0:
-            await interaction.edit_original_response(content=chunk, view=view)
-        else:
-            await interaction.followup.send(chunk, ephemeral=True)
-
-
-@bot.tree.command(
-    name="prompt",
-    description="Show a saved strategy prompt by its share code.",
-)
-@app_commands.describe(code="The strategy share code (from /strategy).")
-async def prompt_cmd(
-    interaction: discord.Interaction,
-    code: str,
-) -> None:
-    await interaction.response.defer(thinking=True, ephemeral=True)
-    try:
-        record = await api_get(f"/api/strategies/{code}")
-    except Exception:
-        await interaction.edit_original_response(content=f"No strategy found for code `{code}`.")
-        return
-
-    text = (
-        f"**Strategy `{code}`**\n"
-        f"{record.get('share_url', '')}\n\n"
-        f"```\n{record.get('prompt', '')}\n```"
-    )
-    chunks = split_discord_message(text)
-    for index, chunk in enumerate(chunks):
-        if index == 0:
-            await interaction.edit_original_response(content=chunk)
-        else:
-            await interaction.followup.send(chunk, ephemeral=True)
-
-
-@bot.tree.command(
-    name="backtest",
-    description="Run a backtest from your own strategy prompt (real Alpaca data + hosted model).",
-)
-@app_commands.describe(
-    prompt="Your strategy in plain language — used directly, no /strategy needed.",
-    code="Optional saved strategy code (from /strategy); used only if no prompt is given.",
-    start="Optional start date YYYY-MM-DD.",
-    end="Optional end date YYYY-MM-DD.",
-)
-async def backtest_cmd(
-    interaction: discord.Interaction,
-    prompt: Optional[str] = None,
-    code: Optional[str] = None,
-    start: Optional[str] = None,
-    end: Optional[str] = None,
-) -> None:
-    await interaction.response.defer(thinking=True, ephemeral=True)
-
-    discord_user_id = str(interaction.user.id)
-    await execute_backtest(
-        interaction,
-        discord_user_id,
-        prompt=prompt,
-        code=code,
-        start=start,
-        end=end,
-    )
-
-
-@bot.tree.command(
-    name="reset",
-    description="Clear your temporary agent conversation.",
-)
-async def reset(
-    interaction: discord.Interaction,
-) -> None:
-    discord_user_id = str(interaction.user.id)
-    selected = selected_agent_for(discord_user_id)
-    agent_id = selected["agent_id"] if selected else DEFAULT_AGENT_ID
-
-    reset_agent_conversation(
-        user_id=discord_user_id,
-        agent_id=agent_id,
-    )
-
-    await interaction.response.send_message(
-        "Your temporary agent conversation has been cleared.",
-        ephemeral=True,
-    )
-
-
-@bot.tree.command(
-    name="agent",
-    description="List your linked website agents and choose which one to talk to.",
-)
-async def agent(
-    interaction: discord.Interaction,
-) -> None:
-    await interaction.response.defer(thinking=True, ephemeral=True)
-
-    discord_user_id = str(interaction.user.id)
-    try:
-        agents, err = await fetch_owned_agents(discord_user_id)
-    except Exception as exc:
-        print("Discord /agent fetch failed:", repr(exc))
-        await interaction.edit_original_response(
-            content=(
-                "Could not load your agents. Is the backend running at "
-                f"`{api_base()}`? (set ATL_API_BASE if not)"
-            )
-        )
-        return
-
-    if err == "discord_not_linked":
-        await interaction.edit_original_response(
-            content=(
-                "Your Discord account is not linked to the website yet.\n"
-                "On the lab site: **sign in → Open Discord** (authorize once). "
-                "Then run `/agent` again to see *your* agents."
-            )
-        )
-        return
-
-    if err == "fetch_failed":
-        await interaction.edit_original_response(
-            content=(
-                "Could not load your agents (auth/config error). "
-                "Ask an admin to check `DISCORD_BOT_API_SECRET` on the API and bot."
-            )
-        )
-        return
-
-    # Backtest agent_id path requires builtin; keep externals visible but not selectable.
-    selectable = [
-        a for a in agents
-        if (a.get("agent_type") or "external") == "builtin" and a.get("agent_id")
-    ]
-
-    # Drop stale in-memory selection if the agent is no longer owned.
-    current = selected_agent_for(discord_user_id)
-    owned_ids = {a["agent_id"] for a in agents if a.get("agent_id")}
-    if current and current.get("agent_id") not in owned_ids:
-        _selected_agents.pop(discord_user_id, None)
-        current = None
-
-    if not selectable:
-        if agents:
-            await interaction.edit_original_response(
-                content=(
-                    "Your linked account has agents, but none are **built-in** "
-                    "(needed for Discord backtests).\n"
-                    "On the website: **My Agents → Add Agent → Create a Built-in Agent**."
-                )
-            )
-        else:
-            await interaction.edit_original_response(
-                content=(
-                    "No agents on your linked website account yet.\n"
-                    "Create one on the site: **My Agents → Add Agent → "
-                    "Create a Built-in Agent**, then run `/agent` again."
-                )
-            )
-        return
-
-    lines = ["**Your agents** (linked website account)"]
-    for a in selectable[:25]:
-        marker = "✅ " if current and current["agent_id"] == a["agent_id"] else "• "
-        lines.append(
-            f"{marker}**{a.get('name')}** — `{a.get('model_name') or 'local-model'}` "
-            f"· {a.get('run_count', 0)} backtest(s)"
-        )
-    if current:
-        lines.append(f"\nCurrently selected: **{current['name']}**")
-    lines.append("\nPick one below, then message the bot directly (or use `/ask`).")
-
+    role_id = support_role_id()
+    ping = f"<@&{role_id}> " if role_id else ""
     await interaction.edit_original_response(
-        content="\n".join(lines),
-        view=AgentSelectView(selectable),
+        content=(
+            f"**NewWorldSupport**\nI couldn't answer that one right now. "
+            f"{ping}can someone take a look? In the meantime: #get-the-bot has "
+            "setup steps and #announcements has the latest releases."
+        )
     )
 
 

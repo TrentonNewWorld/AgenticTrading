@@ -122,7 +122,7 @@ Config + pricing:
   "name": "Agentic FinSearch",
   "label": "Model",
   "model": "FinSearch Trader — Gemini 3 Flash (tools off)",
-  "provider": "SecureFinAI Lab",
+  "provider": "the upstream lab",
   "strategy": "llm_agent",
   "integration": "finsearch",
   "model_id": "FinSearch-Trader",

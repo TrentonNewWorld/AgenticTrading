@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agentic Trading Lab</title>
-    <link rel="icon" type="image/png" href="/images/atltransparent.png">
-    <link rel="apple-touch-icon" href="/images/atltransparent.png">
+    <title>NewWorldTrading</title>
+    <link rel="icon" type="image/png" href="/images/atltransparent.png?v=2">
+    <link rel="apple-touch-icon" href="/images/atltransparent.png?v=2">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- API origin (Vercel serves this page, Render answers its fetches):
@@ -13,7 +13,7 @@
          because every API call is a CORS request. -->
     <link rel="preconnect" href="https://agentictrading.onrender.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=118">
+    <link rel="stylesheet" href="styles.css?v=143">
     <!-- defer: ~200KB that was render-blocking. Deferred scripts execute in
          document order (this one first, the body-end ones after), all before
          DOMContentLoaded, so Chart is defined before any chart renders. -->
@@ -29,7 +29,9 @@
             home: { page: 'home' },
             community: { page: 'community' },
             account: { page: 'account' },
-            credits: { page: 'credits' },
+            connections: { page: 'connections' },
+            manual: { page: 'manual' },
+            strategycatalog: { page: 'strategycatalog' },
             backtest: { page: 'playground', playgroundTab: 'backtest' },
             paper: { page: 'playground', playgroundTab: 'paper' },
             agents: { page: 'playground', playgroundTab: 'agents' },
@@ -78,6 +80,12 @@
             var view = params.get('view') || params.get('mode');
             var hash = window.location.hash.replace('#', '');
             var legacy = view || hash;
+            // Own param, not a NAV_VIEW_MAP slug: assetClass is orthogonal to
+            // which page/subtab a URL names, exactly like playgroundTab/
+            // competitionTab already are. Mirrors app.js's own resolveInitialNavigation.
+            var assetParam = params.get('asset');
+            var validAssetParams = ['options', 'futures', 'forex', 'crypto'];
+            var assetOverride = validAssetParams.indexOf(assetParam) !== -1 ? assetParam : null;
             // Discord / share deep links: open Playground backtest immediately.
             if (params.get('agent_id') || params.get('run_id')) {
                 return { page: 'playground', playgroundTab: 'backtest' };
@@ -105,18 +113,19 @@
                     page: mapped.page,
                     playgroundTab: mapped.playgroundTab,
                     competitionTab: mapped.competitionTab,
+                    assetClass: assetOverride || undefined,
                 };
             }
             try {
                 var saved = migrateSavedNavState(
                     JSON.parse(localStorage.getItem(NAV_STATE_KEY) || 'null'),
                 );
-                var valid = ['home', 'playground', 'competition', 'community', 'account', 'credits'];
+                var valid = ['home', 'playground', 'competition', 'community', 'account', 'connections', 'manual', 'strategycatalog'];
                 if (saved && valid.indexOf(saved.page) !== -1) {
-                    return saved;
+                    return assetOverride ? Object.assign({}, saved, { assetClass: assetOverride }) : saved;
                 }
             } catch (e) { /* ignore */ }
-            return { page: 'home' };
+            return { page: 'home', assetClass: assetOverride || undefined };
         }
         var nav = resolveBootNavigation();
         var html = document.documentElement;
@@ -124,6 +133,7 @@
         html.setAttribute('data-nav-page', nav.page);
         html.setAttribute('data-nav-playground-tab', nav.playgroundTab || 'agents');
         html.setAttribute('data-nav-competition-tab', nav.competitionTab || 'leaderboard');
+        html.setAttribute('data-nav-asset-class', nav.assetClass || 'stocks');
         // Warm the API before the JS pipeline even finishes downloading: on
         // Render's free tier the first request may pay a 30-60s cold start,
         // so every second saved here comes straight off page readiness.
@@ -141,13 +151,24 @@
     html[data-nav-boot][data-nav-page="competition"] #competitionView { display: block !important; }
     html[data-nav-boot][data-nav-page="community"] #communityView { display: block !important; }
     html[data-nav-boot][data-nav-page="account"] #accountView { display: block !important; }
-    html[data-nav-boot][data-nav-page="credits"] #creditsView { display: block !important; }
+    html[data-nav-boot][data-nav-page="connections"] #connectionsView { display: block !important; }
     html[data-nav-boot][data-nav-page="admin"] #adminView { display: block !important; }
+    html[data-nav-boot][data-nav-page="manual"] #manualView { display: block !important; }
+    html[data-nav-boot][data-nav-page="strategycatalog"] #strategyCatalogView { display: block !important; }
     html[data-nav-boot] .primary-nav .mode-btn.active { background-color: transparent; color: var(--text-secondary); }
     html[data-nav-boot][data-nav-page="home"] .primary-nav [data-mode="home"] { background-color: var(--info-color); color: white; }
     html[data-nav-boot][data-nav-page="playground"] .primary-nav [data-mode="playground"] { background-color: var(--info-color); color: white; }
     html[data-nav-boot][data-nav-page="competition"] .primary-nav [data-mode="competition"] { background-color: var(--info-color); color: white; }
     html[data-nav-boot][data-nav-page="community"] .primary-nav [data-mode="community"] { background-color: var(--info-color); color: white; }
+    html[data-nav-boot][data-nav-page="manual"] .primary-nav [data-mode="manual"] { background-color: var(--info-color); color: white; }
+    html[data-nav-boot][data-nav-page="strategycatalog"] .primary-nav [data-mode="strategycatalog"] { background-color: var(--info-color); color: white; }
+    html[data-nav-boot] [data-asset-class].active { background-color: transparent; color: var(--text-secondary); }
+    html[data-nav-boot][data-nav-asset-class="stocks"] [data-asset-class="stocks"] { background-color: var(--dash-accent); color: white; }
+    html[data-nav-boot][data-nav-asset-class="options"] [data-asset-class="options"] { background-color: var(--dash-accent); color: white; }
+    html[data-nav-boot][data-nav-asset-class="futures"] [data-asset-class="futures"] { background-color: var(--dash-accent); color: white; }
+    html[data-nav-boot][data-nav-asset-class="forex"] [data-asset-class="forex"] { background-color: var(--dash-accent); color: white; }
+    html[data-nav-boot][data-nav-asset-class="crypto"] [data-asset-class="crypto"] { background-color: var(--dash-accent); color: white; }
+    html[data-nav-boot][data-nav-asset-class="prediction"] [data-asset-class="prediction"] { background-color: var(--dash-accent); color: white; }
     html[data-nav-boot][data-nav-page="playground"] .playground-subtabs .subtab-btn.active { background: transparent; color: var(--text-secondary); }
     html[data-nav-boot][data-nav-page="playground"][data-nav-playground-tab="agents"] .playground-subtabs [data-playground-tab="agents"],
     html[data-nav-boot][data-nav-page="playground"][data-nav-playground-tab="backtest"] .playground-subtabs [data-playground-tab="backtest"],
@@ -220,33 +241,34 @@
     <!-- Header -->
     <header class="header">
         <div class="header-left">
-            <a class="header-github-link" href="https://github.com/Open-Finance-Lab/AgenticTrading" target="_blank" rel="noopener noreferrer" aria-label="AgenticTrading on GitHub">
+            <a class="header-github-link" href="https://github.com/TrentonNewWorld/AgenticTrading" target="_blank" rel="noopener noreferrer" aria-label="NW_AmericanTrading on GitHub">
                 <svg class="ui-icon header-github-icon" aria-hidden="true"><use href="#icon-github"/></svg>
-                <span class="header-github-name">AgenticTrading</span>
+                <span class="header-github-name">NW_AmericanTrading</span>
             </a>
             <a id="openDiscordBtn" class="header-discord-btn" data-discord-link href="https://discord.gg/9HnQ6XDG98" target="_blank" rel="noopener noreferrer">
                 <svg class="header-discord-btn__icon" aria-hidden="true"><use href="#icon-discord"/></svg>
-                <span class="header-discord-btn__label">Discord Community</span>
+                <span class="header-discord-btn__label">Discord</span>
                 <svg class="header-discord-btn__arrow" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
             </a>
         </div>
-        <a class="header-brand" href="/" aria-label="Agentic Trading Lab home">
+        <a class="header-brand" href="/" aria-label="NewWorldTrading home">
             <div class="logo-container">
-                <img src="images/atltransparent.png" alt="" class="logo-icon">
+                <img src="images/atltransparent.png?v=2" alt="" class="logo-icon">
             </div>
             <div class="title-section">
-                <h1>Agentic Trading Lab</h1>
+                <h1>NewWorldTrading</h1>
             </div>
         </a>
         <div class="header-right">
             <button id="navMenuToggle" class="nav-menu-toggle" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
             <nav id="primaryNav" class="mode-toggle primary-nav" aria-label="Primary">
                 <button class="mode-btn active" data-mode="home">Home</button>
+                <button class="mode-btn" data-mode="manual">Manual</button>
                 <button class="mode-btn" data-mode="playground">My Agents</button>
-                <button class="mode-btn" data-mode="competition">Competition</button>
-                <button class="mode-btn" data-mode="community">Community</button>
+                <button class="mode-btn" data-mode="competition">Overview</button>
+                <button class="mode-btn" data-mode="community">Testing</button>
+                <button class="mode-btn" data-mode="strategycatalog">Strategy</button>
             </nav>
-            <a class="mode-btn" href="/strategy-catalog.html">Strategy Catalog</a>
             <div id="authControls" class="header-account">
                 <button id="authSignInBtn" class="auth-btn auth-btn-primary" type="button">Sign in</button>
                 <div id="accountMenuWrap" class="account-menu-wrap" hidden>
@@ -261,9 +283,18 @@
                             <span id="accountMenuEmail" class="account-menu-email"></span>
                         </div>
                         <button id="accountMenuAccountBtn" class="account-menu-item" type="button">Account</button>
-                        <button id="accountMenuCreditsBtn" class="account-menu-item" type="button">Credits &amp; Billing</button>
+                        <button id="accountMenuConnectionsBtn" class="account-menu-item" type="button">API Connections</button>
                         <button id="accountMenuAdminBtn" class="account-menu-item" type="button" hidden>Admin</button>
-                        <button id="accountMenuLogoutBtn" class="account-menu-item account-menu-item--danger" type="button">Log out</button>
+                        <div id="accountMenuLiveExecuteRow" class="account-menu-live-execute" hidden>
+                            <div class="account-menu-live-execute-text">
+                                <span class="account-menu-live-execute-label">Live Trading</span>
+                                <span class="account-menu-live-execute-sub" id="accountMenuLiveExecuteSub">Real orders place automatically when armed</span>
+                            </div>
+                            <label class="live-execute-switch">
+                                <input type="checkbox" id="liveExecuteToggle" aria-label="Arm live trading">
+                                <span class="live-execute-switch-track" aria-hidden="true"></span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -443,6 +474,39 @@
 
     <!-- Home -->
     <div id="homeView" class="page-view home-view">
+        <!-- Dashboard Switch: picks which trading dashboard is active
+             (assetClass in app.js). Sits outside the horizontal pager below
+             so it's always visible on Home regardless of which pager screen
+             is showing, right under the live ticker (the "market data" this
+             sits below). Manual/Strategy Catalog/Competition all read the
+             same assetClass to pick their API base path -- see
+             js/manual.js's m10Path(), js/strategy-catalog.js's scBasePath(),
+             js/leaderboard.js's lbBasePath(). Futures and Forex both run
+             entirely on free Yahoo Finance data by default (real Tradovate/
+             OANDA execution is wired in but gated off -- see
+             infrastructure/brokers/tradovate_paper.py's and
+             oanda_practice.py's docstrings: Tradovate's own API needs
+             either a $1,000+ funded account or a partner application, not
+             a free self-serve demo the way Alpaca and OANDA both offer).
+             Crypto is the one dashboard on the SAME verified Alpaca account
+             every other dashboard already uses (crypto_status ACTIVE,
+             confirmed against a real paper account) -- real execution is
+             still gated off by default for consistency with every other
+             dashboard's dry-run posture, see
+             infrastructure/brokers/alpaca_paper_crypto.py's docstring. -->
+        <section class="dashboard-switch" aria-label="Dashboard switch">
+            <h2 class="dashboard-switch-title">Dashboard Switch</h2>
+            <p class="dashboard-switch-desc">Click a market below to switch to that trading dashboard. Your account stays the same everywhere &mdash; each dashboard has its own independent paper wallet.</p>
+            <p class="dashboard-switch-disclaimer">Trading involves risk of loss. Past performance does not guarantee future results. Simulated and backtested results do not represent actual trading and often differ from live results.</p>
+            <div class="dashboard-switch-buttons">
+                <button type="button" class="dashboard-switch-btn active" data-asset-class="stocks">Stocks</button>
+                <button type="button" class="dashboard-switch-btn" data-asset-class="options">Options</button>
+                <button type="button" class="dashboard-switch-btn" data-asset-class="futures">Futures</button>
+                <button type="button" class="dashboard-switch-btn" data-asset-class="forex">Forex</button>
+                <button type="button" class="dashboard-switch-btn" data-asset-class="crypto">Crypto</button>
+                <button type="button" class="dashboard-switch-btn" data-asset-class="prediction">Prediction</button>
+            </div>
+        </section>
         <div class="home-page home-page--pager">
             <div class="home-pager-track" id="homePagerTrack" data-page="0">
 
@@ -573,6 +637,10 @@
                                     <span class="hm-port-metric-label">Today’s P&amp;L</span>
                                     <strong class="hm-port-metric-value tabular-nums" id="homeMetricPnl">$0.00 <em id="homeMetricPnlPct">(0.00%)</em></strong>
                                 </div>
+                                <div class="hm-port-metric hm-port-metric--side" id="homeMetricRealMoneyWrap" title="Combined balance across every broker account connected on the API Connections page -- one dashboard's amount is never double-counted just because another dashboard shares the same account.">
+                                    <span class="hm-port-metric-label">Real Money</span>
+                                    <strong class="hm-port-metric-value tabular-nums" id="homeMetricRealMoney">—</strong>
+                                </div>
                             </div>
                             <div class="hm-port-range" role="tablist" aria-label="Equity range">
                                 <button type="button" class="hm-range-btn is-active" data-port-range="1D">1D</button>
@@ -616,7 +684,7 @@
                                     <button type="button" class="hm-tab is-active" data-market-tab="news" role="tab" aria-selected="true">News</button>
                                     <button type="button" class="hm-tab" data-market-tab="signals" role="tab" aria-selected="false">Signals</button>
                                 </div>
-                                <span class="hm-source-label" id="homeModuleMarketBtn" role="link" tabindex="0">Powered by FinSearch</span>
+                                <span class="hm-source-label" id="homeModuleMarketBtn" role="link" tabindex="0">Market signals</span>
                             </header>
                             <div class="hm-market-grid">
                                 <div class="hm-market-feed" id="homeMarketNewsPane">
@@ -629,123 +697,11 @@
                                 </div>
                             </div>
                         </article>
-
-                        <article class="home-module home-module--community" id="homeModuleCommunity">
-                            <header class="home-module-head">
-                                <h3 class="home-module-title">Community Overview</h3>
-                                <div class="hm-community-head-meta">
-                                    <span class="hm-demo-badge" id="homeCommunityDemoBadge">Demo data</span>
-                                    <span class="hm-live-badge"><span class="home-live-dot" aria-hidden="true"></span>Live</span>
-                                </div>
-                            </header>
-                            <div class="hm-community-stats">
-                                <div class="hm-community-stat">
-                                    <span id="homeMetricAgents" class="hm-community-value tabular-nums">28</span>
-                                    <span class="hm-community-label">Active agents</span>
-                                </div>
-                                <div class="hm-community-stat">
-                                    <span id="homeMetricUsers" class="hm-community-value tabular-nums">126</span>
-                                    <span class="hm-community-label">Backtests today</span>
-                                </div>
-                                <div class="hm-community-stat">
-                                    <span id="homeMetricTrades" class="hm-community-value tabular-nums">37</span>
-                                    <span class="hm-community-label">Paper trades today</span>
-                                </div>
-                            </div>
-                            <p class="hm-activity-label">Recent Activity</p>
-                            <ul class="hm-activity-list" id="homeCommunityActivity">
-                                <li><span class="hm-act-dot"></span><span>AlphaWolf published a strategy</span><time class="tabular-nums">5m ago</time></li>
-                                <li><span class="hm-act-dot"></span><span>QuantNova completed a backtest</span><time class="tabular-nums">18m ago</time></li>
-                                <li><span class="hm-act-dot"></span><span>Momentum Scout moved to #3</span><time class="tabular-nums">31m ago</time></li>
-                            </ul>
-                            <button class="hm-footer-btn" id="homeModuleCommunityBtn" type="button">Join our Discord community</button>
-                        </article>
                         </div>
                     </div>
                 </div>
                 </section>
 
-                <div class="home-pager-hidden" hidden>
-                <section class="home-news-signals" id="homeNewsSignals" aria-label="News and signals">
-                    <div class="home-section-title-row">
-                        <h2 class="home-section-title">News &amp; Signals <span class="nns-source-tag">via Agentic FinSearch</span></h2>
-                        <span class="nns-updated" id="nnsUpdated"></span>
-                        <span class="nns-badge" id="nnsStatusBadge" hidden></span>
-                    </div>
-                    <p class="nns-overview" id="nnsOverview"></p>
-                    <div class="nns-split">
-                        <!-- Phase B honesty: the left column is the broad raw-items feed — not
-                             gated by the signals relevance filter; may include non-Dow tickers
-                             and general-market stories (null ticker, rendered without a chip).
-                             When the items endpoint is unavailable it falls back to Phase A's
-                             one-representative-story-per-signal feed (get_latest_panel_payload). -->
-                        <div class="nns-col" id="nnsFeed"><h3>Latest news</h3><ul class="nns-list" id="nnsFeedList"></ul></div>
-                        <div class="nns-col" id="nnsSignals"><h3>Signals</h3><ul class="nns-list" id="nnsSignalsList"></ul></div>
-                    </div>
-                </section>
-
-                <section class="home-insights">
-                    <h3 class="home-section-title home-insights-heading">Insights from the Lab</h3>
-                    <div class="home-insights-grid">
-                        <article class="home-insight-card">
-                            <span class="icon-shell icon-shell--sm"><svg class="ui-icon"><use href="#icon-chart"/></svg></span>
-                            <h4 class="home-insight-title">Momentum strategies dominate today</h4>
-                            <p class="home-insight-stat tabular-nums">58% of winning trades are momentum-based.</p>
-                            <a class="home-link-btn" href="https://finagent-orchestration.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">View analysis</a>
-                        </article>
-                        <article class="home-insight-card">
-                            <span class="icon-shell icon-shell--sm icon-shell--positive"><svg class="ui-icon"><use href="#icon-shield-check"/></svg></span>
-                            <h4 class="home-insight-title">Risk discipline pays off</h4>
-                            <p class="home-insight-stat tabular-nums">Top agents have 23% lower maximum drawdown.</p>
-                            <a class="home-link-btn" href="https://finagent-orchestration.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">View report</a>
-                        </article>
-                        <article class="home-insight-card">
-                            <span class="icon-shell icon-shell--sm"><svg class="ui-icon"><use href="#icon-users"/></svg></span>
-                            <h4 class="home-insight-title">Diversity drives performance</h4>
-                            <p class="home-insight-stat tabular-nums">Top portfolios hold 12.4 assets on average.</p>
-                            <a class="home-link-btn" href="https://finagent-orchestration.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">View breakdown</a>
-                        </article>
-                    </div>
-                </section>
-
-                <section class="home-resources">
-                    <h3 class="home-section-title home-resources-heading">Resources</h3>
-                    <div class="home-resources-grid">
-                        <a class="home-resource-card" href="https://github.com/Open-Finance-Lab/AgenticTrading" target="_blank" rel="noopener noreferrer">
-                            <span class="icon-shell icon-shell--sm icon-shell--muted"><svg class="ui-icon"><use href="#icon-github"/></svg></span>
-                            <span class="home-resource-copy">
-                                <span class="home-resource-title">GitHub</span>
-                                <span class="home-resource-subtitle">Source code and worked examples</span>
-                            </span>
-                            <svg class="ui-icon home-resource-arrow" aria-hidden="true"><use href="#icon-external-link"/></svg>
-                        </a>
-                        <a class="home-resource-card" href="https://discord.gg/9HnQ6XDG98" target="_blank" rel="noopener noreferrer">
-                            <span class="icon-shell icon-shell--sm icon-shell--discord"><svg class="ui-icon"><use href="#icon-discord"/></svg></span>
-                            <span class="home-resource-copy">
-                                <span class="home-resource-title">Discord Community</span>
-                                <span class="home-resource-subtitle">Talk strategy with other members</span>
-                            </span>
-                            <svg class="ui-icon home-resource-arrow" aria-hidden="true"><use href="#icon-external-link"/></svg>
-                        </a>
-                        <button id="homeResourceLeaderboardBtn" class="home-resource-card home-resource-card--button" type="button">
-                            <span class="icon-shell icon-shell--sm"><svg class="ui-icon"><use href="#icon-trophy"/></svg></span>
-                            <span class="home-resource-copy">
-                                <span class="home-resource-title">Leaderboard</span>
-                                <span class="home-resource-subtitle">See top agents and teams</span>
-                            </span>
-                            <svg class="ui-icon home-resource-arrow" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
-                        </button>
-                        <a class="home-resource-card" href="https://finagent-orchestration.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer">
-                            <span class="icon-shell icon-shell--sm"><svg class="ui-icon"><use href="#icon-book"/></svg></span>
-                            <span class="home-resource-copy">
-                                <span class="home-resource-title">Documentation</span>
-                                <span class="home-resource-subtitle">Guides and reference documentation</span>
-                            </span>
-                            <svg class="ui-icon home-resource-arrow" aria-hidden="true"><use href="#icon-external-link"/></svg>
-                        </a>
-                    </div>
-                </section>
-                </div>
             </div>
         </div>
     </div>
@@ -818,12 +774,57 @@
                     <input id="builtinAgentDescription" type="text" maxlength="280" placeholder="What makes this agent different?" autocomplete="off">
                 </label>
                 <label class="auth-field">
+                    <span>What does this agent trade?</span>
+                    <!-- Cannot be changed after creation -- see AssetClassField's
+                         docstring in api/routers/agents.py for why. -->
+                    <select id="builtinAgentAssetClass" class="control-select">
+                        <option value="stocks" selected>Stocks</option>
+                        <option value="options">Options</option>
+                        <option value="futures">Futures</option>
+                        <option value="forex">Forex</option>
+                        <option value="crypto">Crypto</option>
+                        <option value="prediction">Prediction</option>
+                    </select>
+                </label>
+                <label class="auth-field">
                     <span>Paper Trading Allocated Capital (max $3,000)</span>
                     <input id="builtinAgentCashAllocation" type="number" min="0" max="3000" step="100" value="1000" required aria-describedby="builtinAgentCashHint">
                 </label>
                 <p id="builtinAgentCashHint" class="credential-hint">Cash reserved from My Portfolio for this agent's paper trading. Backtests start from this amount by default but never spend it.</p>
                 <p id="createBuiltinAgentError" class="auth-error" hidden></p>
                 <button id="createBuiltinAgentSubmit" class="auth-submit-btn" type="submit">Create built-in agent</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="uploadAgentModal" class="auth-modal" hidden>
+        <div class="auth-modal-backdrop" id="uploadAgentModalBackdrop"></div>
+        <div class="auth-modal-panel" role="dialog" aria-labelledby="uploadAgentModalTitle">
+            <button id="uploadAgentModalClose" class="auth-modal-close" type="button" aria-label="Close">×</button>
+            <h2 id="uploadAgentModalTitle" class="auth-modal-title">Upload a File to Create an Agent</h2>
+            <p class="auth-modal-subtitle">Upload a file describing a trading idea -- a strategy write-up, code, notes. An AI model reads it and extracts a trading instruction for a new agent, which you can review and edit in Configure before running.</p>
+            <form id="uploadAgentForm" class="auth-form">
+                <label class="auth-field">
+                    <span>File</span>
+                    <input id="uploadAgentFile" type="file" accept=".py,.txt,.md,text/plain" required>
+                </label>
+                <label class="auth-field">
+                    <span>Agent name (optional -- defaults to the filename)</span>
+                    <input id="uploadAgentName" type="text" maxlength="100" placeholder="Momentum Alpha" autocomplete="off">
+                </label>
+                <label class="auth-field">
+                    <span>What does this agent trade?</span>
+                    <select id="uploadAgentAssetClass" class="control-select">
+                        <option value="stocks" selected>Stocks</option>
+                        <option value="options">Options</option>
+                        <option value="futures">Futures</option>
+                        <option value="forex">Forex</option>
+                        <option value="crypto">Crypto</option>
+                        <option value="prediction">Prediction</option>
+                    </select>
+                </label>
+                <p id="uploadAgentError" class="auth-error" hidden></p>
+                <button id="uploadAgentSubmit" class="auth-submit-btn" type="submit">Upload and create agent</button>
             </form>
         </div>
     </div>
@@ -852,7 +853,7 @@
         <div class="auth-modal-panel" role="dialog" aria-labelledby="agentCredentialsModalTitle">
             <button id="agentCredentialsModalClose" class="auth-modal-close" type="button" aria-label="Close">×</button>
             <h2 id="agentCredentialsModalTitle" class="auth-modal-title">Agent created</h2>
-            <p id="agentCredentialsModalSubtitle" class="auth-modal-subtitle">Your agent is ready. Use the access key below to connect your own program to Agentic Trading Lab. (This is the API key in the SDK and docs.)</p>
+            <p id="agentCredentialsModalSubtitle" class="auth-modal-subtitle">Your agent is ready. Use the access key below to connect your own program to NewWorldTrading. (This is the API key in the SDK and docs.)</p>
             <p class="credential-warning">One-time key — copy and save it before closing this window. You won't be able to view the full key again.</p>
             <div class="auth-form">
                 <label class="auth-field">
@@ -908,6 +909,7 @@
                         <h2 class="page-title">My Agents</h2>
                         <a id="agentsSectionDiscordBtn" class="discord-nav-btn discord-nav-btn-sm" data-discord-link href="https://discord.gg/9HnQ6XDG98" target="_blank" rel="noopener noreferrer">Open Discord</a>
                     </div>
+                    <p class="page-description agents-section-intro">An agent is an AI model you give a trading instruction to, then backtest to see how it would have done. Agents are for testing ideas, not for trading directly — when one tests well, add it to Strategy from its card, and your bot trades that instruction from your Strategy page instead.</p>
                     <div class="agent-toolbar">
                         <div class="agent-toolbar-search">
                             <svg class="agent-toolbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
@@ -922,6 +924,7 @@
                             </button>
                         </div>
                         <button id="addAgentBtnToolbar" class="home-btn home-btn-primary agent-toolbar-add" type="button">Add Agent +</button>
+                        <button id="uploadAgentBtnToolbar" class="home-btn agent-toolbar-add" type="button">Upload a file instead</button>
                     </div>
                 </div>
                 <div id="agentsCategories">
@@ -951,36 +954,90 @@
                         <div id="agentsGridFooterStocks" class="agents-grid-footer" hidden></div>
                         <p id="agentsEmptyStocks" class="control-helper" hidden>You don't have any agents yet. Create one and test your first trading idea.</p>
                     </section>
-                    <!-- Locked shelves. Crypto is a display-only price ticker
-                         (quotes.py, never wired to the engine) and futures exist
-                         nowhere in the repo, so these rows are inert on purpose:
-                         no grid, no chips, no focus stop, nothing clickable. They
-                         must read as "not built yet", never as "built and broken".
-                         Adding a category slug for either would make them
-                         selectable in Configure and cloneable from Community. -->
-                    <section class="agents-category agents-category--locked" data-category="crypto" aria-disabled="true">
+                    <section class="agents-category" data-category="options">
                         <div class="agents-category-head">
                             <div class="agents-category-heading">
                                 <span class="agents-category-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                                 </span>
-                                <h3 class="agents-category-title">Crypto</h3>
-                                <span class="agents-category-tag">Not yet available</span>
+                                <h3 class="agents-category-title">Options</h3>
+                                <span id="agentsCountOptions" class="agents-category-count" hidden></span>
                             </div>
-                            <p class="agents-category-sub">Round-the-clock crypto backtesting isn't built yet. Nothing here can be run.</p>
+                            <p class="agents-category-sub">Trade options contracts, tested against real historical chains.</p>
                         </div>
+                        <div id="agentsGridOptions" class="agents-grid">
+                            <div class="section-card agent-card agent-card--skeleton" aria-hidden="true"></div>
+                        </div>
+                        <div id="agentsGridFooterOptions" class="agents-grid-footer" hidden></div>
+                        <p id="agentsEmptyOptions" class="control-helper" hidden>You don't have any agents yet. Create one and test your first trading idea.</p>
                     </section>
-                    <section class="agents-category agents-category--locked" data-category="futures" aria-disabled="true">
+                    <section class="agents-category" data-category="futures">
                         <div class="agents-category-head">
                             <div class="agents-category-heading">
                                 <span class="agents-category-icon" aria-hidden="true">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                 </span>
                                 <h3 class="agents-category-title">Futures</h3>
-                                <span class="agents-category-tag">Not yet available</span>
+                                <span id="agentsCountFutures" class="agents-category-count" hidden></span>
                             </div>
-                            <p class="agents-category-sub">Futures contracts aren't built yet. Nothing here can be run.</p>
+                            <p class="agents-category-sub">Trade futures contracts, simulated on free market data by default.</p>
                         </div>
+                        <div id="agentsGridFutures" class="agents-grid">
+                            <div class="section-card agent-card agent-card--skeleton" aria-hidden="true"></div>
+                        </div>
+                        <div id="agentsGridFooterFutures" class="agents-grid-footer" hidden></div>
+                        <p id="agentsEmptyFutures" class="control-helper" hidden>You don't have any agents yet. Create one and test your first trading idea.</p>
+                    </section>
+                    <section class="agents-category" data-category="forex">
+                        <div class="agents-category-head">
+                            <div class="agents-category-heading">
+                                <span class="agents-category-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+                                </span>
+                                <h3 class="agents-category-title">Forex</h3>
+                                <span id="agentsCountForex" class="agents-category-count" hidden></span>
+                            </div>
+                            <p class="agents-category-sub">Trade currency pairs, simulated on free market data by default.</p>
+                        </div>
+                        <div id="agentsGridForex" class="agents-grid">
+                            <div class="section-card agent-card agent-card--skeleton" aria-hidden="true"></div>
+                        </div>
+                        <div id="agentsGridFooterForex" class="agents-grid-footer" hidden></div>
+                        <p id="agentsEmptyForex" class="control-helper" hidden>You don't have any agents yet. Create one and test your first trading idea.</p>
+                    </section>
+                    <section class="agents-category" data-category="crypto">
+                        <div class="agents-category-head">
+                            <div class="agents-category-heading">
+                                <span class="agents-category-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                </span>
+                                <h3 class="agents-category-title">Crypto</h3>
+                                <span id="agentsCountCrypto" class="agents-category-count" hidden></span>
+                            </div>
+                            <p class="agents-category-sub">Trade crypto around the clock on real market data.</p>
+                        </div>
+                        <div id="agentsGridCrypto" class="agents-grid">
+                            <div class="section-card agent-card agent-card--skeleton" aria-hidden="true"></div>
+                        </div>
+                        <div id="agentsGridFooterCrypto" class="agents-grid-footer" hidden></div>
+                        <p id="agentsEmptyCrypto" class="control-helper" hidden>You don't have any agents yet. Create one and test your first trading idea.</p>
+                    </section>
+                    <section class="agents-category" data-category="prediction">
+                        <div class="agents-category-head">
+                            <div class="agents-category-heading">
+                                <span class="agents-category-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+                                </span>
+                                <h3 class="agents-category-title">Prediction</h3>
+                                <span id="agentsCountPrediction" class="agents-category-count" hidden></span>
+                            </div>
+                            <p class="agents-category-sub">Trade prediction markets. New strategies paper-trade forward for 5 real days before results show — see Prediction for why.</p>
+                        </div>
+                        <div id="agentsGridPrediction" class="agents-grid">
+                            <div class="section-card agent-card agent-card--skeleton" aria-hidden="true"></div>
+                        </div>
+                        <div id="agentsGridFooterPrediction" class="agents-grid-footer" hidden></div>
+                        <p id="agentsEmptyPrediction" class="control-helper" hidden>You don't have any agents yet. Create one and test your first trading idea.</p>
                     </section>
                     <section class="agents-category" data-category="external">
                         <div class="agents-category-head">
@@ -1022,7 +1079,7 @@
                 <div id="agentEditorManagedModelField" class="agent-editor-managed-model-field" aria-label="Hosted AI model" hidden>
                     <span class="agent-editor-model-label">Hosted AI model</span>
                     <strong id="agentEditorManagedModelValue" class="agent-editor-managed-model-value">OpenRouter · nvidia/nemotron-3-nano-30b-a3b</strong>
-                    <span class="agent-editor-managed-model-note">Managed for you by Agentic Trading Lab</span>
+                    <span class="agent-editor-managed-model-note">Managed for you by NewWorldTrading</span>
                 </div>
                 <label id="agentEditorCategoryField" class="agent-editor-model-field" for="agentEditorCategorySelect">
                     <span class="agent-editor-model-label">Market</span>
@@ -1086,7 +1143,7 @@
                     </div>
                     <div id="agentEditorAiHedgeFundPanel" class="agent-editor-simple section-card compact" hidden>
                         <h3 class="agent-editor-intro-title">AI Hedge Fund analyst panel</h3>
-                        <p class="agent-editor-intro-text">Choose the analysts that shape this agent's strategy. The AI model and its settings are hosted and managed by Agentic Trading Lab.</p>
+                        <p class="agent-editor-intro-text">Choose the analysts that shape this agent's strategy. The AI model and its settings are hosted and managed by NewWorldTrading.</p>
                         <div id="agentEditorAiHedgeFundAnalysts" class="agent-editor-analyst-grid" role="group" aria-label="AI Hedge Fund analysts"></div>
                         <label class="auth-field agent-editor-credential-field" for="agentEditorFinancialDatasetsKey">
                             <span>Financial Datasets access key (from financialdatasets.ai)</span>
@@ -1457,170 +1514,22 @@
         <div class="subtab-bar competition-subtabs">
             <button class="subtab-btn active" data-competition-tab="leaderboard">Competition Leaderboard</button>
             <button class="subtab-btn" data-competition-tab="live">Live Trading Leaderboard</button>
-            <button class="subtab-btn" data-competition-tab="participants">Participating Teams</button>
-            <button class="subtab-btn" data-competition-tab="about">About</button>
-        </div>
-        <div id="competitionParticipantsPanel" class="competition-panel participants-panel" style="display: none;">
-            <div class="participants-empty-wrap">
-                <div class="participants-empty" id="participantsEmptyState">
-                    <p class="participants-empty-title">Season hasn't started yet</p>
-                    <p class="participants-empty-text">Participating teams will appear here when the contest season opens. The Ranking board shows AI models and baseline strategies only.</p>
-                </div>
-            </div>
-            <div class="participants-grid" id="participantsGrid" hidden></div>
-        </div>
-        <div id="competitionAboutPanel" class="competition-panel" style="display: none;">
-            <div class="about-grid">
-                <div class="section-card">
-                    <h3 class="section-title">Competition Overview</h3>
-                    <p class="about-text">SecureFinAI Contest 2026 is a paper-trading competition for AI-powered agents. The contest is currently in <strong>Preseason</strong>. Participating teams join when the season starts (registration Aug 2026).</p>
-                </div>
-                <div class="section-card">
-                    <h3 class="section-title">Live Trading Leaderboard</h3>
-                    <p class="about-text">This board runs <strong>forward</strong>, in seasons of <strong>two weeks</strong>, Monday to Friday. &ldquo;Live&rdquo; describes the direction, not the money: this is <strong>simulated trading on real market data</strong> &mdash; no broker account, no real capital, and no order ever leaves this system.</p>
-                    <p class="about-text">Each night after the 16:00 ET cash close, every entry is advanced one trading day: the model sees that day's real bars for the first time and its portfolio carries forward from where the previous day left it. Nobody &mdash; including us &mdash; knows what the next bar does when an entry locks, which is what separates this board from the fixed-window Competition one.</p>
-                    <p class="about-text">Seasons do not accumulate. Every season starts flat at $10,000, ranks only the days inside it, and ends. Entries do not carry over, so joining is a per-season decision.</p>
-                    <p class="about-text">If a night's advance fails, that day is <strong>marked as a gap</strong> and positions carry forward unchanged. It is never quietly re-run days later against a market that has already moved.</p>
-                    <p class="about-text about-text-muted">We are in <strong>Season 0</strong>, the shakedown season: the engine that advances it is not deployed yet, so nothing on this tab is a standing. Until it ships, the board renders in preview and says so across the top. Season 1 is the first one that will count.</p>
-                </div>
-                <div class="section-card">
-                    <h3 class="section-title">Competition Leaderboard</h3>
-                    <p class="about-text">Ranking is a <strong>backtest leaderboard</strong>, not live trading. Each entry is an hourly backtest over <strong>2026-04-15 → 2026-05-15</strong> (one-month window), comparing leading AI models, baseline strategies, and market indices. Official rank is by final portfolio value.</p>
-                </div>
-                <div class="section-card compact">
-                    <h3 class="section-title">Schedule</h3>
-                    <div class="metric-row">
-                        <span class="metric-label">Phase</span>
-                        <span class="metric-value">Preseason</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Registration</span>
-                        <span class="metric-value">Aug 1 – Aug 31</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Trading Window</span>
-                        <span class="metric-value">Sep 1 – Oct 30</span>
-                    </div>
-                    <div class="metric-row">
-                        <span class="metric-label">Results</span>
-                        <span class="metric-value">Nov 5</span>
-                    </div>
-                </div>
-                <div class="section-card compact">
-                    <h3 class="section-title">Rules</h3>
-                    <ul class="about-list">
-                        <li>Paper trading only — no real capital at risk</li>
-                        <li>Agents must trade within the assigned asset universe</li>
-                        <li>Maximum 10 trades per day per agent</li>
-                        <li>All decisions must be logged and auditable</li>
-                    </ul>
-                </div>
-                <div class="section-card compact">
-                    <h3 class="section-title">Evaluation Metrics</h3>
-                    <ul class="about-list">
-                        <li>Official rank by final portfolio value (Ranking)</li>
-                        <li>Also reported: cumulative return, Sharpe, max drawdown</li>
-                        <li>Entry types: Model, Baseline Strategy, Market Index</li>
-                    </ul>
-                </div>
-            </div>
         </div>
     </div>
 
     <!-- Leaderboard View (Competition / Leaderboard) -->
     <div id="leaderboardView" class="leaderboard-view competition-panel competition-leaderboard-panel" style="display: none;">
         <div class="leaderboard-container compact">
-            <!-- Contest identity (merged from former standalone banner) -->
-            <div class="leaderboard-contest-header">
-                <div class="contest-identity">
-                    <div class="contest-title-row">
-                        <h2 class="contest-title">SecureFinAI Contest 2026</h2>
-                        <span class="status-badge upcoming contest-live-badge">Upcoming</span>
-                    </div>
-                    <p class="contest-subtitle" id="boardSubtitle">Sep 1 – Oct 30, 2026</p>
-                    <!-- Competition-only, and hidden on the live board by
-                         leaderboard.js. The board name and the first subtitle
-                         are rewritten per board; this line is not, so left
-                         alone it captions the Live Trading Leaderboard as a
-                         SecureFinAI Lab contest event, which it is not. -->
-                    <p class="contest-subtitle" id="contestOrganizerLine">Organized by SecureFinAI Lab with Agentic Trading Lab.</p>
-                </div>
-                <div class="contest-actions">
-                    <!-- Opens the SecureFinAI Contest 2026 rules modal, which
-                         describes a fixed window and a registration deadline —
-                         neither of which governs a season. Hidden with the
-                         organizer line above. -->
-                    <button id="competitionRulesBtn" class="agent-action-btn agent-action-secondary contest-action-btn" type="button">Rules</button>
-                    <a class="discord-nav-btn discord-nav-btn-sm" href="https://discord.gg/9HnQ6XDG98" target="_blank" rel="noopener noreferrer">Join our Discord community</a>
-                </div>
-            </div>
-            <!-- Live Trading season chrome. Hidden entirely on the Competition board:
-                 every element below describes a season, and a season is the one
-                 thing the fixed contest window is not. -->
-            <!-- Ships with real text rather than empty. The boot stylesheet
-                 reveals this element for ?view=live before any script runs, and
-                 an empty div revealed at boot is indistinguishable from no
-                 disclaimer. leaderboard.js replaces the body once the payload
-                 names the window the curves actually came from. -->
-            <div id="seasonPreviewBanner" class="season-preview-banner" role="status" hidden><strong>Preview — the season engine is not deployed.</strong><span> Season 0 has not been run: nothing on this tab is a live standing, and no ranking on it counts.</span></div>
-
-            <section id="seasonStrip" class="season-strip" aria-label="Season status" hidden>
-                <div class="season-strip-top">
-                    <div class="season-identity">
-                        <span class="season-badge" id="seasonBadge">Season —</span>
-                        <span class="season-dates" id="seasonDates">—</span>
-                    </div>
-                    <div class="season-entry-state" id="seasonEntryState">
-                        <span class="season-entry-dot" aria-hidden="true"></span>
-                        <span id="seasonEntryText">—</span>
-                    </div>
-                </div>
-                <div class="season-strip-progress">
-                    <div class="season-progress-track" role="progressbar" id="seasonProgressBar"
-                         aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"
-                         aria-label="Trading days completed this season">
-                        <div class="season-progress-fill" id="seasonProgressFill" style="width: 0%"></div>
-                    </div>
-                    <span class="season-progress-label" id="seasonProgressLabel">—</span>
-                    <span class="season-next-advance" id="seasonNextAdvance">—</span>
-                </div>
-                <p class="season-reset-note">
-                    Every season starts flat at $10,000 and ranks only the days inside it.
-                    Entries do not carry over &mdash; re-enter each season.
-                </p>
-            </section>
-
-            <!-- Missed nights are a hole in a cumulative curve, so they are stated
-                 rather than smoothed over. Copy differs by failure_kind on purpose:
-                 "the market was flat" and "our job died" must never read alike. -->
-            <ul id="seasonGaps" class="season-gaps" aria-label="Days this season did not advance" hidden></ul>
-
-            <!-- Combined Header with Stats + Controls -->
+            <!-- Combined Header with Controls (the Phase/Window/Updated/Leader
+                 stat strip was removed at the user's request -- "Phase:
+                 Preseason" was stale copy left over from before the board ran
+                 real data, and the rest of the strip went with it). The
+                 elements these ids drove (#boardPhaseLabel/#totalTeams/
+                 #tradingWindow/#lastUpdate/#leaderTeam) no longer exist;
+                 updateLeaderboardHeader() in js/leaderboard.js guards every
+                 lookup with getElementById + optional chaining, so it no-ops
+                 on all of them rather than throwing. -->
             <div class="leaderboard-header-bar compact">
-                <!-- Left: Stats -->
-                <div class="header-stats compact">
-                    <div class="stat-item compact">
-                        <!-- Relabelled per board: the value below is the
-                             contest phase on Competition and the season number
-                             on the live board, and "Phase: Season 0" captions
-                             one with the other's noun. -->
-                        <span class="stat-label" id="boardPhaseLabel">Phase</span>
-                        <span class="stat-value" id="totalTeams">Preseason</span>
-                    </div>
-                    <div class="stat-item compact">
-                        <span class="stat-label">Window</span>
-                        <span class="stat-value" id="tradingWindow">—</span>
-                    </div>
-                    <div class="stat-item compact">
-                        <span class="stat-label">Updated</span>
-                        <span class="stat-value" id="lastUpdate">—</span>
-                    </div>
-                    <div class="stat-item compact">
-                        <span class="stat-label">Leader</span>
-                        <span class="stat-value" id="leaderTeam">—</span>
-                    </div>
-                </div>
-
                 <!-- Right: Controls -->
                 <div class="header-controls compact">
                     <div class="curve-picker" id="curvePicker">
@@ -1710,32 +1619,191 @@
         </div>
     </div>
 
-    <!-- Community -- Agent Marketplace is its first section, not the whole page:
-         the nav button says "Community", so the page has to say it too. -->
-    <div id="communityView" class="page-view community-view" style="display: none;">
-        <div class="page-header">
-            <div>
-                <h2 class="page-title">Community</h2>
-                <p class="page-description">Agent templates shared by the Agentic Trading Lab community.</p>
+    <!-- Live Trading Leaderboard: ACTUAL live-account results. Orders really
+         placed (from the live audit trail) valued by the broker's own
+         numbers, plus the account's own equity history. Deliberately a
+         separate view/chart from the Competition Leaderboard above -- it
+         tracks real trading activity, not a backtest, and must never share a
+         chart instance or data source with the backtest board. -->
+    <div id="liveTradingView" class="leaderboard-view competition-panel live-trading-panel" style="display: none;">
+        <div class="leaderboard-container compact">
+            <div class="live-trading-header">
+                <h2 class="contest-title">Live Trading Leaderboard</h2>
+                <p class="contest-subtitle" id="liveTradingSubtitle">Real orders on the live Alpaca account — no simulations, no backtests</p>
+                <p class="control-helper">Every row comes from orders actually placed by an activated strategy. The chart is the account's own equity history as Alpaca records it.</p>
+            </div>
+
+            <div id="liveTradingAccountStrip" class="live-trading-account-strip" style="display:none; gap: 18px; flex-wrap: wrap; margin: 8px 0 14px;">
+                <!-- populated by loadLiveTradingData() -->
+            </div>
+
+            <div class="leaderboard-main compact full-width">
+                <section class="chart-section full-width">
+                    <div class="chart-container medium">
+                        <canvas id="liveTradingChart"></canvas>
+                    </div>
+                    <div id="liveTradingLegend" class="chart-legend-custom"></div>
+                </section>
+            </div>
+
+            <div class="leaderboard-bottom compact">
+                <section class="leaderboard-table-section compact" style="width: 100%;">
+                    <div class="table-header compact">
+                        <h3>Real Trading Standings</h3>
+                    </div>
+                    <div class="table-wrapper compact">
+                        <table class="leaderboard-table compact">
+                            <thead>
+                                <tr>
+                                    <th class="name-col">Strategy</th>
+                                    <th class="portfolio-col">Invested</th>
+                                    <th class="portfolio-col">Current Value</th>
+                                    <th class="return-col">Profit</th>
+                                    <th class="return-col">Return</th>
+                                    <th class="return-col">Orders</th>
+                                </tr>
+                            </thead>
+                            <tbody id="liveTradingTableBody">
+                                <tr><td colspan="6" class="no-selection">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section class="leaderboard-table-section compact" style="width: 100%; margin-top: 14px;">
+                    <div class="table-header compact">
+                        <h3>Live Account Positions</h3>
+                    </div>
+                    <div class="table-wrapper compact">
+                        <table class="leaderboard-table compact">
+                            <thead>
+                                <tr>
+                                    <th class="name-col">Symbol</th>
+                                    <th class="portfolio-col">Qty</th>
+                                    <th class="portfolio-col">Avg Entry</th>
+                                    <th class="portfolio-col">Price</th>
+                                    <th class="portfolio-col">Market Value</th>
+                                    <th class="return-col">Unrealized P/L</th>
+                                </tr>
+                            </thead>
+                            <tbody id="livePositionsTableBody">
+                                <tr><td colspan="6" class="no-selection">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
         </div>
-        <div class="marketplace-section">
-            <div class="marketplace-section-head">
-                <div>
-                    <h3 class="marketplace-section-title">Agent Marketplace</h3>
-                    <p class="marketplace-section-sub">Browse open agent templates and add them to My Agents to customize and backtest.</p>
-                </div>
-                <div class="agent-toolbar-search marketplace-search">
-                    <svg class="agent-toolbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                    <input id="marketplaceSearchInput" type="search" placeholder="Search templates..." aria-label="Search marketplace templates">
-                </div>
+    </div>
+
+    <!-- Testing: upload a strategy, it gets scanned for safety and backtested
+         over the most recent completed year at a $1,000 wallet, then you
+         decide to add it to the Strategy Catalog or delete it. Fully
+         replaces the old Agent Marketplace browse/clone page. -->
+    <div id="communityView" class="page-view community-view testing-view" style="display: none;">
+        <div class="page-header">
+            <div>
+                <h2 class="page-title">Testing</h2>
+                <p class="page-description">Upload a strategy. It's scanned for safety and checked that it's actually a strategy, then backtested over the most recent completed year with a $1,000 wallet. When it's done, you decide: add it to Strategy, or delete it.</p>
             </div>
-            <p class="control-helper">Every test here uses simulated money. Real money is involved only if you explicitly connect a brokerage account and turn on live trading.</p>
-            <div id="marketplaceCategoryChips" class="marketplace-category-chips" role="group" aria-label="Filter templates by market"></div>
-            <div id="marketplaceVendorChips" class="marketplace-category-chips marketplace-vendor-chips" role="group" aria-label="Filter templates by AI model"></div>
-            <div id="marketplaceGrid" class="agents-grid marketplace-grid"></div>
-            <p id="marketplaceEmptyState" class="control-helper" hidden></p>
-            <p id="marketplaceErrorState" class="control-helper" hidden style="color:#f87171;">Couldn't load the marketplace. Check your connection and try again.</p>
+        </div>
+        <p class="control-helper">Every test here uses simulated money. Real money is involved only if you explicitly connect a brokerage account and turn on live trading.</p>
+
+        <div class="testing-upload-card">
+            <h3 class="testing-section-title">Upload a strategy</h3>
+            <p class="control-helper">Accepts an exported <code>.strategy.json</code> package, or a plain <code>.py</code> file defining a single <code>decide(price_history)</code> function. See the guide at the bottom of the Manual page if you're writing one from scratch.</p>
+            <form id="testingUploadForm" class="testing-upload-form">
+                <input type="file" id="testingUploadFile" accept=".json,.py,text/plain,application/json" required>
+                <input type="text" id="testingUploadName" placeholder="Name (only needed if not already in the file)">
+                <input type="text" id="testingUploadDescription" placeholder="Description (optional)">
+                <button type="submit" class="auth-btn auth-btn-primary" id="testingUploadSubmitBtn">Add to queue</button>
+            </form>
+            <p id="testingUploadStatus" class="testing-status-line" role="status" aria-live="polite"></p>
+        </div>
+
+        <div class="testing-section">
+            <h3 class="testing-section-title">In progress</h3>
+            <p class="control-helper">Processed one at a time, in the order submitted. This keeps running even if you leave this page.</p>
+            <div id="testingInProgressList" class="testing-queue-list">
+                <p class="testing-empty-state">Nothing queued right now.</p>
+            </div>
+        </div>
+
+        <div class="testing-section">
+            <h3 class="testing-section-title">Ready for your decision</h3>
+            <div id="testingReadyList" class="testing-queue-list">
+                <p class="testing-empty-state">Nothing waiting on a decision.</p>
+            </div>
+        </div>
+
+        <div class="testing-section">
+            <h3 class="testing-section-title">History</h3>
+            <p class="control-helper">Rejected, errored, added, or deleted uploads.</p>
+            <div id="testingHistoryList" class="testing-queue-list testing-history-list">
+                <p class="testing-empty-state">No history yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prediction: one unified queue for Manual, My Agents, and Testing/Upload --
+         see domain/prediction/repository.py's docstring for why there's only one
+         table/state-machine here, unlike every other asset class's three separate
+         flows. Rendered by js/prediction.js, shown in place of manualView AND
+         communityView whenever assetClass === 'prediction' (see app.js's
+         navigateToPage). -->
+    <div id="predictionView" class="page-view prediction-view testing-view" style="display: none;">
+        <div class="page-header">
+            <div>
+                <h2 class="page-title">Prediction</h2>
+                <p class="page-description">Trade Kalshi and Polymarket prediction markets. A new strategy here -- whether you write it, upload it, or build it as a My Agent -- never gets an instant backtest.</p>
+            </div>
+        </div>
+        <p id="predictionFiveDayNotice" class="testing-status-line prediction-notice" role="status">Loading...</p>
+
+        <div class="testing-upload-card">
+            <h3 class="testing-section-title">Create a strategy</h3>
+            <p class="control-helper">Write a Python <code>decide_prediction(as_of, positions, markets, account)</code> function directly, or upload a <code>.py</code> file defining one. Either way it joins the same 5-day waiting list above.</p>
+            <form id="predictionSubmitForm" class="testing-upload-form">
+                <input type="text" id="predictionSubmitName" placeholder="Strategy name" required>
+                <input type="text" id="predictionSubmitDescription" placeholder="Description (optional)">
+                <input type="file" id="predictionSubmitFile" accept=".py,text/plain">
+                <textarea id="predictionSubmitCode" class="prediction-code-textarea" placeholder="def decide_prediction(as_of, positions, markets, account):
+    return []" rows="8"></textarea>
+                <button type="submit" class="auth-btn auth-btn-primary" id="predictionSubmitBtn">Submit strategy</button>
+            </form>
+            <p id="predictionSubmitStatus" class="testing-status-line" role="status" aria-live="polite"></p>
+            <p class="control-helper">Building a My Agent instead? Create one under the Prediction shelf on My Agents and click Run Backtest -- it joins this same waiting list automatically.</p>
+        </div>
+
+        <div class="testing-section">
+            <h3 class="testing-section-title">Waiting list</h3>
+            <p class="control-helper">Paper-trading forward, one real day at a time. Results appear once each reaches day 5.</p>
+            <div id="predictionWaitingList" class="testing-queue-list">
+                <p class="testing-empty-state">Nothing waiting right now.</p>
+            </div>
+        </div>
+
+        <div class="testing-section">
+            <h3 class="testing-section-title">Ready for your decision</h3>
+            <div id="predictionReadyList" class="testing-queue-list">
+                <p class="testing-empty-state">Nothing waiting on a decision.</p>
+            </div>
+        </div>
+
+        <div class="testing-section">
+            <h3 class="testing-section-title">Trading now</h3>
+            <p class="control-helper">Kept strategies -- these keep trading forward every day, no longer time-limited to 5 days.</p>
+            <div id="predictionAddedList" class="testing-queue-list">
+                <p class="testing-empty-state">Nothing added yet.</p>
+            </div>
+        </div>
+
+        <div class="testing-section">
+            <h3 class="testing-section-title">History</h3>
+            <p class="control-helper">Rejected, errored, or deleted strategies.</p>
+            <div id="predictionHistoryList" class="testing-queue-list testing-history-list">
+                <p class="testing-empty-state">No history yet.</p>
+            </div>
         </div>
     </div>
 
@@ -1768,35 +1836,6 @@
                 </form>
             </div>
             <div class="account-section">
-                <h3 class="account-section-title">Change email address</h3>
-                <form id="accountEmailForm" class="auth-form account-password-form">
-                    <div id="emailChangeIdle">
-                        <label class="auth-field">
-                            <span>New email address</span>
-                            <input id="newEmailInput" type="email" maxlength="254" autocomplete="email">
-                        </label>
-                        <label class="auth-field">
-                            <span>Current password</span>
-                            <input id="emailChangePasswordInput" type="password" autocomplete="current-password">
-                        </label>
-                        <p class="account-hint">You can change your email address once every 7 days.</p>
-                    </div>
-                    <div id="emailChangeCodeStep" hidden>
-                        <p id="emailChangeStepCopy" class="account-hint"></p>
-                        <label class="auth-field">
-                            <span>Confirmation code</span>
-                            <input id="emailChangeCodeInput" type="text" maxlength="6" autocomplete="one-time-code">
-                        </label>
-                    </div>
-                    <p id="emailChangeError" class="auth-error" hidden></p>
-                    <p id="emailChangeSuccess" class="account-success" hidden>Email address updated. Other devices were signed out.</p>
-                    <div class="account-email-actions">
-                        <button id="emailChangeSubmitBtn" class="auth-btn auth-btn-primary" type="submit">Send code</button>
-                        <button id="emailChangeCancelBtn" class="auth-btn auth-btn-secondary" type="button" hidden>Cancel</button>
-                    </div>
-                </form>
-            </div>
-            <div class="account-section">
                 <h3 class="account-section-title">Profile photo</h3>
                 <div class="account-avatar-row">
                     <span id="accountAvatarPreview" class="auth-avatar auth-avatar--large" aria-hidden="true"></span>
@@ -1808,30 +1847,6 @@
                 </div>
                 <p id="avatarError" class="auth-error" hidden></p>
             </div>
-            <div class="account-section">
-                <h3 class="account-section-title">Change password</h3>
-                <form id="changePasswordForm" class="auth-form account-password-form">
-                    <label class="auth-field">
-                        <span>Current password</span>
-                        <input id="currentPasswordInput" type="password" autocomplete="current-password" required>
-                    </label>
-                    <label class="auth-field">
-                        <span>New password</span>
-                        <input id="newPasswordInput" type="password" autocomplete="new-password" required>
-                    </label>
-                    <label class="auth-field">
-                        <span>Confirm new password</span>
-                        <input id="confirmPasswordInput" type="password" autocomplete="new-password" required>
-                    </label>
-                    <ul id="passwordPolicyHints" class="password-policy-hints" hidden></ul>
-                    <p id="changePasswordError" class="auth-error" hidden></p>
-                    <p id="changePasswordSuccess" class="account-success" hidden>Password updated. Other devices were signed out.</p>
-                    <button class="auth-btn auth-btn-primary" type="submit">Update password</button>
-                </form>
-            </div>
-            <div class="account-section account-actions">
-                <button id="authLogoutBtn" class="auth-btn auth-btn-danger" type="button">Log out</button>
-            </div>
         </div>
         <div id="accountSignedOut" class="account-card account-card--empty" hidden>
             <p class="account-empty-copy">Sign in to view your account.</p>
@@ -1839,99 +1854,459 @@
         </div>
     </div>
 
-    <div id="creditsView" class="page-view credits-view" style="display: none;">
-        <div class="credits-shell">
-            <div class="page-header credits-page-header">
+    <div id="connectionsView" class="page-view connections-view" style="display: none;">
+        <div class="connections-shell">
+            <div class="page-header">
                 <div>
-                    <div class="credits-title-row">
-                        <h2 class="page-title">Credits &amp; Billing</h2>
-                        <span id="creditsTestModeBadge" class="credits-test-badge">Test Mode</span>
-                    </div>
-                    <p class="page-description">Buy ATL Credits with Stripe test cards. No real charge is made.</p>
+                    <h2 class="page-title">API Connections</h2>
+                    <p class="page-description">Connect the brokers and LLM providers this account trades and reasons with. Real-money and paper-money connections are kept strictly separate -- nothing here can accidentally cross over.</p>
                 </div>
-                <button id="creditsRefreshBtn" class="credits-icon-btn" type="button" aria-label="Refresh Credits" title="Refresh Credits">
-                    <svg aria-hidden="true"><use href="#icon-refresh"/></svg>
-                </button>
+                <button id="connectionsRefreshBtn" class="auth-btn auth-btn-secondary" type="button">Refresh</button>
             </div>
 
-            <section id="creditsSignedOut" class="credits-empty-state" hidden>
-                <h3>Sign in to manage Credits</h3>
-                <p>Your balance and purchase history belong to your ATL account.</p>
-                <button id="creditsSignInBtn" class="auth-btn auth-btn-primary" type="button">Sign in</button>
+            <section id="connectionsSignedOut" class="connections-empty-state" hidden>
+                <h3>Sign in to manage connections</h3>
+                <button id="connectionsSignInBtn" class="auth-btn auth-btn-primary" type="button">Sign in</button>
             </section>
 
-            <div id="creditsSignedIn" hidden>
-                <section class="credits-balance-band" aria-labelledby="creditsBalanceHeading">
-                    <div>
-                        <p id="creditsBalanceHeading" class="credits-section-kicker">Credit balance</p>
-                        <p id="creditsBalance" class="credits-balance" aria-live="polite">—</p>
-                        <p id="creditsAccountStatus" class="credits-account-status">Loading account…</p>
+            <div id="connectionsSignedIn" hidden>
+                <section class="connections-section">
+                    <h3 class="connections-section-title">Real money</h3>
+                    <p class="connections-section-note">Anything connected here can place real orders once a strategy or agent is explicitly run in live mode.</p>
+
+                    <div class="connections-card" data-provider="robinhood">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">Robinhood</span>
+                            <span class="connections-status-badge" id="connStatusRobinhood">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc"><strong>Stocks only.</strong> Powers the Live Trading Leaderboard's real-money execution (an alternative to Alpaca Live below -- connect one or the other, not both). OAuth-connected -- no key to type.</p>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connConnectRobinhoodBtn" type="button">Connect Robinhood</button>
+                            <button class="connections-btn danger" id="connDisconnectRobinhoodBtn" type="button" hidden>Disconnect</button>
+                        </div>
                     </div>
-                    <div class="credits-balance-note">
-                        <svg aria-hidden="true"><use href="#icon-shield-check"/></svg>
-                        <span>Credits are added only after a signed Stripe webhook is verified.</span>
+
+                    <div class="connections-card" data-provider="alpaca_live">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">Alpaca (Live)</span>
+                            <span class="connections-status-badge" id="connStatusAlpacaLive">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc"><strong>Stocks only.</strong> Powers Manual's Top 10 promote-to-real-money and the Live Trading Leaderboard (an alternative to Robinhood above -- connect one or the other, not both). Never used for paper runs.</p>
+                        <div class="connections-field-row">
+                            <input type="password" id="connAlpacaLiveKey" placeholder="API Key" autocomplete="off">
+                            <input type="password" id="connAlpacaLiveSecret" placeholder="Secret Key" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveAlpacaLiveBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearAlpacaLiveBtn" type="button">Remove</button>
+                        </div>
+                    </div>
+
+                    <div class="connections-card" data-provider="alpaca_ira">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">Alpaca (IRA)</span>
+                            <span class="connections-status-badge" id="connStatusAlpacaIra">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc"><strong>Stocks only.</strong> A separate Alpaca account from Alpaca (Live) above -- IRAs have their own account number and their own key pair, real retirement funds. Its balance counts toward the Stocks dashboard and Home's combined portfolio total. Not yet wired to any order-placement path -- balance visibility only for now.</p>
+                        <div class="connections-field-row">
+                            <input type="password" id="connAlpacaIraKey" placeholder="API Key" autocomplete="off">
+                            <input type="password" id="connAlpacaIraSecret" placeholder="Secret Key" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveAlpacaIraBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearAlpacaIraBtn" type="button">Remove</button>
+                        </div>
                     </div>
                 </section>
 
-                <section class="credits-section" aria-labelledby="creditsPurchaseHeading">
-                    <div class="credits-section-head">
-                        <div>
-                            <p class="credits-section-kicker">Top up</p>
-                            <h3 id="creditsPurchaseHeading">Choose an amount</h3>
-                        </div>
-                        <span class="credits-rate">$1 = 1 Credit</span>
-                    </div>
-                    <div id="creditsPackageGrid" class="credits-package-grid" role="radiogroup" aria-label="Credit package">
-                        <button class="credits-package-btn" type="button" role="radio" aria-checked="false" data-credit-package="usd_5" data-credit-cents="500"><strong>$5</strong><span>5 Credits</span></button>
-                        <button class="credits-package-btn is-selected" type="button" role="radio" aria-checked="true" data-credit-package="usd_10" data-credit-cents="1000"><strong>$10</strong><span>10 Credits</span></button>
-                        <button class="credits-package-btn" type="button" role="radio" aria-checked="false" data-credit-package="usd_20" data-credit-cents="2000"><strong>$20</strong><span>20 Credits</span></button>
-                        <button class="credits-package-btn" type="button" role="radio" aria-checked="false" data-credit-package="usd_50" data-credit-cents="5000"><strong>$50</strong><span>50 Credits</span></button>
-                    </div>
-                    <div class="credits-custom-row">
-                        <label for="creditsCustomAmount">Custom amount</label>
-                        <div class="credits-money-input">
-                            <span aria-hidden="true">$</span>
-                            <input id="creditsCustomAmount" inputmode="decimal" autocomplete="off" placeholder="5.00–200.00" aria-describedby="creditsCustomHint">
-                        </div>
-                        <p id="creditsCustomHint">Minimum $5, maximum $200.</p>
-                    </div>
-                    <button id="creditsPurchaseBtn" class="auth-btn auth-btn-primary credits-purchase-btn" type="button">
-                        <svg aria-hidden="true"><use href="#icon-wallet"/></svg>
-                        <span>Continue to Stripe</span>
-                    </button>
-                    <p id="creditsPurchaseStatus" class="credits-status" role="status" aria-live="polite"></p>
-                </section>
+                <section class="connections-section">
+                    <h3 class="connections-section-title">Paper trading</h3>
+                    <p class="connections-section-note">Choose how the Stocks paper wallet gets its money: a connected Alpaca paper account, or a virtual balance with no broker at all. Options and Crypto each keep their own separate simulated wallet, unaffected by this toggle.</p>
 
-                <section class="credits-section" aria-labelledby="creditsActivityHeading">
-                    <div class="credits-section-head">
-                        <div>
-                            <p class="credits-section-kicker">Ledger</p>
-                            <h3 id="creditsActivityHeading">Recent activity</h3>
+                    <div class="connections-card">
+                        <div class="connections-card-head"><span class="connections-card-name">Paper wallet mode</span></div>
+                        <div class="connections-field-row">
+                            <label class="connections-radio"><input type="radio" name="paperWalletMode" id="connPaperModeAlpaca" value="alpaca"> Alpaca paper account</label>
+                            <label class="connections-radio"><input type="radio" name="paperWalletMode" id="connPaperModeVirtual" value="virtual"> Virtual wallet (no broker)</label>
                         </div>
                     </div>
-                    <div id="creditsLedgerList" class="credits-ledger-list" aria-live="polite">
-                        <p class="credits-muted">Loading activity…</p>
+
+                    <div class="connections-card" data-provider="alpaca_paper" id="connAlpacaPaperCard">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">Alpaca (Paper)</span>
+                            <span class="connections-status-badge" id="connStatusAlpacaPaper">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc"><strong>Stocks, Options, and Crypto.</strong> One shared paper account across all three -- powers Manual, My Agents backtests/paper trading, and the Options and Crypto Manual dashboards. Each still defaults to local simulation with no connection needed; connecting this upgrades their paper fills to Alpaca's real paper-trading API.</p>
+                        <div class="connections-field-row">
+                            <input type="password" id="connAlpacaPaperKey" placeholder="API Key" autocomplete="off">
+                            <input type="password" id="connAlpacaPaperSecret" placeholder="Secret Key" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveAlpacaPaperBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearAlpacaPaperBtn" type="button">Remove</button>
+                        </div>
+                    </div>
+
+                    <div class="connections-card" id="connVirtualWalletCard">
+                        <div class="connections-card-head"><span class="connections-card-name">Virtual paper wallet balance</span></div>
+                        <div class="connections-field-row">
+                            <input type="number" id="connVirtualWalletAmount" placeholder="10000" min="1" step="1">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveVirtualWalletBtn" type="button">Save</button>
+                        </div>
                     </div>
                 </section>
 
-                <section id="creditsAdminSection" class="credits-section credits-admin-section" aria-labelledby="creditsAdminHeading" hidden>
-                    <div class="credits-section-head">
-                        <div>
-                            <p class="credits-section-kicker">Administration</p>
-                            <h3 id="creditsAdminHeading">Payment orders</h3>
+                <section class="connections-section">
+                    <h3 class="connections-section-title">Prediction markets</h3>
+                    <p class="connections-section-note">Optional. The Prediction dashboard paper-trades on public market data by default with no connection needed -- connect Kalshi for real (fake-money) demo-exchange fills instead of local simulation, or connect Polymarket for real-money trading (off by default; see Prediction for the risk notice).</p>
+
+                    <div class="connections-card" data-provider="kalshi">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">Kalshi</span>
+                            <span class="connections-status-badge" id="connStatusKalshi">Checking…</span>
                         </div>
-                        <span class="credits-admin-badge">Admin</span>
+                        <p class="connections-card-desc">A free demo account's API key (from demo.kalshi.co) upgrades Prediction's Kalshi paper fills from simulated to the real (fake-money) demo exchange. There's no real-money Kalshi trading yet -- only Polymarket supports that.</p>
+                        <div class="connections-field-row">
+                            <input type="password" id="connKalshiKey" placeholder="API Key ID" autocomplete="off">
+                            <input type="password" id="connKalshiSecret" placeholder="RSA Private Key" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveKalshiBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearKalshiBtn" type="button">Remove</button>
+                        </div>
                     </div>
-                    <div class="credits-table-wrap">
-                        <table class="credits-admin-table">
-                            <thead><tr><th>Order</th><th>User</th><th>Paid</th><th>Status</th><th>Refundable</th><th aria-label="Action"></th></tr></thead>
-                            <tbody id="creditsAdminOrders"></tbody>
-                        </table>
+
+                    <div class="connections-card" data-provider="polymarket">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">Polymarket</span>
+                            <span class="connections-status-badge" id="connStatusPolymarket">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc">Polymarket has no demo mode -- Prediction always paper-trades it on simulated fills against real public market data. Connecting a funded Polygon wallet's key only enables real-money trading, off by default.</p>
+                        <div class="connections-field-row">
+                            <input type="password" id="connPolymarketKey" placeholder="Wallet Private Key" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSavePolymarketBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearPolymarketBtn" type="button">Remove</button>
+                        </div>
                     </div>
-                    <p id="creditsAdminStatus" class="credits-status" role="status" aria-live="polite"></p>
                 </section>
+
+                <section class="connections-section">
+                    <h3 class="connections-section-title">Futures &amp; forex</h3>
+                    <p class="connections-section-note">Optional. Both dashboards paper-trade on public market data by default with no connection needed -- connect a demo/practice account below for real (fake-money) demo-exchange fills instead of local simulation. One shared connection for the whole deployment, not per-account (Futures/Forex strategies aren't tied to a signed-in user).</p>
+
+                    <div class="connections-card" data-provider="tradovate">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">Tradovate</span>
+                            <span class="connections-status-badge" id="connStatusTradovate">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc">A demo/simulation account's login plus its separately-issued API app credentials upgrade Futures' paper fills from simulated to the real demo exchange.</p>
+                        <div class="connections-field-row">
+                            <input type="text" id="connTradovateUsername" placeholder="Username" autocomplete="off">
+                            <input type="password" id="connTradovatePassword" placeholder="Password" autocomplete="off">
+                        </div>
+                        <div class="connections-field-row">
+                            <input type="text" id="connTradovateCid" placeholder="App CID" autocomplete="off">
+                            <input type="password" id="connTradovateSec" placeholder="App Secret" autocomplete="off">
+                        </div>
+                        <div class="connections-field-row">
+                            <input type="text" id="connTradovateAccountSpec" placeholder="Account Spec" autocomplete="off">
+                            <input type="text" id="connTradovateAccountId" placeholder="Account ID" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveTradovateBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearTradovateBtn" type="button">Remove</button>
+                        </div>
+                    </div>
+
+                    <div class="connections-card" data-provider="oanda">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">OANDA</span>
+                            <span class="connections-status-badge" id="connStatusOanda">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc">A practice account's API token upgrades Forex's paper fills from simulated to the real demo exchange.</p>
+                        <div class="connections-field-row">
+                            <input type="password" id="connOandaToken" placeholder="API Access Token" autocomplete="off">
+                            <input type="text" id="connOandaAccountId" placeholder="Account ID" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveOandaBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearOandaBtn" type="button">Remove</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="connections-section">
+                    <h3 class="connections-section-title">LLM providers</h3>
+                    <p class="connections-section-note">Pick how agents/strategies reason. A subscription token and a metered API key are kept as separate connections since they're billed completely differently.</p>
+
+                    <div class="connections-card" data-provider="anthropic_subscription">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">Claude (subscription)</span>
+                            <span class="connections-status-badge" id="connStatusAnthropicSubscription">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc">Uses your Claude subscription session token -- not billed per token.</p>
+                        <div class="connections-field-row">
+                            <input type="password" id="connAnthropicSubscriptionToken" placeholder="Subscription session token" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveAnthropicSubscriptionBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearAnthropicSubscriptionBtn" type="button">Remove</button>
+                        </div>
+                    </div>
+
+                    <div class="connections-card" data-provider="anthropic_api">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">Claude (API, pay-per-use)</span>
+                            <span class="connections-status-badge" id="connStatusAnthropicApi">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc">Metered Anthropic API key -- billed per token.</p>
+                        <div class="connections-field-row">
+                            <input type="password" id="connAnthropicApiKey" placeholder="sk-ant-..." autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveAnthropicApiBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearAnthropicApiBtn" type="button">Remove</button>
+                        </div>
+                    </div>
+
+                    <div class="connections-card" data-provider="openrouter">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">OpenRouter</span>
+                            <span class="connections-status-badge" id="connStatusOpenrouter">Checking…</span>
+                        </div>
+                        <div class="connections-field-row">
+                            <input type="password" id="connOpenrouterKey" placeholder="API Key" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveOpenrouterBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearOpenrouterBtn" type="button">Remove</button>
+                        </div>
+                    </div>
+
+                    <div class="connections-card" data-provider="commonstack">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">CommonStack</span>
+                            <span class="connections-status-badge" id="connStatusCommonstack">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc">One gateway key that powers all 7 Competition Leaderboard AI models (Claude, GPT, Gemini, Qwen, DeepSeek, Nemotron, and more) -- no need for a separate key per model.</p>
+                        <div class="connections-field-row">
+                            <input type="password" id="connCommonstackKey" placeholder="API Key" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveCommonstackBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearCommonstackBtn" type="button">Remove</button>
+                        </div>
+                    </div>
+
+                    <div class="connections-card" data-provider="local">
+                        <div class="connections-card-head">
+                            <span class="connections-card-name">Local</span>
+                            <span class="connections-status-badge" id="connStatusLocal">Checking…</span>
+                        </div>
+                        <p class="connections-card-desc">A self-hosted endpoint (e.g. Ollama) -- no data leaves your machine.</p>
+                        <div class="connections-field-row">
+                            <input type="text" id="connLocalUrl" placeholder="http://localhost:11434" autocomplete="off">
+                            <input type="password" id="connLocalKey" placeholder="API Key (optional)" autocomplete="off">
+                        </div>
+                        <div class="connections-card-actions">
+                            <button class="connections-btn primary" id="connSaveLocalBtn" type="button">Save</button>
+                            <button class="connections-btn danger" id="connClearLocalBtn" type="button">Remove</button>
+                        </div>
+                    </div>
+                </section>
+
+                <p id="connectionsStatus" class="connections-status" role="status" aria-live="polite"></p>
             </div>
         </div>
+    </div>
+
+    <div id="manualView" class="page-view manual-view" style="display: none;">
+        <div class="m10-wrap">
+            <div class="page-header">
+                <div>
+                    <h2 class="page-title">Manual</h2>
+                    <p class="page-description">Browse, upload, select, and activate strategies, and watch their screener/paper/real-money panels for the day.</p>
+                </div>
+            </div>
+
+            <div class="m10-broker-wallet-row" id="m10BrokerWalletRow"></div>
+
+            <div class="m10-wallet-row">
+                <div>
+                    <div class="m10-wallet-label">Wallet (open positions, all activated strategies)</div>
+                    <div class="m10-wallet-amount" id="m10WalletAmount">$0.00</div>
+                </div>
+                <div>
+                    <div class="m10-wallet-label">Today's P/L</div>
+                    <div class="m10-wallet-amount m10-pnl" id="m10TodayPnl">$0.00</div>
+                </div>
+                <div class="m10-calendar" id="m10Calendar" title="Win/loss by trading day"></div>
+            </div>
+
+            <h2 class="m10-section-title">Strategies</h2>
+            <p class="m10-help">Select a strategy to open its panel below. Selecting doesn't trade anything -- you must press Activate on a strategy's panel before it can actually buy or sell.</p>
+            <div class="m10-strategy-grid" id="m10StrategyGrid"><p class="m10-empty">Loading strategies...</p></div>
+
+            <div class="m10-settings-box">
+                <button class="m10-btn primary" id="m10SettingsToggle" type="button">Top 10 settings</button>
+                <div id="m10SettingsForm" style="display:none; margin-top: 12px;">
+                    <p class="m10-help">These apply to the built-in Top 10 strategy only. Changes take effect on its next screener run.</p>
+                    <div class="m10-settings-grid">
+                        <div class="m10-settings-field">
+                            <label>Screener window (minutes)</label>
+                            <input type="number" id="setScreenerWindow" min="1">
+                            <div class="m10-settings-hint">How long after open it watches before picking.</div>
+                        </div>
+                        <div class="m10-settings-field">
+                            <label>How many stocks (top N)</label>
+                            <input type="number" id="setTopN" min="1">
+                        </div>
+                        <div class="m10-settings-field">
+                            <label>$ per stock</label>
+                            <input type="number" id="setBuyIn" min="1">
+                            <div class="m10-settings-hint">How much paper (and, once promoted, real) money goes into each pick.</div>
+                        </div>
+                        <div class="m10-settings-field">
+                            <label>Min price ($)</label>
+                            <input type="number" id="setPriceMin" min="0" step="0.01">
+                        </div>
+                        <div class="m10-settings-field">
+                            <label>Max price ($)</label>
+                            <input type="number" id="setPriceMax" min="0" step="0.01">
+                        </div>
+                        <div class="m10-settings-field">
+                            <label>Promotion check (minutes)</label>
+                            <input type="number" id="setPromotionWindow" min="1">
+                            <div class="m10-settings-hint">How long a paper pick is held before checking whether to promote it to real money.</div>
+                        </div>
+                        <div class="m10-settings-field">
+                            <label>Close-out (minutes before close)</label>
+                            <input type="number" id="setCloseOut" min="1">
+                        </div>
+                        <div class="m10-settings-field">
+                            <label>Straggler check (minutes before close)</label>
+                            <input type="number" id="setStraggler" min="1">
+                        </div>
+                    </div>
+                    <button class="m10-btn primary" id="m10SettingsSave" type="button" style="margin-top: 10px;">Save settings</button>
+                    <span id="m10SettingsStatus" style="font-size: 12px; margin-left: 8px;"></span>
+                </div>
+            </div>
+
+            <div class="m10-upload-box" id="m10UploadBox">
+                <button class="m10-btn primary" id="m10UploadToggle" type="button">Upload a strategy</button>
+                <div id="m10UploadForm" style="display:none; margin-top: 12px;">
+                    <p class="m10-help">
+                        Your code must define <code>decide(price_history)</code>, where <code>price_history</code> is
+                        <code>{"AAPL": [{"t": "2026-08-01", "close": 100.0}, ...], ...}</code> (recent daily closes for the Dow 30).
+                        Return <code>{"AAPL": 0.5, ...}</code> -- target weights (0-1) of your strategy's paper capital to hold in
+                        each symbol. Only <code>math</code>, <code>statistics</code>, <code>json</code>, and <code>datetime</code>
+                        may be imported -- no file, network, or system access of any kind. Every upload runs in an isolated
+                        sandbox with your credentials stripped out, gets an automated risk review, and stays <b>pending</b> until
+                        you explicitly approve it below -- nothing you upload can trade before that, and even approved uploads
+                        only ever trade in paper money (never promoted to real money automatically).
+                    </p>
+                    <div class="m10-field"><label>Name</label><input type="text" id="m10UploadName" maxlength="100"></div>
+                    <div class="m10-field"><label>Description</label><input type="text" id="m10UploadDesc" maxlength="300"></div>
+                    <div class="m10-field">
+                        <label>Re-check interval (minutes)</label>
+                        <input type="number" id="m10UploadInterval" value="15" min="5" max="240">
+                    </div>
+                    <div class="m10-field">
+                        <label>Code</label>
+                        <textarea id="m10UploadCode" spellcheck="false" placeholder="def decide(price_history):
+    weights = {}
+    for symbol, points in price_history.items():
+        if len(points) >= 2 and points[-1][&quot;close&quot;] > points[0][&quot;close&quot;]:
+            weights[symbol] = 1.0
+    return weights"></textarea>
+                    </div>
+                    <button class="m10-btn primary" id="m10UploadSubmit" type="button">Submit for review</button>
+                    <span id="m10UploadStatus" style="font-size: 12px; margin-left: 8px;"></span>
+                </div>
+            </div>
+
+            <div id="m10Panels"></div>
+
+            <h2 class="m10-section-title">Making a strategy exportable</h2>
+            <div class="m10-strategy-card" style="max-width: 780px;">
+                <p class="m10-strategy-desc">
+                    Every strategy here -- and every strategy the Testing page accepts -- is one plain Python function,
+                    run in an isolated sandbox with no file, network, or system access:
+                </p>
+                <pre style="background: var(--bg-input); border-radius: 8px; padding: 10px 12px; font-size: 12px; overflow-x: auto; margin: 0;"><code>def decide(price_history):
+    # price_history: {"AAPL": [{"t": "2026-08-01", "close": 100.0}, ...], ...}
+    # -- one list of {date, close} entries per symbol, oldest first, up to and
+    # including the most recent close. Only math, statistics, json, and
+    # datetime may be imported; no eval/exec/open/os/subprocess/network/etc.
+    weights = {}
+    for symbol, points in price_history.items():
+        if len(points) &gt;= 2 and points[-1]["close"] &gt; points[0]["close"]:
+            weights[symbol] = 1.0
+    return weights  # {"AAPL": 0.5, ...} -- target weight (0-1) per symbol</code></pre>
+                <p class="m10-strategy-desc">
+                    If you wrote a strategy outside this bot -- as a plain <code>.py</code> file with just that function
+                    in it -- you can upload it as-is, either here (the "Upload a strategy" box above) or on the
+                    <a href="#" data-nav-link="community" style="color: var(--info-color);">Testing page</a>, where it will be scanned for
+                    safety and checked that it's actually a strategy before being backtested over the most recent completed
+                    year with a $1,000 wallet.
+                </p>
+                <p class="m10-strategy-desc">
+                    To make it a re-shareable file with its name and description attached (what this page's own
+                    <b>Export</b> button produces), package it as a single JSON file shaped like this:
+                </p>
+                <pre style="background: var(--bg-input); border-radius: 8px; padding: 10px 12px; font-size: 12px; overflow-x: auto; margin: 0;"><code>{
+  "format": "agentic-trading-lab-strategy-v1",
+  "name": "My Strategy",
+  "description": "What it does, in a sentence or two.",
+  "code": "def decide(price_history):\n    ...",
+  "source": "external"
+}</code></pre>
+                <p class="m10-strategy-desc">
+                    Save that as <code>my_strategy.strategy.json</code> and upload it the same way as a <code>.py</code> file --
+                    both this page's upload box and the Testing page accept either. Only <code>name</code> and <code>code</code>
+                    are required; <code>description</code> and <code>source</code> are optional and default to blank/"external".
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="strategyCatalogView" class="page-view strategy-catalog-view" style="display: none;">
+        <div class="sc-wrap">
+            <div class="page-header">
+                <div>
+                    <h2 class="page-title">Strategy</h2>
+                    <p class="page-description">
+                        Every registered strategy that cleared a 3%+ return in the "Strategy Lab" full-year backtest
+                        ($1,000 starting wallet, $10-per-trade lot sizing), each shown with its own description, equity
+                        curve, and metrics. "Activate Paper" and "Activate Live" turn a strategy on: once activated, it
+                        runs its own <code>decide()</code> logic against your Alpaca account automatically every day the
+                        market is open, and keeps doing so until you deactivate it -- it does not run once and stop.
+                        Activation alone never places a real order; that also requires the corresponding
+                        <code>ALPACA_PAPER_EXECUTE</code> / <code>ALPACA_LIVE_EXECUTE</code> environment variable to be
+                        armed server-side, so an activated strategy with neither armed just reviews, harmlessly, every day.
+                    </p>
+                </div>
+                <div style="display:flex; align-items:center; gap:14px;">
+                    <span id="scTimestamp" style="font-size:12px; color:var(--text-muted); font-family: var(--font-mono);"></span>
+                    <button class="sc-btn" style="flex:none;" id="scRefreshBtn">Refresh</button>
+                </div>
+            </div>
+            <div class="sc-status-row" id="scStatusRow"></div>
+            <div class="sc-grid" id="scGrid"><p class="sc-empty">Loading catalog…</p></div>
+        </div>
+
+        <dialog id="scReportDialog" class="sc-report-dialog">
+            <div class="sc-report-head">
+                <h2 id="scReportTitle" style="margin:0; font-size:16px;"></h2>
+                <button class="sc-btn" style="flex:none;" id="scReportCloseBtn">Close</button>
+            </div>
+            <div id="scReportBody"></div>
+        </dialog>
     </div>
 
     <div id="adminView" class="page-view admin-view" style="display: none;">
@@ -1983,50 +2358,24 @@
         </div>
     </div>
 
-    <dialog id="creditsRefundDialog" class="credits-refund-dialog" aria-labelledby="creditsRefundTitle">
-        <form id="creditsRefundForm" method="dialog">
-            <div class="credits-refund-head">
-                <div>
-                    <p class="credits-section-kicker">Admin refund</p>
-                    <h2 id="creditsRefundTitle">Refund Credits purchase</h2>
-                </div>
-                <button id="creditsRefundClose" class="credits-icon-btn" type="button" aria-label="Close refund dialog" title="Close">
-                    <svg aria-hidden="true"><use href="#icon-x"/></svg>
-                </button>
-            </div>
-            <p id="creditsRefundOrder" class="credits-refund-order"></p>
-            <label class="credits-refund-field" for="creditsRefundAmount">Refund amount</label>
-            <div class="credits-money-input">
-                <span aria-hidden="true">$</span>
-                <input id="creditsRefundAmount" inputmode="decimal" autocomplete="off" required>
-            </div>
-            <p id="creditsRefundLimit" class="credits-muted"></p>
-            <p id="creditsRefundStatus" class="credits-status" role="status" aria-live="polite"></p>
-            <div class="credits-refund-actions">
-                <button id="creditsRefundCancel" class="auth-btn auth-btn-secondary" type="button">Cancel</button>
-                <button id="creditsRefundSubmit" class="auth-btn auth-btn-danger" type="submit">Issue refund</button>
-            </div>
-        </form>
-    </dialog>
-
     <!-- All deferred so the Chart.js CDN tag in <head> (also deferred) can
          stay first in execution order: deferred scripts run in document
          order, all before DOMContentLoaded. -->
-    <script src="market-events/mockMarketEvents.js" defer></script>
     <script src="market-events/marketEventRelativeTime.js" defer></script>
-    <script src="market-events/MarketEventCard.js" defer></script>
-    <script src="market-events/MarketEventFeed.js" defer></script>
     <script src="js/portfolio.js?v=17" defer></script>
-    <script src="js/agent-editor.js?v=27" defer></script>
-    <script src="app.js?v=117" defer></script>
-    <script src="js/credits.js?v=2" defer></script>
-    <script src="js/leaderboard.js?v=32" defer></script>
-    <script src="home-page.js?v=50" defer></script>
+    <script src="js/agent-editor.js?v=28" defer></script>
+    <script src="app.js?v=137" defer></script>
+    <script src="js/connections.js?v=5" defer></script>
+    <script src="js/strategy-testing.js?v=3" defer></script>
+    <script src="js/prediction.js?v=1" defer></script>
+    <script src="js/manual.js?v=8" defer></script>
+    <script src="js/strategy-catalog.js?v=7" defer></script>
+    <script src="js/leaderboard.js?v=43" defer></script>
+    <script src="home-page.js?v=54" defer></script>
     <!-- Load order: must come after app.js (API/API_BASE/escapeHtml) and
          market-events/marketEventRelativeTime.js (formatMarketEventRelativeTime),
          both loaded above — not beside the market-events/* block, which loads
          before app.js. -->
-    <script src="home-news-signals.js" defer></script>
     <!-- Never `hidden`: a live region has to stay rendered to be monitored. It
          hides itself visually via .app-toast's opacity + pointer-events. -->
     <div id="appToast" class="app-toast" role="status" aria-live="polite"></div>

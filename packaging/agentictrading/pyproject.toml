@@ -5,13 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agentictrading"
 dynamic = ["version"]
-description = "Lightweight Python client for the Agentic Trading Lab REST API (LLM-powered trading agents, backtests, paper trading)."
+description = "Lightweight Python client for the NewWorldTrading REST API (LLM-powered trading agents, backtests, paper trading)."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Chunlin Feng", email = "chunlinfeng0920@gmail.com" },
-    { name = "SecureFinAI Lab" },
+    { name = "NewWorldTrading" },
 ]
 keywords = [
     "trading",
@@ -51,10 +50,8 @@ vnpy = [
 ]
 
 [project.urls]
-Homepage = "https://agentic-trading-lab.vercel.app/"
-Documentation = "https://finagent-orchestration.readthedocs.io/"
-Source = "https://github.com/Allan-Feng/AgenticTrading"
-Issues = "https://github.com/Allan-Feng/AgenticTrading/issues"
+Source = "https://github.com/TrentonNewWorld/AgenticTrading"
+Issues = "https://github.com/TrentonNewWorld/AgenticTrading/issues"
 
 [project.scripts]
 agentictrading = "agentictrading.cli:main"

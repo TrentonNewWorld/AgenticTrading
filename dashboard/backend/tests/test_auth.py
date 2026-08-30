@@ -1169,7 +1169,7 @@ def test_stage_two_mail_reads_correctly_for_a_recipient_with_no_account(
 ):
     """The new address may belong to someone else entirely.
 
-    Its owner has no Agentic Trading Lab account and no password there, so
+    Its owner has no NewWorldTrading account and no password there, so
     copy reused from the stage-one mail -- "your ... account", "change your
     password" -- is wrong for them, and instructions that cannot apply to the
     reader are exactly what phishing looks like.
@@ -1185,11 +1185,11 @@ def test_stage_two_mail_reads_correctly_for_a_recipient_with_no_account(
 
     owner_body, recipient_body = (mail["body"] for mail in sent_emails)
     # The account owner is told how to react to a hijack attempt...
-    assert "your Agentic Trading Lab account" in owner_body
+    assert "your NewWorldTrading account" in owner_body
     assert "change your password" in owner_body
     # ...but the stage-two recipient is a bystander until they opt in.
-    assert "their Agentic Trading Lab account" in recipient_body
-    assert "your Agentic Trading Lab account" not in recipient_body
+    assert "their NewWorldTrading account" in recipient_body
+    assert "your NewWorldTrading account" not in recipient_body
     assert "change your password" not in recipient_body
 
 

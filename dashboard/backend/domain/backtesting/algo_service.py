@@ -174,7 +174,7 @@ def process_chat(message: str, blocks: dict[str, str] | None = None) -> dict[str
     if not client:
         return _process_chat_fallback(message, current)
 
-    system = f"""You are a trading strategy assistant for Agentic Trading Lab.
+    system = f"""You are a trading strategy assistant for NewWorldTrading.
 The user configures a 4-block pipeline. Update blocks based on their message.
 
 Current blocks:

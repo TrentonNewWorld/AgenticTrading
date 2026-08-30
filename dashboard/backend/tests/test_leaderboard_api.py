@@ -29,7 +29,7 @@ def _seed_leaderboard_runs(db, session_id="leaderboard-contest"):
     db.insert_run(
         run_id="lb_equal_weight_djia_20260415_20260515",
         session_id=session_id,
-        agent_name="Agentic Trading Lab",
+        agent_name="NewWorldTrading",
         mode="leaderboard",
         start_date=start,
         end_date=end,
@@ -52,7 +52,7 @@ def _seed_leaderboard_runs(db, session_id="leaderboard-contest"):
     db.insert_run(
         run_id="lb_spy_index_20260415_20260515",
         session_id=session_id,
-        agent_name="Agentic Trading Lab",
+        agent_name="NewWorldTrading",
         mode="leaderboard",
         start_date=start,
         end_date=end,
@@ -97,7 +97,7 @@ def test_leaderboard_api_returns_baselines(client, monkeypatch):
     assert body["phase_label"] == "Preseason"
     assert len(body["entries"]) == 2
     names = {e["team_name"] for e in body["entries"]}
-    assert names == {"Agentic Trading Lab"}
+    assert names == {"NewWorldTrading"}
     models = {e["model"] for e in body["entries"]}
     assert "Daily Equal-Weight" in models
     assert "S&P 500 Buy & Hold" in models
@@ -188,7 +188,7 @@ def test_daily_leaderboard_api_uses_daily_window(client, monkeypatch):
         lb_service.db.insert_run(
             run_id=run_id,
             session_id="leaderboard-daily",
-            agent_name="Agentic Trading Lab",
+            agent_name="NewWorldTrading",
             mode="leaderboard",
             start_date=start,
             end_date=end,
@@ -286,7 +286,7 @@ def test_ensure_leaderboard_runs_skips_refetch_after_empty_curve(tmp_path, monke
         "strategies": [
             {
                 "id": "equal_weight_djia",
-                "name": "Agentic Trading Lab",
+                "name": "NewWorldTrading",
                 "label": "Baseline Strategy",
                 "model": "Equal-Weight",
                 "strategy": "equal_weight_index",
@@ -294,7 +294,7 @@ def test_ensure_leaderboard_runs_skips_refetch_after_empty_curve(tmp_path, monke
             },
             {
                 "id": "mean_variance_djia",
-                "name": "Agentic Trading Lab",
+                "name": "NewWorldTrading",
                 "label": "Baseline Strategy",
                 "model": "Mean-Variance",
                 "strategy": "mean_variance",

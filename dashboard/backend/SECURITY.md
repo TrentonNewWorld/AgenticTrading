@@ -24,7 +24,6 @@ The backend now provides **safe LLM integration** that:
 | File | Purpose |
 |------|---------|
 | `infrastructure/llm/validator.py` | Validation engine (schema, constraints, tool rejection) |
-| `llm_integration_example.py` | Example endpoint to add to app.py |
 | `tests/test_llm_validator.py` | 50+ unit tests (all cases including security) |
 
 ---
@@ -133,12 +132,12 @@ new endpoints must not copy this exemption.
 
 ## Integration: Adding LLM Endpoint to Backend
 
-Use `llm_integration_example.py` as a template. Here's the quick version:
+Wrap every LLM call in `infrastructure/llm/validator.py`'s validation before acting on it. Here's the quick version:
 
 ### 1. Import at top of `app.py`
 
 ```python
-from llm_integration_example import SafeTradingLLMIntegration
+from dashboard.backend.infrastructure.llm.validator import LLMResponseValidator
 import os
 
 # Initialize once at startup

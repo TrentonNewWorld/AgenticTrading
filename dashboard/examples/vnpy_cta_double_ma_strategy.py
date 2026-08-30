@@ -11,7 +11,7 @@ from vnpy_ctastrategy import CtaTemplate
 class DoubleMaStrategy(CtaTemplate):
     """Trade long-only crossovers after enough hourly bars have arrived."""
 
-    author = "Agentic Trading Lab"
+    author = "NewWorldTrading"
 
     fast_window = 5
     slow_window = 20

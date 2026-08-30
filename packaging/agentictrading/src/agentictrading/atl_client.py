@@ -54,7 +54,7 @@ from .models import (
 
 
 class ATLClient:
-    """Remote client for the Agentic Trading Lab Agent-Environment API.
+    """Remote client for the NewWorldTrading Agent-Environment API.
 
     Parameters
     ----------

@@ -24,18 +24,16 @@ must not contain the name part of your email. There are no other composition
 rules (no forced mix of symbols or digits).
 
 
-Sign in and out
----------------
+Sign in
+-------
 
 - **Sign in:** header **Sign in**, then enter your email and password.
 - Once signed in, the header shows your avatar (or your initials). Click it to
-  open the account menu: your name and email, **Account**, and **Log out**.
-- **Log out** appears both in that menu and at the bottom of the **Account**
-  page. Either one ends the session on this device only; your other devices
-  stay signed in.
-- Logging out takes you back to the public homepage — the page you see before
-  signing in. Your browser's **Back** button will not return you to the
-  dashboard you just left; sign in again to get back to it.
+  open the account menu: your name and email, **Account**, **API
+  Connections**, and (admins only) **Admin** plus a **Live Trading** switch.
+- There is no **Log out** control in this UI — this deployment is local-only
+  (auto-login, no multi-device session to end). To sign out, clear this
+  browser's session cookie directly.
 
 
 Manage your profile

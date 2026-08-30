@@ -95,8 +95,8 @@ function plClass(v) {
 function renderWallet(container, snapshot, kind) {
   if (!snapshot.configured || !snapshot.account) {
     const hint = kind === 'live'
-      ? 'Set <code>ALPACA_LIVE_API_KEY</code> / <code>ALPACA_LIVE_SECRET_KEY</code> in <code>dashboard/.env</code> to connect a real account.'
-      : 'Set <code>ALPACA_API_KEY</code> / <code>ALPACA_SECRET_KEY</code> in <code>dashboard/.env</code> to connect a paper account.';
+      ? 'Connect your Alpaca (Live) key on the API Connections page, or set <code>ALPACA_LIVE_API_KEY</code> / <code>ALPACA_LIVE_SECRET_KEY</code> in <code>dashboard/.env</code> for a server-wide account.'
+      : 'Connect your Alpaca (Paper) key on the API Connections page, or set <code>ALPACA_API_KEY</code> / <code>ALPACA_SECRET_KEY</code> in <code>dashboard/.env</code> for a server-wide account.';
     container.innerHTML = '<p class="mc-not-configured">Not connected. ' + hint + '</p>' +
       (snapshot.error ? '<p class="mc-error">' + snapshot.error + '</p>' : '');
     return;

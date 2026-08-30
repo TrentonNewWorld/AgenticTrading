@@ -1,7 +1,7 @@
 # Python SDK QuickStart (`agentictrading`)
 
 The `agentictrading` package gives Python users a clean, typed, function-call
-interface over the Agentic Trading Lab **Agent–Environment Protocol (v1)**. It is
+interface over the NewWorldTrading **Agent–Environment Protocol (v1)**. It is
 a remote HTTP client: it talks to the same REST endpoints documented in
 [`agent-environment-protocol-v1.md`](./agent-environment-protocol-v1.md) and works
 whether the backend runs on your machine or is deployed elsewhere.
