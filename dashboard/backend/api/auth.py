@@ -469,7 +469,7 @@ async def signup(payload: SignupRequest, request: Request):
 _LOCAL_AUTO_LOGIN_EMAIL = "local@newworldtrading.local"
 #: Pre-rebrand row key; an existing local DB is migrated in place on the
 #: next auto-login rather than orphaning the operator's account and state.
-_LOCAL_AUTO_LOGIN_LEGACY_EMAIL = "local@newworldtrading.local"
+_LOCAL_AUTO_LOGIN_LEGACY_EMAIL = "local@agentic-trading-lab.local"  # noqa: pre-rebrand row key, deliberately old
 _LOCAL_AUTO_LOGIN_DISPLAY_NAME = "Local User"
 
 
