@@ -16,7 +16,7 @@ const SELECTED_BACKTEST_RUN_KEY = 'selected-backtest-run-id';
 // index.html's goToDashboardLoggedIn() writes this same key as a bare string
 // literal (no build step to share this constant across the landing/app split).
 const NAV_STATE_KEY = 'nav-state';
-const DISCORD_SERVER_URL = 'https://discord.gg/9HnQ6XDG98';
+const DISCORD_SERVER_URL = 'https://discord.gg/xyC3MQAWNj';
 const BACKTEST_POLL_MAX_SECONDS = 600; // 10 minutes at 1-second polling intervals
 
 function initSession() {

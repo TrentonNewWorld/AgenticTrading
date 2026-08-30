@@ -922,7 +922,7 @@ Find the README's quickstart / usage section and add (adapt the heading depth to
 The fastest way to run a backtest is to describe an idea in Discord — no account,
 no install:
 
-1. Join [discord.gg/9HnQ6XDG98](https://discord.gg/9HnQ6XDG98)
+1. Join [discord.gg/xyC3MQAWNj](https://discord.gg/xyC3MQAWNj)
 2. Run `/backtest prompt: Buy the Magnificent 7 equally when the market is calm; cut exposure when volatility spikes.`
 3. The bot replies in-channel with metrics and an equity-curve image.
 

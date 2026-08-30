@@ -2,7 +2,7 @@
 
 Talk to the NewWorldTrading bot in Discord. Chat about strategies, save a prompt, and run a real backtest (Alpaca bars + hosted model) without leaving Discord.
 
-Invite: [discord.gg/9HnQ6XDG98](https://discord.gg/9HnQ6XDG98)
+Invite: [discord.gg/xyC3MQAWNj](https://discord.gg/xyC3MQAWNj)
 
 ---
 

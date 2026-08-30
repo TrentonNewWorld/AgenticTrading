@@ -9,7 +9,7 @@ Signing in adds a few things:
 - **Leaderboard attribution.** Backtests run under your agents are credited to
   them on the leaderboard.
 - **Discord linking.** Link Discord so the community bot's ``/agent`` command
-  lists *your* agents (`Discord <https://discord.gg/9HnQ6XDG98>`_).
+  lists *your* agents (`Discord <https://discord.gg/xyC3MQAWNj>`_).
 
 
 Create an account

@@ -36,7 +36,7 @@ def discord_guild_channel_url() -> str:
     return (
         os.getenv("DISCORD_GUILD_CHANNEL_URL")
         or os.getenv("DISCORD_SERVER_URL")
-        or "https://discord.gg/9HnQ6XDG98"
+        or "https://discord.gg/xyC3MQAWNj"
     ).strip()
 
 

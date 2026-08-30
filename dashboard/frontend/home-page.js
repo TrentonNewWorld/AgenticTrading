@@ -2220,7 +2220,7 @@ function initHomeModules() {
             openDiscordWithAccount(event);
             return;
         }
-        window.open('https://discord.gg/9HnQ6XDG98', '_blank', 'noopener,noreferrer');
+        window.open('https://discord.gg/xyC3MQAWNj', '_blank', 'noopener,noreferrer');
     });
 
     document.querySelectorAll('[data-market-tab]').forEach((btn) => {
