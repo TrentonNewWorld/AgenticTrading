@@ -52,6 +52,8 @@ NewWorldTrading/
 
 ## Getting Started
 
+**Read [SETUP-GUIDE.md](SETUP-GUIDE.md) for full Windows & Linux setup instructions, and [DISCLAIMER.md](DISCLAIMER.md) before trading anything.**
+
 One codebase, three ways to run — identical behavior on Windows and Linux:
 
 ```bash
@@ -76,6 +78,12 @@ docker compose up --build
 | Discord bot | `ops\run-discord-bot.cmd` + `keep-discord-bot-online.ps1` | `ops/run-discord-bot.sh` + `keep-discord-bot-online.sh` |
 
 Both watchdog sets share the same semantics: idempotent when healthy, bind `127.0.0.1` only, and never kill a port listener that isn't this repo's own venv Python.
+
+## Strategies
+
+This repository ships with **empty strategy catalogs** — a blank-slate platform.
+Write your own strategies in the built-in editor (see the Manual page in-app),
+build an AI agent from a plain-English instruction, or upload strategy files.
 
 ## License
 
