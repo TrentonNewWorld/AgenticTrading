@@ -51,6 +51,33 @@ async def submit(
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=400, detail="file must be UTF-8 text") from exc
 
+    # Reference packages register a BUILT-IN strategy into this bot's catalog
+    # instead of entering the sandbox/backtest pipeline -- the strategy class
+    # already ships with the bot; only the roster entry travels in the file.
+    # Accept the pre-rebrand format string too: files exported before the
+    # rename are otherwise identical.
+    try:
+        _maybe_pkg = json.loads(text)
+    except ValueError:
+        _maybe_pkg = None
+    if isinstance(_maybe_pkg, dict) and str(_maybe_pkg.get("format", "")).endswith("-strategy-reference-v1"):
+        if asset_class != "stocks":
+            raise HTTPException(
+                status_code=400,
+                detail="built-in strategy references install on the Stocks dashboard",
+            )
+        from dashboard.backend.domain.strategy_testing.promote import install_reference_package
+        try:
+            entry = install_reference_package(_maybe_pkg)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {
+            "reference_installed": True,
+            "id": entry["id"],
+            "name": entry.get("model") or entry["id"],
+            "detail": "Registered built-in strategy into your Strategy catalog.",
+        }
+
     resolved_name = name
     resolved_description = description or ""
     code = text

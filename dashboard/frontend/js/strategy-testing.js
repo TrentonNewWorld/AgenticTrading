@@ -220,6 +220,12 @@ async function handleTestingUploadSubmit(event) {
     setTestingUploadStatus('Uploading…', false);
     try {
         const row = await testFetch('/submit', { method: 'POST', body: formData });
+        if (row.reference_installed) {
+            // Built-in strategy reference: registered straight into the
+            // Strategy catalog, no scan/backtest queue involved.
+            setTestingUploadStatus(`Registered "${row.name}" into your Strategy catalog - open the Strategy page to allocate and run it.`, false);
+            return;
+        }
         setTestingUploadStatus(`Queued "${row.name}". It'll be scanned and backtested shortly.`, false);
         if (fileInput) fileInput.value = '';
         if (nameInput) nameInput.value = '';

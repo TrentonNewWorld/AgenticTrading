@@ -513,16 +513,23 @@ def build_export(key: str) -> Dict[str, Any]:
 
     from dashboard.backend.domain.leaderboard.strategy_overrides import effective_params, schema_for
 
+    display_name = strat_entry.get("model") or strat_entry.get("name") or key
     return {
         "format": "newworldtrading-strategy-reference-v1",
         "executable": False,
-        "name": strat_entry.get("name") or key,
-        "description": _description_for(key, strat_entry.get("name") or key, strat_entry)["description"],
+        "name": display_name,
+        "description": _description_for(key, display_name, strat_entry)["description"],
         "note": (
-            "This is a built-in Strategy Catalog strategy implemented in the dashboard's own Python code, "
-            "not a standalone decide(price_history) script -- it cannot be re-uploaded to the Testing page. "
-            "This file documents its current configuration for reference/sharing."
+            "This references a built-in Strategy Catalog strategy implemented in the "
+            "dashboard's own Python code. Upload this file on any NewWorldTrading bot's "
+            "Testing page (Stocks dashboard) and it registers straight into that bot's "
+            "Strategy catalog -- no separate code file needed."
         ),
+        # Everything an importing bot needs to register this strategy in its own
+        # roster. Registry strategies carry no code -- the class ships with the
+        # bot itself -- so the entry (strategy type, symbols, params) is the
+        # complete install payload.
+        "catalog_entry": {k: v for k, v in strat_entry.items() if k != "code"},
         "parameter_schema": schema_for(key),
         "parameter_values": effective_params(key),
     }

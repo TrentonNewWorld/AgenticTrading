@@ -195,7 +195,7 @@ def test_cache_busters_bumped():
     assert "js/leaderboard.js?v=43" in APP_HTML
     assert "home-page.js?v=56" in APP_HTML
     assert "js/connections.js?v=5" in APP_HTML
-    assert "js/strategy-testing.js?v=3" in APP_HTML
+    assert "js/strategy-testing.js?v=4" in APP_HTML
     assert "js/prediction.js?v=1" in APP_HTML
     assert "js/manual.js?v=9" in APP_HTML
     assert "js/strategy-catalog.js?v=8" in APP_HTML
